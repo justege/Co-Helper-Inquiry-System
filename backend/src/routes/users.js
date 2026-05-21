@@ -8,28 +8,16 @@ const router = Router();
 // ── GET /api/users/me ──────────────────────────────────────────────────────────
 router.get("/me", requireAuth, async (req, res) => {
   try {
-    let { data, error } = await supabase
+    const { data, error } = await supabase
       .from("users")
+      .upsert(
+        { firebase_uid: req.uid, email: req.firebaseUser.email ?? "" },
+        { onConflict: "firebase_uid" }
+      )
       .select("*, user_categories(category_id, categories(*))")
-      .eq("firebase_uid", req.uid)
-      .maybeSingle();
+      .single();
 
     if (error) throw error;
-
-    if (!data) {
-      const { data: created, error: insertError } = await supabase
-        .from("users")
-        .upsert(
-          { firebase_uid: req.uid, email: req.firebaseUser.email ?? "" },
-          { onConflict: "firebase_uid" }
-        )
-        .select("*, user_categories(category_id, categories(*))")
-        .single();
-
-      if (insertError) throw insertError;
-      data = created;
-    }
-
     res.json(toUser(data));
   } catch (err) {
     console.error(err);

@@ -1,86 +1,138 @@
-import { useState, type FormEvent } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { useAuthContext } from "../components/auth/AuthContext";
+import { useState, type FormEvent } from "react"
+import { useNavigate, Link } from "react-router-dom"
+import {
+  Box, Button, Flex, Heading, Input, Separator, Spinner, Text, VStack,
+} from "@chakra-ui/react"
+import { Field } from "@/components/ui/field"
+import { useAuthContext } from "../components/auth/AuthContext"
 
 export default function LoginPage() {
-  const { loginWithEmail, loginWithGoogle } = useAuthContext();
-  const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const { loginWithEmail, loginWithGoogle } = useAuthContext()
+  const navigate = useNavigate()
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
 
   async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setBusy(true);
+    e.preventDefault()
+    setError(null)
+    setBusy(true)
     try {
-      await loginWithEmail(email, password);
-      navigate("/app/dashboard", { replace: true });
+      await loginWithEmail(email, password)
+      navigate("/app/dashboard", { replace: true })
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(err instanceof Error ? err.message : "Login failed")
     } finally {
-      setBusy(false);
+      setBusy(false)
     }
   }
 
   async function handleGoogle() {
-    setError(null);
-    setBusy(true);
+    setError(null)
+    setBusy(true)
     try {
-      await loginWithGoogle();
-      navigate("/app/dashboard", { replace: true });
+      await loginWithGoogle()
+      navigate("/app/dashboard", { replace: true })
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Google login failed");
+      setError(err instanceof Error ? err.message : "Google login failed")
     } finally {
-      setBusy(false);
+      setBusy(false)
     }
   }
 
   return (
-    <div className="auth-page">
-      <div className="auth-card">
-        <Link to="/" className="auth-back">← Back</Link>
-        <h1>Sign In</h1>
-        {error && <p className="error">{error}</p>}
-        <form onSubmit={handleSubmit}>
-          <label>
-            Email
-            <input
+    <Flex minH="100vh" align="center" justify="center" p={4} bg="#fcfcfc">
+      <Box
+        bg="white"
+        border="1px solid"
+        borderColor="gray.100"
+        rounded="3xl"
+        p={10}
+        w="full"
+        maxW="420px"
+        shadow="sm"
+      >
+        <Box as={Link} to="/" fontSize="sm" color="gray.500" fontWeight="500"
+          _hover={{ color: "gray.800", textDecoration: "none" }}
+        >
+          ← Back
+        </Box>
+
+        <Heading mt={4} mb={6} fontSize="1.5rem" fontWeight="800" letterSpacing="-0.03em" color="gray.900">
+          Sign In
+        </Heading>
+
+        {error && (
+          <Box bg="red.50" border="1px solid" borderColor="red.200" rounded="lg" p={3} mb={4}>
+            <Text fontSize="sm" color="red.600">{error}</Text>
+          </Box>
+        )}
+
+        <VStack as="form" onSubmit={handleSubmit} gap={4}>
+          <Field label="Email" w="full">
+            <Input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               autoComplete="email"
+              borderColor="gray.200"
+              _focus={{ borderColor: "orange.400", boxShadow: "0 0 0 3px rgba(255,161,78,0.15)" }}
             />
-          </label>
-          <label>
-            Password
-            <input
+          </Field>
+          <Field label="Password" w="full">
+            <Input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               autoComplete="current-password"
+              borderColor="gray.200"
+              _focus={{ borderColor: "orange.400", boxShadow: "0 0 0 3px rgba(255,161,78,0.15)" }}
             />
-          </label>
-          <button type="submit" disabled={busy}>
-            {busy ? "Signing in…" : "Sign In"}
-          </button>
-        </form>
+          </Field>
+          <Button
+            type="submit"
+            colorPalette="orange"
+            w="full"
+            fontWeight="700"
+            disabled={busy}
+          >
+            {busy ? <Spinner size="sm" /> : "Sign In"}
+          </Button>
+        </VStack>
 
-        <div className="auth-divider"><span>or</span></div>
+        <Flex align="center" gap={3} my={5}>
+          <Separator flex="1" />
+          <Text fontSize="xs" color="gray.400" fontWeight="500">or</Text>
+          <Separator flex="1" />
+        </Flex>
 
-        <button className="google-btn" onClick={handleGoogle} disabled={busy}>
+        <Button
+          variant="outline"
+          colorPalette="gray"
+          w="full"
+          fontWeight="600"
+          onClick={handleGoogle}
+          disabled={busy}
+          borderColor="gray.200"
+          _hover={{ bg: "gray.50" }}
+        >
           <GoogleIcon /> Continue with Google
-        </button>
+        </Button>
 
-        <p className="auth-footer">
-          No account? <Link to="/register">Create one</Link>
-        </p>
-      </div>
-    </div>
-  );
+        <Text mt={5} fontSize="sm" color="gray.500" textAlign="center" fontWeight="500">
+          No account?{" "}
+          <Box as={Link} to="/register" color="orange.500" fontWeight="600"
+            _hover={{ textDecoration: "underline" }}
+          >
+            Create one
+          </Box>
+        </Text>
+      </Box>
+    </Flex>
+  )
 }
 
 function GoogleIcon() {
@@ -91,5 +143,5 @@ function GoogleIcon() {
       <path d="M3.964 10.706A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.038l3.007-2.332z" fill="#FBBC05"/>
       <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
     </svg>
-  );
+  )
 }
