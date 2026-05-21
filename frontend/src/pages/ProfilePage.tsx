@@ -3,13 +3,23 @@ import { getMe, updateMe, type User } from "../api/users"
 import {
   Box, Button, Card, Heading, Input, Spinner, Stack, Text,
 } from "@chakra-ui/react"
+import { useForm } from "react-hook-form"
 import { Field } from "@/components/ui/field"
+
+type ProfileFields = {
+  username: string
+}
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [username, setUsername] = useState("")
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting, isDirty },
+  } = useForm<ProfileFields>({ defaultValues: { username: "" } })
 
   useEffect(() => {
     getMe()
@@ -17,15 +27,10 @@ export default function ProfilePage() {
       .finally(() => setLoading(false))
   }, [])
 
-  async function handleSave() {
-    setSaving(true)
-    try {
-      const updated = await updateMe({ username })
-      setProfile(updated)
-      setUsername("")
-    } finally {
-      setSaving(false)
-    }
+  async function onSubmit(data: ProfileFields) {
+    const updated = await updateMe({ username: data.username })
+    setProfile(updated)
+    reset({ username: "" })
   }
 
   return (
@@ -46,7 +51,7 @@ export default function ProfilePage() {
               <Text fontSize="sm" color="gray.500">Loading…</Text>
             </Box>
           ) : (
-            <Stack gap={5}>
+            <Stack as="form" onSubmit={handleSubmit(onSubmit)} gap={5}>
               <Box display="grid" gridTemplateColumns="auto 1fr" gap={3} alignItems="baseline">
                 <Text fontSize="sm" color="gray.500" fontWeight="500" whiteSpace="nowrap">
                   Current username
@@ -56,25 +61,29 @@ export default function ProfilePage() {
                 </Text>
               </Box>
 
-              <Field label="New username">
+              <Field
+                label="New username"
+                errorText={errors.username?.message}
+                invalid={!!errors.username}
+              >
                 <Input
                   type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
                   placeholder="Enter new username"
-                  borderColor="gray.200"
+                  borderColor={errors.username ? "red.400" : "gray.200"}
                   _focus={{ borderColor: "orange.400", boxShadow: "0 0 0 3px rgba(255,161,78,0.15)" }}
+                  {...register("username", { required: "Username is required" })}
                 />
               </Field>
 
               <Button
+                type="submit"
                 colorPalette="orange"
                 alignSelf="flex-start"
                 fontWeight="700"
-                onClick={handleSave}
-                disabled={!username || saving}
+                loading={isSubmitting}
+                disabled={!isDirty}
               >
-                {saving ? <Spinner size="sm" /> : "Save changes"}
+                Save changes
               </Button>
             </Stack>
           )}
