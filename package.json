@@ -1,0 +1,13 @@
+{
+  "name": "boilerplate",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently --names \"API,VITE\" --prefix-colors \"cyan,magenta\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "install:all": "cd backend && npm install && cd ../frontend && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
