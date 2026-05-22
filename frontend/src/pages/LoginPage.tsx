@@ -107,19 +107,6 @@ export default function LoginPage() {
           />
         </Field>
 
-        <Box textAlign="right" mt={-1}>
-          <Text
-            as="a"
-            href="#"
-            fontSize="sm"
-            color="#4f77ff"
-            fontWeight="600"
-            _hover={{ textDecoration: "underline" }}
-          >
-            Forgot password?
-          </Text>
-        </Box>
-
         <Button type="submit" loading={isSubmitting} {...authPrimaryButtonProps}>
           Sign-in
         </Button>
