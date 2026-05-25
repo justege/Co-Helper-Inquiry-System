@@ -8,15 +8,31 @@ const router = Router();
 // ── GET /api/users/me ──────────────────────────────────────────────────────────
 router.get("/me", requireAuth, async (req, res) => {
   try {
+    // Check if user already exists
+    const { data: existing } = await supabase
+      .from("users")
+        .select("*, user_categories(category_id, categories(*))")
+        .eq("firebase_uid", req.uid)
+        .maybeSingle();
+
+    if (existing) {
+      // Update email only — never overwrite the user's role
+      const { data, error } = await supabase
+        .from("users")
+        .update({ email: req.firebaseUser.email ?? "" })
+        .eq("firebase_uid", req.uid)
+        .select("*, user_categories(category_id, categories(*))")
+        .single();
+      if (error) throw error;
+      return res.json(toUser(data));
+    }
+
+    // New user — create with default role 'client'
     const { data, error } = await supabase
       .from("users")
-      .upsert(
-        { firebase_uid: req.uid, email: req.firebaseUser.email ?? "" },
-        { onConflict: "firebase_uid" }
-      )
+      .insert({ firebase_uid: req.uid, email: req.firebaseUser.email ?? "", role: "client" })
       .select("*, user_categories(category_id, categories(*))")
       .single();
-
     if (error) throw error;
     res.json(toUser(data));
   } catch (err) {
@@ -27,13 +43,16 @@ router.get("/me", requireAuth, async (req, res) => {
 
 // ── PUT /api/users/me ── (own profile — cannot change own role) ────────────────
 router.put("/me", requireAuth, async (req, res) => {
-  const { username, avatarUrl } = req.body ?? {};
+  const { username, avatarUrl, firstName, lastName, companyName } = req.body ?? {};
   const updates = {
     firebase_uid: req.uid,
     email: req.firebaseUser.email ?? "",
   };
   if (username !== undefined) updates.username = username;
   if (avatarUrl !== undefined) updates.avatar_url = avatarUrl;
+  if (firstName !== undefined) updates.first_name = firstName;
+  if (lastName !== undefined) updates.last_name = lastName;
+  if (companyName !== undefined) updates.company_name = companyName;
 
   try {
     const { data, error } = await supabase
@@ -69,8 +88,8 @@ router.get("/", requireAuth, ...isAdminOrAbove, async (req, res) => {
 // ── PUT /api/users/:id/role ── (superadmin only) ───────────────────────────────
 router.put("/:id/role", requireAuth, ...isSuperadmin, async (req, res) => {
   const { role } = req.body ?? {};
-  if (!["superadmin", "admin", "member"].includes(role)) {
-    return res.status(400).json({ error: "role must be superadmin, admin, or member" });
+  if (!["superadmin", "admin", "client", "expert"].includes(role)) {
+    return res.status(400).json({ error: "role must be superadmin, admin, client, or expert" });
   }
 
   try {
@@ -128,7 +147,12 @@ function toUser(row) {
     email: row.email,
     username: row.username ?? null,
     avatarUrl: row.avatar_url ?? null,
-    role: row.role ?? "member",
+    firstName: row.first_name ?? null,
+    lastName: row.last_name ?? null,
+    companyName: row.company_name ?? null,
+    phone: row.phone ?? null,
+    contactPref: row.contact_pref ?? "email",
+    role: row.role ?? "client",
     categories: (row.user_categories ?? []).map((uc) => uc.categories),
     createdAt: row.created_at,
   };

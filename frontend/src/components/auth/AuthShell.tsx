@@ -1,5 +1,41 @@
-import { Box, Flex, Heading, HStack, Text, VStack } from "@chakra-ui/react"
+import { Box, Flex, Heading, Text, VStack } from "@chakra-ui/react"
 import { Link } from "react-router-dom"
+
+// ── Logo ──────────────────────────────────────────────────────────────────────
+
+export function LogoMark({ dark = true, size = "md" }: { dark?: boolean; size?: "sm" | "md" }) {
+  const px = size === "sm" ? "22px" : "26px"
+  const py = size === "sm" ? "22px" : "26px"
+  const dot = size === "sm" ? "8px" : "9px"
+  const fs = size === "sm" ? "0.75rem" : "0.875rem"
+  return (
+    <Box display="flex" alignItems="center" gap={2}>
+      <Box
+        w={px} h={py}
+        bg={dark ? "#0D1B2E" : "rgba(255,255,255,0.15)"}
+        rounded="6px"
+        display="flex" alignItems="center" justifyContent="center"
+        flexShrink={0}
+      >
+        <Box w={dot} h={dot} bg={dark ? "#1563B2" : "white"} rounded="sm" transform="rotate(45deg)" />
+      </Box>
+      <Text
+        fontSize={fs} fontWeight="800" letterSpacing="0.06em" textTransform="uppercase"
+        color={dark ? "#0D1B2E" : "white"}
+        lineHeight="1"
+      >
+        OutsourceSoft
+      </Text>
+    </Box>
+  )
+}
+
+// ── AuthShell ─────────────────────────────────────────────────────────────────
+
+export type AuthPromoProps = {
+  tagline: string
+  imageSrc?: string
+}
 
 export function AuthShell({
   title,
@@ -15,268 +51,108 @@ export function AuthShell({
   promo: AuthPromoProps
 }) {
   return (
-    <Flex minH="100vh" bg="white">
+    <Flex minH="100vh" bg="#F2F4F8">
+      {/* ── Left: Form panel ─────────────────────────────────────── */}
       <Flex
+        flex={{ base: "1", lg: "none" }}
+        w={{ base: "100%", lg: "440px" }}
+        flexDir="column"
+        px={{ base: 6, md: 10, lg: 14 }}
+        py={10}
+        bg="white"
+        position="relative"
+        zIndex={1}
+        boxShadow={{ lg: "2px 0 24px rgba(11,21,40,0.06)" }}
+      >
+        {/* Brand */}
+        <Box mb={16}>
+          <Box as={Link} to="/" display="inline-flex" _hover={{ textDecoration: "none" }}>
+            <LogoMark dark />
+          </Box>
+        </Box>
+
+        {/* Form area */}
+        <Flex flex="1" flexDir="column" justify="center">
+          <Box maxW="340px" w="full">
+            <VStack gap={1} align="flex-start" mb={8}>
+              <Heading
+                fontSize="1.625rem" fontWeight="800" color="#0D1B2E"
+                letterSpacing="-0.03em" lineHeight="1.2"
+              >
+                {title}
+              </Heading>
+              <Text fontSize="0.875rem" color="#94A3B8" fontWeight="500" mt={1}>
+                {subtitle}
+              </Text>
+            </VStack>
+            {children}
+          </Box>
+        </Flex>
+
+        {/* Footer */}
+        <Text fontSize="0.8125rem" color="#94A3B8" fontWeight="500" mt={8}>
+          {footer}
+        </Text>
+      </Flex>
+
+      {/* ── Right: Photo panel ───────────────────────────────────── */}
+      <Flex
+        display={{ base: "none", lg: "flex" }}
         flex="1"
         position="relative"
         overflow="hidden"
-        flexDir="column"
-        bg="#f6f8fc"
       >
-        <Box
-          display={{ base: "block", lg: "none" }}
-          mx={5}
-          mt={5}
-          px={5}
-          py={4}
-          rounded="2xl"
-          bgGradient="linear(to-r, #3d5afe, #7e57c2)"
-          color="white"
-          textAlign="center"
-          shadow="md"
-        >
-          <Text fontSize="sm" fontWeight="600" opacity={0.9}>
-            {promo.eyebrow}
-          </Text>
-          <Text fontSize="lg" fontWeight="800" mt={1}>
-            {promo.headline} {promo.highlight}
-          </Text>
-        </Box>
-
-        <Flex
-          flex="1"
-          align="center"
-          justify="center"
-          px={{ base: 5, md: 10 }}
-          py={{ base: 8, md: 12 }}
-          position="relative"
-        >
-        <AuthLeftDecor />
-
-        <Box position="relative" zIndex={1} w="full" maxW="400px">
-          <VStack gap={8} align="stretch">
-            <AuthBrand />
-
-            <Box
-              bg="white"
-              rounded="2xl"
-              px={{ base: 6, md: 8 }}
-              py={8}
-              shadow="0 20px 60px rgba(15, 23, 42, 0.08)"
-              border="1px solid"
-              borderColor="white"
-            >
-              <VStack gap={1} align="flex-start" mb={6}>
-                <Heading fontSize="1.75rem" fontWeight="800" color="gray.900" letterSpacing="-0.03em">
-                  {title}
-                </Heading>
-                <Text fontSize="sm" color="gray.500" fontWeight="500">
-                  {subtitle}
-                </Text>
-              </VStack>
-
-              {children}
+        {promo.imageSrc ? (
+          <>
+            <Box position="absolute" inset={0}
+              bgImage={`url(${promo.imageSrc})`}
+              bgSize="cover" bgPosition="center 40%"
+            />
+            {/* Gradient: strong at bottom for text, lighter in middle */}
+            <Box position="absolute" inset={0}
+              background="linear-gradient(180deg, rgba(8,16,32,0.55) 0%, rgba(8,16,32,0.20) 50%, rgba(8,16,32,0.72) 100%)"
+            />
+            {/* Blue accent line top */}
+            <Box position="absolute" top={0} left={0} right={0} h="3px"
+              background="linear-gradient(90deg, #1563B2 0%, rgba(21,99,178,0.3) 100%)" zIndex={3}
+            />
+            {/* Logo top-left */}
+            <Box position="absolute" top={10} left={12} zIndex={4}>
+              <LogoMark dark={false} size="sm" />
             </Box>
-
-            <Text fontSize="sm" color="gray.500" textAlign="center" fontWeight="500">
-              {footer}
+            {/* Bottom tagline — minimal */}
+            <Box position="absolute" bottom={12} left={12} right={12} zIndex={4}>
+              <Text
+                fontSize={{ lg: "1.625rem", xl: "2rem" }}
+                fontWeight="800"
+                color="white"
+                lineHeight="1.2"
+                letterSpacing="-0.02em"
+                maxW="420px"
+              >
+                {promo.tagline}
+              </Text>
+              <Box display="flex" alignItems="center" gap={2} mt={4}>
+                <Box w="20px" h="1px" bg="rgba(255,255,255,0.4)" />
+                <Text fontSize="0.75rem" color="rgba(255,255,255,0.4)" fontWeight="500" letterSpacing="0.04em">
+                  OutsourceSoft · B2B Procurement · Turkey
+                </Text>
+              </Box>
+            </Box>
+          </>
+        ) : (
+          /* fallback dark panel */
+          <Box bg="#0B1528" position="absolute" inset={0} display="flex" alignItems="center" justifyContent="center">
+            <Text fontSize="2rem" fontWeight="800" color="white" maxW="360px" textAlign="center" letterSpacing="-0.03em">
+              {promo.tagline}
             </Text>
-          </VStack>
-        </Box>
-        </Flex>
+          </Box>
+        )}
       </Flex>
-
-      <AuthPromoPanel {...promo} />
     </Flex>
   )
 }
 
 export function AuthBrand() {
-  return (
-    <VStack gap={1} textAlign="center">
-      <Heading
-        as={Link}
-        to="/"
-        fontSize="1.5rem"
-        fontWeight="800"
-        letterSpacing="-0.04em"
-        color="gray.900"
-        _hover={{ textDecoration: "none", opacity: 0.85 }}
-      >
-        Boilerplate
-      </Heading>
-      <Text fontSize="xs" color="gray.400" fontWeight="600" letterSpacing="0.08em" textTransform="uppercase">
-        Full-stack starter
-      </Text>
-    </VStack>
-  )
-}
-
-function AuthLeftDecor() {
-  return (
-    <>
-      <Box
-        position="absolute"
-        top="-120px"
-        left="-80px"
-        w="320px"
-        h="320px"
-        rounded="full"
-        bg="rgba(79, 119, 255, 0.08)"
-        filter="blur(2px)"
-      />
-      <Box
-        position="absolute"
-        bottom="-100px"
-        right="-60px"
-        w="280px"
-        h="280px"
-        rounded="full"
-        bg="rgba(99, 102, 241, 0.06)"
-      />
-      <Box
-        position="absolute"
-        top="18%"
-        right="8%"
-        w="120px"
-        h="72px"
-        rounded="full"
-        bg="rgba(255, 255, 255, 0.7)"
-        filter="blur(1px)"
-      />
-      <Box
-        position="absolute"
-        bottom="22%"
-        left="6%"
-        w="160px"
-        h="90px"
-        rounded="full"
-        bg="rgba(255, 255, 255, 0.55)"
-      />
-    </>
-  )
-}
-
-type AuthPromoProps = {
-  eyebrow: string
-  headline: React.ReactNode
-  highlight: string
-  bullets: string[]
-  footer: string
-}
-
-function AuthPromoPanel({ eyebrow, headline, highlight, bullets, footer }: AuthPromoProps) {
-  return (
-    <Flex
-      display={{ base: "none", lg: "flex" }}
-      flex="1"
-      position="relative"
-      overflow="hidden"
-      align="center"
-      justify="center"
-      px={14}
-      py={16}
-      bgGradient="linear(to-br, #3d5afe, #5c6bc0 45%, #7e57c2)"
-    >
-      <Box
-        position="absolute"
-        inset={0}
-        opacity={0.35}
-        bgImage="radial-gradient(circle at center, rgba(255,255,255,0.35) 0, rgba(255,255,255,0) 70%)"
-        bgSize="120px 120px"
-      />
-
-      {[320, 480, 640].map((size, i) => (
-        <Box
-          key={size}
-          position="absolute"
-          top="50%"
-          left="50%"
-          transform="translate(-50%, -50%)"
-          w={`${size}px`}
-          h={`${size}px`}
-          rounded="full"
-          border="1px solid"
-          borderColor="whiteAlpha.200"
-          opacity={0.5 - i * 0.12}
-        />
-      ))}
-
-      <VStack gap={10} position="relative" zIndex={1} maxW="420px" textAlign="center">
-        <VStack gap={3}>
-          <Text fontSize="sm" color="whiteAlpha.800" fontWeight="600" letterSpacing="0.06em" textTransform="uppercase">
-            {eyebrow}
-          </Text>
-          <Heading fontSize="3rem" fontWeight="800" color="white" lineHeight="1.08" letterSpacing="-0.03em">
-            {headline}
-            <Box as="span" display="block" color="#ffe082">
-              {highlight}
-            </Box>
-          </Heading>
-        </VStack>
-
-        <Box
-          w="full"
-          bg="white"
-          rounded="3xl"
-          p={8}
-          shadow="0 30px 80px rgba(15, 23, 42, 0.25)"
-          position="relative"
-        >
-          <Box
-            position="absolute"
-            top="-18px"
-            left="50%"
-            transform="translateX(-50%)"
-            w="72px"
-            h="72px"
-            rounded="full"
-            bg="linear-gradient(135deg, #ffd180, #ffb74d)"
-            border="4px solid white"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            fontSize="2rem"
-          >
-            👩‍💻
-          </Box>
-
-          <VStack gap={4} pt={8}>
-            <Text fontSize="sm" color="gray.500" fontWeight="600">
-              Everything you need to launch
-            </Text>
-            <VStack gap={3} align="stretch" w="full">
-              {bullets.map((item) => (
-                <HStack key={item} gap={3} align="flex-start">
-                  <Box
-                    mt={1}
-                    w="18px"
-                    h="18px"
-                    rounded="full"
-                    bg="#eef2ff"
-                    color="#4f46e5"
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="center"
-                    fontSize="10px"
-                    fontWeight="800"
-                    flexShrink={0}
-                  >
-                    ✓
-                  </Box>
-                  <Text fontSize="sm" color="gray.700" fontWeight="500" textAlign="left">
-                    {item}
-                  </Text>
-                </HStack>
-              ))}
-            </VStack>
-          </VStack>
-        </Box>
-
-        <Text fontSize="sm" color="whiteAlpha.700" fontWeight="500">
-          {footer}
-        </Text>
-      </VStack>
-    </Flex>
-  )
+  return <LogoMark dark />
 }

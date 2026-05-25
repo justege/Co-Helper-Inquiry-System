@@ -11,10 +11,13 @@ function slugify(name) {
 
 // ── GET /api/categories ── (any authenticated user) ────────────────────────────
 router.get("/", requireAuth, async (req, res) => {
-  const { data, error } = await supabase
-    .from("categories")
-    .select("*")
-    .order("name");
+  const { type } = req.query;
+  const VALID_TYPES = ["service", "tool_sourcing"];
+
+  let query = supabase.from("categories").select("*").order("name");
+  if (type && VALID_TYPES.includes(type)) query = query.eq("type", type);
+
+  const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
@@ -32,12 +35,20 @@ router.get("/:id", requireAuth, async (req, res) => {
 
 // ── POST /api/categories ── (superadmin only) ──────────────────────────────────
 router.post("/", requireAuth, ...isSuperadmin, async (req, res) => {
-  const { name } = req.body ?? {};
+  const { name, type = "service", description } = req.body ?? {};
   if (!name?.trim()) return res.status(400).json({ error: "name is required" });
+  const VALID_TYPES = ["service", "tool_sourcing"];
+  if (!VALID_TYPES.includes(type)) return res.status(400).json({ error: "type must be service or tool_sourcing" });
 
   const { data, error } = await supabase
     .from("categories")
-    .insert({ name: name.trim(), slug: slugify(name.trim()), created_by: req.dbUser.id })
+    .insert({
+      name: name.trim(),
+      slug: slugify(name.trim()),
+      type,
+      description: description?.trim() || null,
+      created_by: req.dbUser.id,
+    })
     .select()
     .single();
 
@@ -47,12 +58,15 @@ router.post("/", requireAuth, ...isSuperadmin, async (req, res) => {
 
 // ── PUT /api/categories/:id ── (superadmin only) ───────────────────────────────
 router.put("/:id", requireAuth, ...isSuperadmin, async (req, res) => {
-  const { name } = req.body ?? {};
+  const { name, type, description } = req.body ?? {};
+  const VALID_TYPES = ["service", "tool_sourcing"];
   const updates = {};
   if (name?.trim()) {
     updates.name = name.trim();
     updates.slug = slugify(name.trim());
   }
+  if (type && VALID_TYPES.includes(type)) updates.type = type;
+  if (description !== undefined) updates.description = description?.trim() || null;
 
   const { data, error } = await supabase
     .from("categories")

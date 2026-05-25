@@ -8,6 +8,7 @@ import { AuthDivider, SocialAuthButtons } from "@/components/auth/SocialAuthButt
 import { authFieldLabel, authInputProps, authPrimaryButtonProps } from "@/components/auth/authStyles"
 import { useAuthContext } from "../components/auth/AuthContext"
 import { updateMe } from "../api/users"
+import izmirPng from "@/assets/izmir.png"
 
 type RegisterFields = {
   username: string
@@ -54,22 +55,15 @@ export default function RegisterPage() {
   return (
     <AuthShell
       title="Create account"
-      subtitle="Get started with Boilerplate in under a minute."
+      subtitle="Join OutsourceSoft and start sourcing today."
       promo={{
-        eyebrow: "Join developers",
-        headline: "Ship your idea",
-        highlight: "in hours, not weeks.",
-        bullets: [
-          "Email/password and Google sign-in ready",
-          "Supabase Postgres with auto-created tables",
-          "One command spins up frontend + backend",
-        ],
-        footer: "Free to use · Open source · MIT license",
+        tagline: "Turkey's B2B marketplace — post, match, deliver.",
+        imageSrc: izmirPng,
       }}
       footer={
         <>
           Already have an account?{" "}
-          <Box as={Link} to="/login" color="#4f77ff" fontWeight="700" _hover={{ textDecoration: "underline" }}>
+          <Box as={Link} to="/login" color="#1563B2" fontWeight="700" _hover={{ textDecoration: "underline" }}>
             Sign In
           </Box>
         </>

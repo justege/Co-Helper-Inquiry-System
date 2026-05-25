@@ -9,7 +9,7 @@ const ROLE_HIERARCHY = { superadmin: 3, admin: 2, member: 1 };
 export async function attachRole(req, res, next) {
   const { data, error } = await supabase
     .from("users")
-    .select("id, role")
+    .select("id, role, company_name, email, first_name, last_name")
     .eq("firebase_uid", req.uid)
     .maybeSingle();
 

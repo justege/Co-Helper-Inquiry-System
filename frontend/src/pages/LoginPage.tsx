@@ -7,11 +7,9 @@ import { AuthShell } from "@/components/auth/AuthShell"
 import { AuthDivider, SocialAuthButtons } from "@/components/auth/SocialAuthButtons"
 import { authFieldLabel, authInputProps, authPrimaryButtonProps } from "@/components/auth/authStyles"
 import { useAuthContext } from "../components/auth/AuthContext"
+import izmirPng from "@/assets/izmir.png"
 
-type LoginFields = {
-  email: string
-  password: string
-}
+type LoginFields = { email: string; password: string }
 
 export default function LoginPage() {
   const { loginWithEmail, loginWithGoogle } = useAuthContext()
@@ -29,9 +27,7 @@ export default function LoginPage() {
       await loginWithEmail(data.email, data.password)
       navigate("/app/dashboard", { replace: true })
     } catch (err: unknown) {
-      setError("root", {
-        message: err instanceof Error ? err.message : "Login failed",
-      })
+      setError("root", { message: err instanceof Error ? err.message : "Login failed" })
     }
   }
 
@@ -40,53 +36,37 @@ export default function LoginPage() {
       await loginWithGoogle()
       navigate("/app/dashboard", { replace: true })
     } catch (err: unknown) {
-      setError("root", {
-        message: err instanceof Error ? err.message : "Google login failed",
-      })
+      setError("root", { message: err instanceof Error ? err.message : "Google login failed" })
     }
   }
 
   return (
     <AuthShell
       title="Sign in"
-      subtitle="Welcome back — enter your details to continue."
+      subtitle="Welcome back to OutsourceSoft."
       promo={{
-        eyebrow: "Welcome back",
-        headline: "Start building",
-        highlight: "faster today.",
-        bullets: [
-          "Firebase auth wired up out of the box",
-          "REST API with Express + Supabase",
-          "One command boots both servers",
-        ],
-        footer: "Firebase · Supabase · Express · React",
+        tagline: "Source smarter from Turkey's finest manufacturers.",
+        imageSrc: izmirPng,
       }}
       footer={
         <>
-          Don't have an account?{" "}
-          <Box as={Link} to="/register" color="#4f77ff" fontWeight="700" _hover={{ textDecoration: "underline" }}>
-            Sign Up
-          </Box>
+          No account?{" "}
+          <Link to="/register" style={{ color: "#1563B2", fontWeight: "700" }}>
+            Create one
+          </Link>
         </>
       }
     >
       {errors.root && (
-        <Box bg="red.50" border="1px solid" borderColor="red.200" rounded="xl" px={4} py={3} mb={5}>
-          <Text fontSize="sm" color="red.600">{errors.root.message}</Text>
+        <Box bg="#FEF2F2" border="1px solid #FECACA" rounded="10px" px={4} py={3} mb={5}>
+          <Text fontSize="sm" color="#B91C1C">{errors.root.message}</Text>
         </Box>
       )}
 
       <VStack as="form" onSubmit={handleSubmit(onSubmit)} gap={4} align="stretch">
-        <Field
-          label={authFieldLabel("Email", true)}
-          errorText={errors.email?.message}
-          invalid={!!errors.email}
-        >
-          <Input
-            type="email"
-            autoComplete="email"
-            {...authInputProps}
-            borderColor={errors.email ? "red.400" : authInputProps.borderColor}
+        <Field label={authFieldLabel("Email", true)} errorText={errors.email?.message} invalid={!!errors.email}>
+          <Input type="email" autoComplete="email" {...authInputProps}
+            borderColor={errors.email ? "#FECACA" : authInputProps.borderColor}
             {...register("email", {
               required: "Email is required",
               pattern: { value: /\S+@\S+\.\S+/, message: "Enter a valid email" },
@@ -94,21 +74,15 @@ export default function LoginPage() {
           />
         </Field>
 
-        <Field
-          label={authFieldLabel("Password", true)}
-          errorText={errors.password?.message}
-          invalid={!!errors.password}
-        >
-          <PasswordInput
-            autoComplete="current-password"
-            {...authInputProps}
-            borderColor={errors.password ? "red.400" : authInputProps.borderColor}
+        <Field label={authFieldLabel("Password", true)} errorText={errors.password?.message} invalid={!!errors.password}>
+          <PasswordInput autoComplete="current-password" {...authInputProps}
+            borderColor={errors.password ? "#FECACA" : authInputProps.borderColor}
             {...register("password", { required: "Password is required" })}
           />
         </Field>
 
         <Button type="submit" loading={isSubmitting} {...authPrimaryButtonProps}>
-          Sign-in
+          Sign In
         </Button>
       </VStack>
 

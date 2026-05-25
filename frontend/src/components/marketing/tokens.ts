@@ -1,0 +1,5 @@
+export const INK = "#0D1117"
+export const MUTED = "#6B7280"
+export const RULE = "#E5E7EB"
+export const ACCENT = "#1E3A5F"
+export const SURFACE = "#F7F8FA"
