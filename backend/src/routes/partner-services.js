@@ -2,7 +2,7 @@ import { Router } from "express";
 import supabase from "../db.js";
 import { createSignedUploadUrl } from "../storage.js";
 import { requireAuth } from "../middleware/auth.js";
-import { attachRole } from "../middleware/requireRole.js";
+import { attachRole, requireRole } from "../middleware/requireRole.js";
 
 const router = Router();
 
@@ -12,6 +12,17 @@ router.use(requireAuth, attachRole);
 // ── Helper to verify the requester is the partner or an admin ─────────────────
 function isOwnerOrAdmin(req, partnerId) {
   return req.dbUser.id === partnerId || ["admin", "superadmin"].includes(req.userRole);
+}
+
+async function partnerHasCategory(partnerId, categoryId) {
+  if (!categoryId) return true;
+  const { data } = await supabase
+    .from("user_categories")
+    .select("category_id")
+    .eq("user_id", partnerId)
+    .eq("category_id", categoryId)
+    .maybeSingle();
+  return Boolean(data);
 }
 
 // ── GET /api/partner-services/me — list current partner's services ───────────
@@ -150,14 +161,20 @@ router.get("/:partnerId", async (req, res) => {
 });
 
 // ── POST /api/partner-services — create a service ────────────────────────────
-router.post("/", async (req, res) => {
-  const { title, description, priceFrom, priceTo, priceUnit, currency, sortOrder } = req.body ?? {};
+router.post("/", ...requireRole("expert"), async (req, res) => {
+  const { title, description, priceFrom, priceTo, priceUnit, currency, sortOrder, categoryId } =
+    req.body ?? {};
   if (!title?.trim()) return res.status(400).json({ error: "title is required" });
+
+  if (categoryId && !(await partnerHasCategory(req.dbUser.id, categoryId))) {
+    return res.status(400).json({ error: "Category is not assigned to your profile" });
+  }
 
   const { data, error } = await supabase
     .from("partner_services")
     .insert({
       partner_id: req.dbUser.id,
+      category_id: categoryId ?? null,
       title: title.trim(),
       description: description?.trim() || null,
       price_from: priceFrom != null ? Number(priceFrom) : null,
@@ -186,7 +203,8 @@ router.put("/:id", async (req, res) => {
   if (!isOwnerOrAdmin(req, existing.partner_id))
     return res.status(403).json({ error: "Access denied" });
 
-  const { title, description, priceFrom, priceTo, priceUnit, currency, isActive, sortOrder } = req.body ?? {};
+  const { title, description, priceFrom, priceTo, priceUnit, currency, isActive, sortOrder, categoryId } =
+    req.body ?? {};
   const updates = { updated_at: new Date().toISOString() };
   if (title?.trim()) updates.title = title.trim();
   if (description !== undefined) updates.description = description?.trim() || null;
@@ -196,6 +214,12 @@ router.put("/:id", async (req, res) => {
   if (currency) updates.currency = currency;
   if (isActive !== undefined) updates.is_active = Boolean(isActive);
   if (sortOrder !== undefined) updates.sort_order = Number(sortOrder);
+  if (categoryId !== undefined) {
+    if (categoryId && !(await partnerHasCategory(existing.partner_id, categoryId))) {
+      return res.status(400).json({ error: "Category is not assigned to your profile" });
+    }
+    updates.category_id = categoryId || null;
+  }
 
   const { data, error } = await supabase
     .from("partner_services")
@@ -332,6 +356,7 @@ function toService(s) {
   return {
     id: s.id,
     partnerId: s.partner_id,
+    categoryId: s.category_id ?? null,
     title: s.title,
     description: s.description ?? null,
     priceFrom: s.price_from != null ? Number(s.price_from) : null,

@@ -17,14 +17,14 @@ export function LogoMark({ dark = true, size = "md" }: { dark?: boolean; size?: 
         display="flex" alignItems="center" justifyContent="center"
         flexShrink={0}
       >
-        <Box w={dot} h={dot} bg={dark ? "#1563B2" : "white"} rounded="sm" transform="rotate(45deg)" />
+        <Box w={dot} h={dot} bg={dark ? "#0F6E56" : "white"} rounded="sm" transform="rotate(45deg)" />
       </Box>
       <Text
         fontSize={fs} fontWeight="800" letterSpacing="0.06em" textTransform="uppercase"
         color={dark ? "#0D1B2E" : "white"}
         lineHeight="1"
       >
-        OutsourceSoft
+        Co-Helper
       </Text>
     </Box>
   )
@@ -37,25 +37,114 @@ export type AuthPromoProps = {
   imageSrc?: string
 }
 
+function AuthFormHeader({ title, subtitle }: { title: string; subtitle: string }) {
+  return (
+    <VStack gap={1} align="flex-start" mb={8}>
+      <Heading
+        fontSize="1.625rem" fontWeight="800" color="#0D1B2E"
+        letterSpacing="-0.03em" lineHeight="1.2"
+      >
+        {title}
+      </Heading>
+      <Text fontSize="0.875rem" color="#94A3B8" fontWeight="500" mt={1}>
+        {subtitle}
+      </Text>
+    </VStack>
+  )
+}
+
 export function AuthShell({
   title,
   subtitle,
   footer,
   children,
   promo,
+  wide = false,
+  layout = "split",
 }: {
   title: string
   subtitle: string
   footer: React.ReactNode
   children: React.ReactNode
   promo: AuthPromoProps
+  wide?: boolean
+  layout?: "split" | "centered"
 }) {
+  if (layout === "centered") {
+    return (
+      <Box minH="100vh" position="relative" overflow="hidden">
+        {promo.imageSrc ? (
+          <>
+            <Box
+              position="absolute"
+              inset={0}
+              bgImage={`url(${promo.imageSrc})`}
+              bgSize="cover"
+              bgPosition="center 40%"
+            />
+            <Box
+              position="absolute"
+              inset={0}
+              background="linear-gradient(160deg, rgba(8,16,32,0.78) 0%, rgba(8,16,32,0.55) 45%, rgba(8,16,32,0.82) 100%)"
+            />
+          </>
+        ) : (
+          <Box position="absolute" inset={0} bg="#0B1528" />
+        )}
+
+        <Box
+          position="absolute"
+          top={0}
+          left={0}
+          right={0}
+          h="3px"
+          background="linear-gradient(90deg, #0F6E56 0%, rgba(15,110,86,0.3) 100%)"
+          zIndex={3}
+        />
+
+        <Box position="absolute" top={{ base: 6, md: 10 }} left={{ base: 6, md: 10 }} zIndex={3}>
+          <Box as={Link} to="/" display="inline-flex" _hover={{ textDecoration: "none" }}>
+            <LogoMark dark={false} size="sm" />
+          </Box>
+        </Box>
+
+        <Flex
+          minH="100vh"
+          align="center"
+          justify="center"
+          px={{ base: 4, sm: 6 }}
+          py={{ base: 20, md: 12 }}
+          position="relative"
+          zIndex={2}
+        >
+          <Box
+            w="full"
+            maxW={wide ? "580px" : "440px"}
+            maxH={{ base: "none", md: "calc(100vh - 96px)" }}
+            overflowY={{ base: "visible", md: "auto" }}
+            bg="white"
+            borderRadius="16px"
+            boxShadow="0 32px 80px rgba(0,0,0,0.32), 0 8px 24px rgba(0,0,0,0.16)"
+            px={{ base: 6, md: 10 }}
+            py={{ base: 8, md: 10 }}
+          >
+            <AuthFormHeader title={title} subtitle={subtitle} />
+            {children}
+            <Text fontSize="0.8125rem" color="#94A3B8" fontWeight="500" mt={8}>
+              {footer}
+            </Text>
+          </Box>
+        </Flex>
+      </Box>
+    )
+  }
+
   return (
     <Flex minH="100vh" bg="#F2F4F8">
       {/* ── Left: Form panel ─────────────────────────────────────── */}
       <Flex
         flex={{ base: "1", lg: "none" }}
-        w={{ base: "100%", lg: "440px" }}
+        w={{ base: "100%", lg: wide ? "560px" : "440px" }}
         flexDir="column"
         px={{ base: 6, md: 10, lg: 14 }}
         py={10}
@@ -73,18 +162,8 @@ export function AuthShell({
 
         {/* Form area */}
         <Flex flex="1" flexDir="column" justify="center">
-          <Box maxW="340px" w="full">
-            <VStack gap={1} align="flex-start" mb={8}>
-              <Heading
-                fontSize="1.625rem" fontWeight="800" color="#0D1B2E"
-                letterSpacing="-0.03em" lineHeight="1.2"
-              >
-                {title}
-              </Heading>
-              <Text fontSize="0.875rem" color="#94A3B8" fontWeight="500" mt={1}>
-                {subtitle}
-              </Text>
-            </VStack>
+          <Box maxW={wide ? "520px" : "340px"} w="full">
+            <AuthFormHeader title={title} subtitle={subtitle} />
             {children}
           </Box>
         </Flex>
@@ -114,7 +193,7 @@ export function AuthShell({
             />
             {/* Blue accent line top */}
             <Box position="absolute" top={0} left={0} right={0} h="3px"
-              background="linear-gradient(90deg, #1563B2 0%, rgba(21,99,178,0.3) 100%)" zIndex={3}
+              background="linear-gradient(90deg, #0F6E56 0%, rgba(15,110,86,0.3) 100%)" zIndex={3}
             />
             {/* Logo top-left */}
             <Box position="absolute" top={10} left={12} zIndex={4}>
@@ -135,7 +214,7 @@ export function AuthShell({
               <Box display="flex" alignItems="center" gap={2} mt={4}>
                 <Box w="20px" h="1px" bg="rgba(255,255,255,0.4)" />
                 <Text fontSize="0.75rem" color="rgba(255,255,255,0.4)" fontWeight="500" letterSpacing="0.04em">
-                  OutsourceSoft · B2B Procurement · Turkey
+                  Co-Helper · Digital Services · Worldwide
                 </Text>
               </Box>
             </Box>

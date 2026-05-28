@@ -1,17 +1,25 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
-import { Badge, Box, Button, Grid, Input, Spinner, Stack, Text, Textarea } from "@chakra-ui/react"
+import { Badge, Box, Button, Grid, Spinner, Stack, Text } from "@chakra-ui/react"
+import {
+  FormInput,
+  FormNativeSelect,
+  FormTextarea,
+  formInvalidBorder,
+} from "@/components/ui/form-controls"
 import {
   LuDownload, LuFileText, LuPaperclip, LuPencil, LuPlus, LuToggleLeft,
   LuToggleRight, LuTrash2, LuUpload,
 } from "react-icons/lu"
 import { PageShell } from "@/components/ui/PageShell"
 import { api } from "@/lib/api"
+import { getMe, type User } from "@/api/users"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface PartnerService {
   id: string
+  categoryId: string | null
   title: string
   description: string | null
   priceFrom: number | null
@@ -34,6 +42,7 @@ interface PartnerDocument {
 }
 
 type ServiceForm = {
+  categoryId: string
   title: string
   description: string
   priceFrom: string
@@ -51,15 +60,6 @@ const CARD = {
   overflow: "hidden" as const,
 }
 
-const INPUT_STYLE = {
-  size: "sm" as const,
-  bg: "white",
-  borderColor: "#D8DCE8",
-  borderRadius: "8px",
-  fontSize: "0.875rem",
-  _focusVisible: { borderColor: "#1563B2", boxShadow: "0 0 0 2px rgba(21,99,178,0.15)" },
-}
-
 const UNITS = ["piece", "hour", "day", "project", "kg", "m2"]
 const DOC_TYPES = [
   { value: "brochure",     label: "Company Brochure" },
@@ -72,7 +72,7 @@ const DOC_TYPES = [
 function FieldLabel({ children, required }: { children: React.ReactNode; required?: boolean }) {
   return (
     <Text fontSize="0.6875rem" fontWeight="700" color="#4A5568" letterSpacing="0.07em" textTransform="uppercase" mb={1}>
-      {children}{required && <Box as="span" color="#1563B2" ml={0.5}>*</Box>}
+      {children}{required && <Box as="span" color="#0F6E56" ml={0.5}>*</Box>}
     </Text>
   )
 }
@@ -95,15 +95,18 @@ function fmtPrice(from: number | null, to: number | null, unit: string, currency
 
 function ServiceFormCard({
   initial,
+  categories,
   onSave,
   onCancel,
 }: {
   initial?: Partial<ServiceForm>
+  categories: User["categories"]
   onSave: (data: ServiceForm) => Promise<void>
   onCancel: () => void
 }) {
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<ServiceForm>({
     defaultValues: {
+      categoryId: initial?.categoryId ?? categories[0]?.id ?? "",
       title: initial?.title ?? "",
       description: initial?.description ?? "",
       priceFrom: initial?.priceFrom ?? "",
@@ -116,55 +119,63 @@ function ServiceFormCard({
   return (
     <Box as="form" onSubmit={handleSubmit(onSave)} {...CARD} p={5}>
       <Grid templateColumns={{ base: "1fr", sm: "1fr 1fr" }} gap={4} mb={4}>
+        {categories.length > 0 && (
+          <Box gridColumn={{ sm: "1 / -1" }}>
+            <FieldLabel required>Category</FieldLabel>
+            <FormNativeSelect
+              selectSize="sm"
+              {...register("categoryId", { required: "Category is required" })}
+              {...formInvalidBorder(!!errors.categoryId)}
+            >
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </FormNativeSelect>
+            {errors.categoryId && (
+              <Text fontSize="0.75rem" color="#B91C1C" mt={1}>{errors.categoryId.message}</Text>
+            )}
+          </Box>
+        )}
+
         <Box gridColumn={{ sm: "1 / -1" }}>
           <FieldLabel required>Service title</FieldLabel>
-          <Input {...INPUT_STYLE} placeholder="e.g. CNC Turning, Custom Textile Production"
+          <FormInput
+            size="sm"
+            placeholder="e.g. CNC Turning, Custom Textile Production"
             {...register("title", { required: "Title is required" })}
-            borderColor={errors.title ? "#FECACA" : INPUT_STYLE.borderColor}
+            {...formInvalidBorder(!!errors.title)}
           />
           {errors.title && <Text fontSize="0.75rem" color="#B91C1C" mt={1}>{errors.title.message}</Text>}
         </Box>
 
         <Box>
           <FieldLabel>Price from</FieldLabel>
-          <Input {...INPUT_STYLE} type="number" step="0.01" min="0" placeholder="0.00"
+          <FormInput size="sm" type="number" step="0.01" min="0" placeholder="0.00"
             {...register("priceFrom")} />
         </Box>
         <Box>
           <FieldLabel>Price to</FieldLabel>
-          <Input {...INPUT_STYLE} type="number" step="0.01" min="0" placeholder="0.00"
+          <FormInput size="sm" type="number" step="0.01" min="0" placeholder="0.00"
             {...register("priceTo")} />
         </Box>
 
         <Box>
           <FieldLabel>Price unit</FieldLabel>
-          <Box
-            as="select" {...INPUT_STYLE}
-            h="36px" w="full" px={3}
-            border="1px solid" borderColor={INPUT_STYLE.borderColor}
-            {...register("priceUnit")}
-            style={{ borderRadius: "8px", background: "white", fontSize: "0.875rem" }}
-          >
+          <FormNativeSelect selectSize="sm" {...register("priceUnit")}>
             {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
-          </Box>
+          </FormNativeSelect>
         </Box>
 
         <Box>
           <FieldLabel>Currency</FieldLabel>
-          <Box
-            as="select" {...INPUT_STYLE}
-            h="36px" w="full" px={3}
-            border="1px solid" borderColor={INPUT_STYLE.borderColor}
-            {...register("currency")}
-            style={{ borderRadius: "8px", background: "white", fontSize: "0.875rem" }}
-          >
+          <FormNativeSelect selectSize="sm" {...register("currency")}>
             {["EUR", "USD", "GBP", "TRY"].map((c) => <option key={c} value={c}>{c}</option>)}
-          </Box>
+          </FormNativeSelect>
         </Box>
 
         <Box gridColumn={{ sm: "1 / -1" }}>
           <FieldLabel>Description</FieldLabel>
-          <Textarea {...INPUT_STYLE} rows={3} placeholder="Describe your service, capabilities, MOQ, lead time…"
+          <FormTextarea size="sm" rows={3} placeholder="Describe your service, capabilities, MOQ, lead time…"
             {...register("description")} />
         </Box>
       </Grid>
@@ -174,9 +185,9 @@ function ServiceFormCard({
           fontWeight="600" onClick={onCancel} type="button">
           Cancel
         </Button>
-        <Button size="sm" h="34px" bg="#1563B2" color="white" borderRadius="8px"
+        <Button size="sm" h="34px" bg="#0F6E56" color="white" borderRadius="8px"
           fontWeight="700" loading={isSubmitting} type="submit"
-          _hover={{ bg: "#1252A0" }}>
+          _hover={{ bg: "#0a5240" }}>
           Save service
         </Button>
       </Box>
@@ -188,11 +199,13 @@ function ServiceFormCard({
 
 function ServiceCard({
   service,
+  categoryName,
   onEdit,
   onToggle,
   onDelete,
 }: {
   service: PartnerService
+  categoryName?: string
   onEdit: (s: PartnerService) => void
   onToggle: (s: PartnerService) => void
   onDelete: (s: PartnerService) => void
@@ -202,8 +215,13 @@ function ServiceCard({
     <Box {...CARD} opacity={service.isActive ? 1 : 0.6} transition="opacity 0.15s">
       <Box px={5} py={4} display="flex" alignItems="flex-start" justifyContent="space-between" gap={4}>
         <Box flex="1" minW={0}>
-          <Box display="flex" alignItems="center" gap={2} mb={1}>
+          <Box display="flex" alignItems="center" gap={2} mb={1} flexWrap="wrap">
             <Text fontSize="0.9375rem" fontWeight="700" color="#0D1B2E">{service.title}</Text>
+            {categoryName && (
+              <Badge bg="#EFF2F8" color="#374151" rounded="full" px={2} py="1px" fontSize="0.65rem" fontWeight="700">
+                {categoryName}
+              </Badge>
+            )}
             {!service.isActive && (
               <Badge bg="#EFF2F8" color="#64748B" rounded="full" px={2} py="1px" fontSize="0.65rem" fontWeight="700">
                 Hidden
@@ -211,7 +229,7 @@ function ServiceCard({
             )}
           </Box>
           {priceStr && (
-            <Text fontSize="0.875rem" color="#1563B2" fontWeight="600" mb={1}>{priceStr}</Text>
+            <Text fontSize="0.875rem" color="#0F6E56" fontWeight="600" mb={1}>{priceStr}</Text>
           )}
           {service.description && (
             <Text fontSize="0.8125rem" color="#64748B" lineHeight="1.6" mt={1}>
@@ -222,7 +240,7 @@ function ServiceCard({
         <Box display="flex" gap={1} flexShrink={0}>
           <Box as="button" type="button" w="30px" h="30px" borderRadius="7px" bg="#F8F9FC"
             border="1px solid #D8DCE8" display="flex" alignItems="center" justifyContent="center"
-            cursor="pointer" color="#64748B" _hover={{ bg: "#EFF6FF", borderColor: "#BFDBFE", color: "#1563B2" }}
+            cursor="pointer" color="#64748B" _hover={{ bg: "#F0FAF5", borderColor: "#A7D7C5", color: "#0F6E56" }}
             onClick={() => onEdit(service)} title="Edit">
             <LuPencil size={13} />
           </Box>
@@ -334,8 +352,8 @@ function DocumentsSection() {
             accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
             onChange={handleFileSelect}
           />
-          <Button size="xs" h="28px" px={3} borderRadius="7px" bg="#1563B2" color="white"
-            fontSize="0.75rem" fontWeight="700" _hover={{ bg: "#1252A0" }}
+          <Button size="xs" h="28px" px={3} borderRadius="7px" bg="#0F6E56" color="white"
+            fontSize="0.75rem" fontWeight="700" _hover={{ bg: "#0a5240" }}
             loading={uploading} onClick={() => fileRef.current?.click()}>
             <LuUpload size={12} /> Upload
           </Button>
@@ -368,7 +386,7 @@ function DocumentsSection() {
               <Box key={doc.id} display="flex" alignItems="center" gap={3} p={3}
                 bg="#FAFBFD" border="1px solid #EFF1F6" borderRadius="10px"
                 _hover={{ borderColor: "#D8DCE8" }} transition="border-color 0.1s">
-                <Box flexShrink={0} color="#1563B2"><LuFileText size={20} /></Box>
+                <Box flexShrink={0} color="#0F6E56"><LuFileText size={20} /></Box>
                 <Box flex="1" minW={0}>
                   <Text fontSize="0.875rem" fontWeight="600" color="#0D1B2E"
                     overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
@@ -384,7 +402,7 @@ function DocumentsSection() {
                 <Box display="flex" gap={1}>
                   <Box as="button" type="button" w="30px" h="30px" borderRadius="7px" bg="white"
                     border="1px solid #D8DCE8" display="flex" alignItems="center" justifyContent="center"
-                    cursor="pointer" color="#1563B2" _hover={{ bg: "#EFF6FF", borderColor: "#BFDBFE" }}
+                    cursor="pointer" color="#0F6E56" _hover={{ bg: "#F0FAF5", borderColor: "#A7D7C5" }}
                     onClick={() => handleDownload(doc)} title="Download">
                     <LuDownload size={13} />
                   </Box>
@@ -408,15 +426,28 @@ function DocumentsSection() {
 
 export default function PartnerServicesPage() {
   const [services, setServices] = useState<PartnerService[]>([])
+  const [profile, setProfile] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
   const [editingService, setEditingService] = useState<PartnerService | null>(null)
   const [err, setErr] = useState<string | null>(null)
 
+  const categoryNameById = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const cat of profile?.categories ?? []) map.set(cat.id, cat.name)
+    return map
+  }, [profile?.categories])
+
   const load = useCallback(() => {
     setLoading(true)
-    api.get<PartnerService[]>("/api/partner-services/me?includeInactive=true")
-      .then(setServices)
+    Promise.all([
+      api.get<PartnerService[]>("/api/partner-services/me?includeInactive=true"),
+      getMe(),
+    ])
+      .then(([svc, me]) => {
+        setServices(svc)
+        setProfile(me)
+      })
       .catch(() => setServices([]))
       .finally(() => setLoading(false))
   }, [])
@@ -425,6 +456,7 @@ export default function PartnerServicesPage() {
 
   async function handleAdd(data: ServiceForm) {
     await api.post("/api/partner-services", {
+      categoryId: data.categoryId,
       title: data.title,
       description: data.description || null,
       priceFrom: data.priceFrom ? Number(data.priceFrom) : null,
@@ -439,6 +471,7 @@ export default function PartnerServicesPage() {
   async function handleEdit(data: ServiceForm) {
     if (!editingService) return
     await api.put(`/api/partner-services/${editingService.id}`, {
+      categoryId: data.categoryId,
       title: data.title,
       description: data.description || null,
       priceFrom: data.priceFrom ? Number(data.priceFrom) : null,
@@ -486,8 +519,8 @@ export default function PartnerServicesPage() {
               Services ({services.filter((s) => s.isActive).length} active)
             </Text>
             {!showAdd && !editingService && (
-              <Button size="sm" h="32px" px={3.5} bg="#1563B2" color="white" borderRadius="8px"
-                fontWeight="700" fontSize="0.8rem" _hover={{ bg: "#1252A0" }}
+              <Button size="sm" h="32px" px={3.5} bg="#0F6E56" color="white" borderRadius="8px"
+                fontWeight="700" fontSize="0.8rem" _hover={{ bg: "#0a5240" }}
                 onClick={() => setShowAdd(true)} display="flex" gap={1.5}>
                 <LuPlus size={13} /> Add service
               </Button>
@@ -497,6 +530,7 @@ export default function PartnerServicesPage() {
           {/* Add form */}
           {showAdd && (
             <ServiceFormCard
+              categories={profile?.categories ?? []}
               onSave={handleAdd}
               onCancel={() => setShowAdd(false)}
             />
@@ -518,10 +552,10 @@ export default function PartnerServicesPage() {
                 No services listed yet
               </Text>
               <Text fontSize="0.875rem" color="#8A96A8" maxW="360px" mx="auto" lineHeight="1.6" mb={5}>
-                Add your manufacturing and service capabilities so buyers can find and contact you.
+                Add your digital service capabilities so clients can find and work with you through Co-Helper.
               </Text>
-              <Button size="sm" h="36px" px={4} bg="#1563B2" color="white" borderRadius="8px"
-                fontWeight="700" _hover={{ bg: "#1252A0" }} onClick={() => setShowAdd(true)}>
+              <Button size="sm" h="36px" px={4} bg="#0F6E56" color="white" borderRadius="8px"
+                fontWeight="700" _hover={{ bg: "#0a5240" }} onClick={() => setShowAdd(true)}>
                 <LuPlus size={14} /> Add your first service
               </Button>
             </Box>
@@ -532,7 +566,9 @@ export default function PartnerServicesPage() {
             editingService?.id === service.id ? (
               <ServiceFormCard
                 key={service.id}
+                categories={profile?.categories ?? []}
                 initial={{
+                  categoryId: service.categoryId ?? profile?.categories[0]?.id ?? "",
                   title: service.title,
                   description: service.description ?? "",
                   priceFrom: service.priceFrom?.toString() ?? "",
@@ -547,6 +583,7 @@ export default function PartnerServicesPage() {
               <ServiceCard
                 key={service.id}
                 service={service}
+                categoryName={service.categoryId ? categoryNameById.get(service.categoryId) : undefined}
                 onEdit={setEditingService}
                 onToggle={handleToggle}
                 onDelete={handleDelete}

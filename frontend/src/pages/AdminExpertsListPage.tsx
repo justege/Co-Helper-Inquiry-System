@@ -4,11 +4,11 @@ import {
   Box,
   Button,
   Grid,
-  Input,
   Spinner,
   Stack,
   Text,
 } from "@chakra-ui/react"
+import { FormInput } from "@/components/ui/form-controls"
 import {
   LuArrowRight,
   LuRefreshCw,
@@ -24,7 +24,6 @@ import {
   APP_BORDER,
   APP_BG_SUBTLE,
   APP_CARD,
-  APP_INPUT_STYLE,
   APP_INK,
   APP_LABEL,
   APP_MUTED,
@@ -107,8 +106,7 @@ export default function AdminExpertsListPage() {
             <Box position="absolute" left={3} top="50%" transform="translateY(-50%)" color={APP_LABEL} zIndex={1}>
               <LuSearch size={14} />
             </Box>
-            <Input
-              {...APP_INPUT_STYLE}
+            <FormInput
               pl={9}
               placeholder="Search by name, company, category…"
               value={search}

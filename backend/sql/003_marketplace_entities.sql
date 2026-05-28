@@ -76,7 +76,7 @@ END $$;
 CREATE TABLE IF NOT EXISTS expert_profiles (
   user_id        UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
   bio            TEXT,
-  location_city  TEXT NOT NULL DEFAULT 'Istanbul',
+  location_city  TEXT NOT NULL DEFAULT 'Remote',
   capacity_notes TEXT,
   is_available   BOOLEAN NOT NULL DEFAULT TRUE
 );

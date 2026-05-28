@@ -1,19 +1,9 @@
 import { Box, Text } from "@chakra-ui/react"
+import { FORM_INPUT_PROPS_LG } from "@/components/ui/form-controls"
 
 export const authInputProps = {
-  size: "lg" as const,
-  h: "46px",
-  rounded: "10px",
-  bg: "white",
-  borderColor: "#D8DCE8",
-  fontSize: "0.9375rem",
-  fontWeight: "500",
-  _placeholder: { color: "#B8C0D0" },
-  _focusVisible: {
-    bg: "white",
-    borderColor: "#1563B2",
-    boxShadow: "0 0 0 3px rgba(21,99,178,0.15)",
-  },
+  ...FORM_INPUT_PROPS_LG,
+  fontWeight: "500" as const,
 }
 
 export const authPrimaryButtonProps = {
@@ -23,10 +13,10 @@ export const authPrimaryButtonProps = {
   rounded: "10px",
   fontWeight: "700",
   fontSize: "0.9375rem",
-  bg: "#1563B2",
+  bg: "#0F6E56",
   color: "white",
   letterSpacing: "0.01em",
-  _hover: { bg: "#1252A0", transform: "translateY(-1px)" },
+  _hover: { bg: "#0a5240", transform: "translateY(-1px)" },
   _active: { transform: "translateY(0)" },
   transition: "all 0.15s",
 }
@@ -43,7 +33,7 @@ export function authFieldLabel(text: string, required = false) {
     >
       {text}
       {required && (
-        <Box as="span" color="#1563B2" ml={0.5}>*</Box>
+        <Box as="span" color="#0F6E56" ml={0.5}>*</Box>
       )}
     </Text>
   )

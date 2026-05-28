@@ -1,6 +1,12 @@
 import { auth } from "./firebase";
+import { getApiBaseUrl } from "./apiBase";
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const BASE_URL = getApiBaseUrl();
+
+async function parseError(res: Response): Promise<string> {
+  const body = await res.json().catch(() => ({}));
+  return (body as { error?: string }).error ?? `HTTP ${res.status}`;
+}
 
 async function getAuthHeaders(): Promise<HeadersInit> {
   const user = auth?.currentUser ?? null;
@@ -14,10 +20,28 @@ async function getAuthHeaders(): Promise<HeadersInit> {
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = await getAuthHeaders();
   const res = await fetch(`${BASE_URL}${path}`, { ...init, headers });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
-  }
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json() as Promise<T>;
+}
+
+export async function publicGet<T>(path: string): Promise<T> {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    headers: { "Content-Type": "application/json" },
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json() as Promise<T>;
+}
+
+export async function postWithToken<T>(path: string, body: unknown, token: string): Promise<T> {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await parseError(res));
   return res.json() as Promise<T>;
 }
 

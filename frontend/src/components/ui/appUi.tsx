@@ -2,15 +2,16 @@ import { Box, Button, Grid, Spinner, Text } from "@chakra-ui/react"
 import { Link } from "react-router-dom"
 import { LuArrowRight } from "react-icons/lu"
 
-// ── Design tokens ─────────────────────────────────────────────────────────────
+// ── Design tokens — Co-Helper brand DNA ──────────────────────────────────────
 
-export const APP_INK = "#0D1B2E"
-export const APP_MUTED = "#64748B"
+export const APP_INK = "#0E1B17"          // Trust Green near-black
+export const APP_MUTED = "#6B7280"
 export const APP_LABEL = "#8A96A8"
-export const APP_BORDER = "#D8DCE8"
+export const APP_BORDER = "#E5E7EB"
 export const APP_SURFACE = "#FFFFFF"
-export const APP_BG_SUBTLE = "#F8F9FC"
-export const APP_ACCENT = "#1B3A6B"
+export const APP_BG_SUBTLE = "#F5F7FA"
+export const APP_ACCENT = "#0F6E56"       // Trust Green
+export const APP_AMBER = "#D8FF86"        // Action Lime — CTA accents
 
 export const APP_CARD = {
   bg: APP_SURFACE,
@@ -20,13 +21,16 @@ export const APP_CARD = {
 }
 
 export const APP_INPUT_STYLE = {
+  variant: "outline" as const,
+  size: "md" as const,
   bg: APP_SURFACE,
   borderColor: APP_BORDER,
   borderRadius: "8px",
   fontSize: "0.875rem",
+  color: APP_INK,
   _focusVisible: {
     borderColor: APP_ACCENT,
-    boxShadow: "0 0 0 3px rgba(27,58,107,0.12)",
+    boxShadow: "0 0 0 3px rgba(15,110,86,0.12)",
   },
   _placeholder: { color: APP_LABEL },
 }
@@ -37,7 +41,7 @@ export const APP_BTN_PRIMARY = {
   fontWeight: "600" as const,
   fontSize: "0.875rem",
   borderRadius: "8px",
-  _hover: { bg: "#152E52" },
+  _hover: { bg: "#0a5240" },
 }
 
 export const APP_BTN_GHOST = {
@@ -140,7 +144,7 @@ export function AppFilterChip({
       border={`1px solid ${active ? APP_ACCENT : APP_BORDER}`}
       cursor="pointer"
       transition="all 0.1s"
-      _hover={{ borderColor: APP_ACCENT, color: active ? APP_SURFACE : APP_INK }}
+      _hover={{ borderColor: APP_ACCENT, color: active ? APP_SURFACE : APP_INK, bg: active ? APP_ACCENT : "#F5FBF8" }}
       whiteSpace="nowrap"
     >
       {children}

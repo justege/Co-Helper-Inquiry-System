@@ -16,7 +16,7 @@ const INTEGRATIONS = [
     category: "Communication",
     items: [
       { name: "Email notifications", status: "Available", detail: "Inquiry updates, bid alerts, and milestone notifications." },
-      { name: "Slack", status: "Available", detail: "Channel alerts for procurement teams." },
+      { name: "Slack", status: "Available", detail: "Channel alerts for project updates and milestone notifications." },
       { name: "Microsoft Teams", status: "Roadmap", detail: "Planned for Q2 2026." },
     ],
   },
@@ -65,13 +65,13 @@ export default function IntegrationsPage() {
       <PageHero
         label="Platform"
         title="Integrations"
-        subtitle="Connect OutsourceSoft to your existing procurement stack — from ERP systems to team communication tools."
+        subtitle="Connect Co-Helper to your existing tools — from project management to team communication."
       />
 
       <ContentSection>
         <Grid templateColumns={{ base: "1fr", lg: "1fr 1fr" }} gap={6} mb={12}>
-          <InfoCard title="Built for procurement teams">
-            Integrations reduce manual data entry and keep your sourcing workflow inside the tools your team already uses.
+          <InfoCard title="Built for growing teams">
+            Integrations reduce manual data entry and keep your outsourcing workflow inside the tools your team already uses.
           </InfoCard>
           <InfoCard title="Enterprise-ready">
             API access, webhooks, and SSO are available on Enterprise plans. Contact sales for implementation support.
@@ -110,7 +110,7 @@ export default function IntegrationsPage() {
           alignItems={{ md: "center" }} justifyContent="space-between" gap={6}>
           <Box>
             <Heading fontSize="1.0625rem" fontWeight="600" color={INK} mb={2}>Need a custom integration?</Heading>
-            <Text fontSize="0.875rem" color={MUTED}>Our enterprise team can help connect OutsourceSoft to your internal systems.</Text>
+            <Text fontSize="0.875rem" color={MUTED}>Our enterprise team can help connect Co-Helper to your internal systems.</Text>
           </Box>
           <CTA to="/contact" variant="primary">Contact sales</CTA>
         </Box>

@@ -5,48 +5,48 @@ import { INK, MUTED, RULE, SURFACE } from "@/components/marketing/tokens"
 
 const PLANS = [
   {
-    name: "Buyer",
+    name: "Client",
     price: "Free",
-    period: "No commission",
-    description: "For procurement teams sourcing products and services from Turkey.",
+    period: "Pay per project only",
+    description: "For teams outsourcing software development, MVPs, and digital builds.",
     features: [
-      "Unlimited inquiries",
-      "Side-by-side offer comparison",
-      "Document management",
-      "Production & shipment tracking",
+      "Unlimited project briefs",
+      "Dedicated PM on every build",
+      "Fixed quote before work starts",
+      "Escrow-protected milestones",
       "Multi-user team access",
     ],
-    cta: { to: "/register", label: "Create buyer account", variant: "primary" as const },
+    cta: { to: "/register", label: "Post a project", variant: "primary" as const },
     highlighted: true,
   },
   {
-    name: "Partner",
+    name: "Specialist",
     price: "Success-based",
-    period: "Per accepted order",
-    description: "For verified manufacturers and service providers in Turkey.",
+    period: "Per completed project",
+    description: "For verified developers, mobile engineers, and automation specialists.",
     features: [
-      "Qualified inquiry briefs",
-      "Structured offer submission",
-      "Verified partner badge",
+      "Pre-scoped dev briefs in your stack",
+      "Co-Helper PM handles client communication",
+      "Verified specialist badge",
       "Service catalogue publishing",
-      "Client communication tools",
+      "No subscription required to start",
     ],
-    cta: { to: "/partners", label: "Apply as partner", variant: "outline" as const },
+    cta: { to: "/partners", label: "Apply as developer", variant: "outline" as const },
     highlighted: false,
   },
   {
     name: "Enterprise",
     price: "Custom",
     period: "Annual contract",
-    description: "For large procurement organisations with volume requirements.",
+    description: "For organisations with ongoing dev capacity needs and volume requirements.",
     features: [
       "Dedicated account manager",
       "Custom approval workflows",
       "API access & integrations",
-      "Priority partner matching",
-      "SLA-backed support",
+      "Priority developer matching",
+      "SLA-backed delivery guarantees",
     ],
-    cta: { to: "/contact", label: "Contact sales", variant: "outline" as const },
+    cta: { to: "/contact", label: "Book a callback", variant: "outline" as const },
     highlighted: false,
   },
 ]
@@ -57,7 +57,7 @@ export default function PricingPage() {
       <PageHero
         label="Platform"
         title="Pricing"
-        subtitle="Transparent pricing with no hidden fees. Buyers use the platform free of charge; partners pay only on successful orders."
+        subtitle="No client platform fees. Every project gets a fixed quote upfront — you pay only for scoped work, protected by escrow."
       />
 
       <ContentSection>
@@ -97,20 +97,20 @@ export default function PricingPage() {
           <Heading fontSize="1.0625rem" fontWeight="600" color={INK} mb={4}>Frequently asked questions</Heading>
           <Grid templateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={8}>
             <Box>
-              <Text fontSize="0.875rem" fontWeight="600" color={INK} mb={2}>Is there a fee for buyers?</Text>
-              <Text fontSize="0.875rem" color={MUTED} lineHeight="1.65">No. Buyers can post inquiries, compare offers, and manage orders at no cost.</Text>
+              <Text fontSize="0.875rem" fontWeight="600" color={INK} mb={2}>Is there a fee for clients?</Text>
+              <Text fontSize="0.875rem" color={MUTED} lineHeight="1.65">No. Clients post projects, receive fixed quotes, and pay only for approved deliverables — with no platform commission.</Text>
             </Box>
             <Box>
-              <Text fontSize="0.875rem" fontWeight="600" color={INK} mb={2}>How do partners pay?</Text>
-              <Text fontSize="0.875rem" color={MUTED} lineHeight="1.65">Partners pay a success fee only when a buyer accepts their offer. No subscription required to start.</Text>
+              <Text fontSize="0.875rem" fontWeight="600" color={INK} mb={2}>How is pricing determined?</Text>
+              <Text fontSize="0.875rem" color={MUTED} lineHeight="1.65">Your PM scopes the work and returns a fixed quote with a committed delivery date — before any development starts.</Text>
+            </Box>
+            <Box>
+              <Text fontSize="0.875rem" fontWeight="600" color={INK} mb={2}>Do I get a project manager?</Text>
+              <Text fontSize="0.875rem" color={MUTED} lineHeight="1.65">Yes. Every project is assigned a dedicated Co-Helper PM who coordinates developers and keeps you updated through one platform.</Text>
             </Box>
             <Box>
               <Text fontSize="0.875rem" fontWeight="600" color={INK} mb={2}>Can I upgrade to Enterprise later?</Text>
-              <Text fontSize="0.875rem" color={MUTED} lineHeight="1.65">Yes. Contact our sales team when your procurement volume or integration needs grow.</Text>
-            </Box>
-            <Box>
-              <Text fontSize="0.875rem" fontWeight="600" color={INK} mb={2}>Are payment processing fees included?</Text>
-              <Text fontSize="0.875rem" color={MUTED} lineHeight="1.65">Payment between buyer and partner is handled directly. OutsourceSoft does not add payment processing markups.</Text>
+              <Text fontSize="0.875rem" color={MUTED} lineHeight="1.65">Yes. Contact our team when your dev volume, SLA requirements, or integration needs grow.</Text>
             </Box>
           </Grid>
         </Box>

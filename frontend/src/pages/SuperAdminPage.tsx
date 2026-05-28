@@ -5,14 +5,12 @@ import {
   Box,
   Button,
   Grid,
-  Input,
-  NativeSelect,
   Spinner,
   Stack,
   Tabs,
   Text,
-  Textarea,
 } from "@chakra-ui/react"
+import { FormInput, FormNativeSelect, FormTextarea } from "@/components/ui/form-controls"
 import {
   LuPlus,
   LuPencil,
@@ -52,7 +50,6 @@ import {
   APP_BTN_GHOST,
   APP_BTN_PRIMARY,
   APP_CARD,
-  APP_INPUT_STYLE,
   APP_INK,
   APP_LABEL,
   APP_MUTED,
@@ -62,7 +59,6 @@ import {
 } from "@/components/ui/appUi"
 
 const CARD = APP_CARD
-const INPUT_STYLE = APP_INPUT_STYLE
 const BTN_PRIMARY = APP_BTN_PRIMARY
 const BTN_GHOST = APP_BTN_GHOST
 
@@ -177,7 +173,7 @@ export default function SuperAdminPage() {
                 color="#64748B"
                 borderBottom="2px solid transparent"
                 _selected={{ color: APP_ACCENT, borderBottomColor: APP_ACCENT }}
-                _hover={{ color: "#1B3A6B" }}
+                _hover={{ color: "#0E1B17" }}
                 transition="all 0.12s"
                 whiteSpace="nowrap"
               >
@@ -280,7 +276,7 @@ function CategoriesTab({ isSuperadmin }: { isSuperadmin: boolean }) {
         <Box display="flex" gap={2}>
           {(["all", "service", "tool_sourcing"] as const).map((t) => (
             <AppFilterChip key={t} active={typeFilter === t} onClick={() => setTypeFilter(t)}>
-              {t === "all" ? "All" : t === "service" ? "Services" : "Tool Sourcing"}
+              {t === "all" ? "All" : t === "service" ? "Ongoing Services" : "Fixed Projects"}
             </AppFilterChip>
           ))}
         </Box>
@@ -314,7 +310,7 @@ function CategoriesTab({ isSuperadmin }: { isSuperadmin: boolean }) {
               <Grid templateColumns={isSuperadmin ? "2fr 1fr 3fr 100px" : "2fr 1fr 3fr"} gap={4} alignItems="center">
                 <Text fontSize="0.875rem" fontWeight="600" color="#0D1B2E">{cat.name}</Text>
                 <Text fontSize="0.8125rem" color={APP_MUTED} fontWeight="500">
-                  {cat.type === "service" ? "Service" : "Tool Sourcing"}
+                  {cat.type === "service" ? "Ongoing Service" : "Fixed Project"}
                 </Text>
                 <Text fontSize="0.8125rem" color="#64748B" lineClamp={1}>{cat.description ?? "—"}</Text>
                 {isSuperadmin && (
@@ -340,26 +336,22 @@ function CategoriesTab({ isSuperadmin }: { isSuperadmin: boolean }) {
             <Grid templateColumns={{ base: "1fr", sm: "1fr 1fr" }} gap={4}>
               <Field label="" invalid={!!errors.name} errorText={errors.name?.message}>
                 <ModalFieldLabel>Name</ModalFieldLabel>
-                <Input
-                  {...INPUT_STYLE}
+                <FormInput
                   placeholder="e.g. CNC Machining"
                   {...register("name", { required: "Name is required" })}
                 />
               </Field>
               <Box>
                 <ModalFieldLabel>Type</ModalFieldLabel>
-                <NativeSelect.Root {...INPUT_STYLE}>
-                  <NativeSelect.Field {...register("type")}>
-                    <option value="service">Service</option>
-                    <option value="tool_sourcing">Tool Sourcing</option>
-                  </NativeSelect.Field>
-                  <NativeSelect.Indicator />
-                </NativeSelect.Root>
+                <FormNativeSelect {...register("type")}>
+                  <option value="service">Service</option>
+                  <option value="tool_sourcing">Fixed Project</option>
+                </FormNativeSelect>
               </Box>
             </Grid>
             <Box>
               <ModalFieldLabel>Description (optional)</ModalFieldLabel>
-              <Textarea {...INPUT_STYLE} placeholder="Brief description of this category" rows={3} {...register("description")} />
+              <FormTextarea placeholder="Brief description of this category" rows={3} {...register("description")} />
             </Box>
             {errors.root && <Text fontSize="sm" color="#B91C1C">{errors.root.message}</Text>}
           </Stack>
@@ -476,21 +468,19 @@ function InquiriesTab() {
                   </Text>
                   <AppStatusText label={INQUIRY_STATUS_LABELS[inq.status] ?? formatStatusLabel(inq.status)} />
                   <Box onClick={(e) => e.stopPropagation()}>
-                    <NativeSelect.Root size="sm" borderRadius="7px" borderColor="#D8DCE8" bg="white" fontSize="0.8rem">
-                      <NativeSelect.Field
-                        value={inq.status}
-                        onChange={(e) => handleStatusChange(inq.id, e.target.value)}
-                        opacity={updatingId === inq.id ? 0.5 : 1}
-                        style={{ pointerEvents: updatingId === inq.id ? "none" : "auto" }}
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="matching">Matching</option>
-                        <option value="offered">Offered</option>
-                        <option value="converted">Converted</option>
-                        <option value="cancelled">Cancelled</option>
-                      </NativeSelect.Field>
-                      <NativeSelect.Indicator />
-                    </NativeSelect.Root>
+                    <FormNativeSelect
+                      selectSize="sm"
+                      value={inq.status}
+                      onChange={(e) => handleStatusChange(inq.id, e.target.value)}
+                      rootProps={{ opacity: updatingId === inq.id ? 0.5 : 1 }}
+                      style={{ pointerEvents: updatingId === inq.id ? "none" : "auto" }}
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="matching">Matching</option>
+                      <option value="offered">Offered</option>
+                      <option value="converted">Converted</option>
+                      <option value="cancelled">Cancelled</option>
+                    </FormNativeSelect>
                   </Box>
                   <Box
                     as="button"
@@ -672,8 +662,7 @@ function ExpertsTab({ isSuperadmin }: { isSuperadmin: boolean }) {
               <Grid templateColumns={{ base: "1fr", sm: "140px 1fr" }} gap={4}>
                 <Field label="" invalid={!!scoreErrors.score} errorText={scoreErrors.score?.message}>
                   <ModalFieldLabel>Score (0 – 10)</ModalFieldLabel>
-                  <Input
-                    {...INPUT_STYLE}
+                  <FormInput
                     type="number"
                     min={0} max={10} step={0.1}
                     placeholder="e.g. 8.5"
@@ -686,7 +675,7 @@ function ExpertsTab({ isSuperadmin }: { isSuperadmin: boolean }) {
                 </Field>
                 <Box>
                   <ModalFieldLabel>Internal notes (optional)</ModalFieldLabel>
-                  <Input {...INPUT_STYLE} placeholder="Scoring context or remarks" {...registerScore("notes")} />
+                  <FormInput placeholder="Scoring context or remarks" {...registerScore("notes")} />
                 </Box>
               </Grid>
               {scoreErrors.root && <Text fontSize="sm" color="#B91C1C">{scoreErrors.root.message}</Text>}
@@ -822,20 +811,18 @@ function UsersTab({ isSuperadmin }: { isSuperadmin: boolean }) {
                     {new Date(u.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "2-digit" })}
                   </Text>
                   {isSuperadmin && (
-                    <NativeSelect.Root size="sm" borderRadius="7px" borderColor={APP_BORDER} bg="white" fontSize="0.8rem">
-                      <NativeSelect.Field
-                        value={u.role}
-                        onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                        opacity={updatingId === u.id ? 0.5 : 1}
-                        style={{ fontWeight: 500, pointerEvents: updatingId === u.id ? "none" : "auto" }}
-                      >
-                        <option value="client">Client</option>
-                        <option value="expert">Expert</option>
-                        <option value="admin">Admin</option>
-                        <option value="superadmin">Superadmin</option>
-                      </NativeSelect.Field>
-                      <NativeSelect.Indicator />
-                    </NativeSelect.Root>
+                    <FormNativeSelect
+                      selectSize="sm"
+                      value={u.role}
+                      onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                      rootProps={{ opacity: updatingId === u.id ? 0.5 : 1 }}
+                      style={{ fontWeight: 500, pointerEvents: updatingId === u.id ? "none" : "auto" }}
+                    >
+                      <option value="client">Client</option>
+                      <option value="expert">Expert</option>
+                      <option value="admin">Admin</option>
+                      <option value="superadmin">Superadmin</option>
+                    </FormNativeSelect>
                   )}
                 </Grid>
               </Box>

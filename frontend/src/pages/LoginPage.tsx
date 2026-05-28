@@ -1,13 +1,14 @@
 import { useNavigate, Link } from "react-router-dom"
-import { Box, Button, Input, Text, VStack } from "@chakra-ui/react"
+import { Box, Button, Text, VStack } from "@chakra-ui/react"
 import { useForm } from "react-hook-form"
 import { Field } from "@/components/ui/field"
 import { PasswordInput } from "@/components/ui/password-input"
+import { FormInput, formInvalidBorder } from "@/components/ui/form-controls"
 import { AuthShell } from "@/components/auth/AuthShell"
 import { AuthDivider, SocialAuthButtons } from "@/components/auth/SocialAuthButtons"
 import { authFieldLabel, authInputProps, authPrimaryButtonProps } from "@/components/auth/authStyles"
 import { useAuthContext } from "../components/auth/AuthContext"
-import izmirPng from "@/assets/izmir.png"
+import loginPng from "@/assets/login.png"
 
 type LoginFields = { email: string; password: string }
 
@@ -43,15 +44,15 @@ export default function LoginPage() {
   return (
     <AuthShell
       title="Sign in"
-      subtitle="Welcome back to OutsourceSoft."
+      subtitle="Welcome back to Co-Helper."
       promo={{
-        tagline: "Source smarter from Turkey's finest manufacturers.",
-        imageSrc: izmirPng,
+        tagline: "Outsource digital work with a project manager who delivers.",
+        imageSrc: loginPng,
       }}
       footer={
         <>
           No account?{" "}
-          <Link to="/register" style={{ color: "#1563B2", fontWeight: "700" }}>
+          <Link to="/register" style={{ color: "#0F6E56", fontWeight: "700" }}>
             Create one
           </Link>
         </>
@@ -65,8 +66,11 @@ export default function LoginPage() {
 
       <VStack as="form" onSubmit={handleSubmit(onSubmit)} gap={4} align="stretch">
         <Field label={authFieldLabel("Email", true)} errorText={errors.email?.message} invalid={!!errors.email}>
-          <Input type="email" autoComplete="email" {...authInputProps}
-            borderColor={errors.email ? "#FECACA" : authInputProps.borderColor}
+          <FormInput
+            type="email"
+            autoComplete="email"
+            {...authInputProps}
+            {...formInvalidBorder(!!errors.email)}
             {...register("email", {
               required: "Email is required",
               pattern: { value: /\S+@\S+\.\S+/, message: "Enter a valid email" },
@@ -75,8 +79,10 @@ export default function LoginPage() {
         </Field>
 
         <Field label={authFieldLabel("Password", true)} errorText={errors.password?.message} invalid={!!errors.password}>
-          <PasswordInput autoComplete="current-password" {...authInputProps}
-            borderColor={errors.password ? "#FECACA" : authInputProps.borderColor}
+          <PasswordInput
+            autoComplete="current-password"
+            {...authInputProps}
+            {...formInvalidBorder(!!errors.password)}
             {...register("password", { required: "Password is required" })}
           />
         </Field>

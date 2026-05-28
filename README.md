@@ -1,8 +1,8 @@
-# OutsourceSoft
+# Co-Helper
 
-**B2B procurement platform connecting global buyers with verified Turkish manufacturers and service partners.**
+**Trusted platform for outsourcing digital services worldwide — with a dedicated project manager on every project.**
 
-OutsourceSoft manages the full sourcing workflow — from inquiry to delivery — with structured offers, document management, partner profiles, and real-time status tracking. Buyers post requirements; verified partners submit itemised bids; admins orchestrate matching, offers, and escalation.
+Co-Helper connects businesses with vetted specialists in software development, social media, e-commerce, design, and more. Every project gets a dedicated project manager who coordinates delivery — clients never need to speak to developers directly. The platform manages the full workflow from project brief to final delivery, with milestone tracking, document management, and real-time status updates.
 
 Repository: [github.com/justege/outsourceSoft](https://github.com/justege/outsourceSoft)
 
@@ -30,27 +30,27 @@ Repository: [github.com/justege/outsourceSoft](https://github.com/justege/outsou
 
 ## Features
 
-### For buyers (clients)
+### For clients (clients)
 
-- Post inquiries with category, urgency, quantity, and deadline
-- Attach specification documents (PDFs, drawings)
-- Receive and compare structured partner offers side by side
-- Accept or decline offers; track inquiry status through delivery
+- Post project briefs with category, urgency, scope, and deadline
+- Attach reference documents and specifications
+- Work with a dedicated project manager — no direct specialist coordination needed
+- Track milestones and deliverables through to completion
 - Team invitations and company contact preferences
 
-### For partners (experts)
+### For specialists (experts)
 
-- Verified partner profile with bio, location, and availability
+- Verified specialist profile with bio, location, and availability
 - Publish a **service catalogue** with pricing ranges and units
-- Upload **company documents** (brochures, certifications, portfolios, price lists)
-- Submit expert offers on matched inquiries
+- Upload **portfolio documents** (brochures, certifications, portfolios, price lists)
+- Deliver projects coordinated through assigned project managers
 - Category-based matching via admin-assigned specialisations
 
-### For administrators
+### For administrators & project managers
 
-- **Inquiry dashboard** — filter, assign experts, update status, add internal notes
-- **Partner management** — view profiles, services, documents, and scoring
-- **Offer builder** — compose project offers from expert bids and send to clients
+- **Project dashboard** — filter, assign specialists, update status, add internal notes
+- **Specialist management** — view profiles, services, documents, and scoring
+- **Offer builder** — compose project proposals from specialist work and send to clients
 - **Control panel** — user roles, categories, and platform oversight (superadmin)
 
 ### Marketing site
@@ -241,7 +241,7 @@ CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `VITE_API_URL` | Yes | Backend API base URL |
+| `VITE_API_URL` | No | Backend API base URL (default: `http://localhost:8000` in dev; empty = same-origin in production) |
 | `VITE_FIREBASE_API_KEY` | Yes | Firebase web API key |
 | `VITE_FIREBASE_AUTH_DOMAIN` | Yes | Firebase auth domain |
 | `VITE_FIREBASE_PROJECT_ID` | Yes | Firebase project ID |
@@ -476,24 +476,91 @@ pending → matching → offered → accepted → in_progress → delivered
 
 ### Key domain concepts
 
-- **Inquiry** — A buyer's sourcing request with specs, category, and urgency.
-- **Expert offer** — A partner's itemised bid on an inquiry.
-- **Project offer** — An admin-composed offer sent to the buyer (aggregates expert bids).
-- **Partner service** — A catalogue entry on a partner's public profile.
-- **Partner document** — Brochure, certificate, or portfolio file stored in Supabase Storage.
+- **Inquiry / Project** — A client's service request with specs, category, and urgency.
+- **Expert offer** — A specialist's proposal on a matched project.
+- **Project offer** — An admin-composed proposal sent to the client.
+- **Partner service** — A catalogue entry on a specialist's profile.
+- **Partner document** — Portfolio, certificate, or brochure file stored in Supabase Storage.
 
 ---
 
 ## Deployment notes
 
-### Backend
+### Railway (recommended)
+
+This repo is configured for a **single Railway service** that builds the Vite frontend and serves it from the Express API. Config lives in `railway.toml` and `nixpacks.toml`.
+
+#### 1. Create the project
+
+1. Push this repo to GitHub (if not already).
+2. In [Railway](https://railway.com/new), choose **Deploy from GitHub repo** and select the repository.
+3. Railway reads `railway.toml` at the repo root — no extra build/start configuration needed.
+
+#### 2. Set environment variables
+
+In the Railway service **Variables** tab, add:
+
+| Variable | Required | Notes |
+|----------|----------|-------|
+| `NODE_ENV` | Yes | Set to `production` |
+| `VITE_SUPABASE_URL` | Yes | Supabase project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Server-side only |
+| `FIREBASE_PROJECT_ID` | Yes | Firebase project ID |
+| `VITE_FIREBASE_API_KEY` | Yes | Embedded in frontend build |
+| `VITE_FIREBASE_AUTH_DOMAIN` | Yes | Embedded in frontend build |
+| `VITE_FIREBASE_PROJECT_ID` | Yes | Embedded in frontend build |
+| `VITE_FIREBASE_STORAGE_BUCKET` | Yes | Embedded in frontend build |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Yes | Embedded in frontend build |
+| `VITE_FIREBASE_APP_ID` | Yes | Embedded in frontend build |
+| `CORS_ALLOWED_ORIGINS` | No | Only needed for split frontend/backend deploys |
+
+`VITE_*` variables must be set **before** the build — Railway injects them at build time. Do **not** set `VITE_API_URL` for the default single-service setup; the app uses same-origin API calls in production.
+
+`RAILWAY_PUBLIC_DOMAIN` is injected automatically and added to CORS when present.
+
+#### 3. Generate a public domain
+
+**Settings → Networking → Generate Domain**. The app serves:
+
+- SPA at `/`
+- API at `/api/*`
+- Health check at `/health`
+
+#### 4. Post-deploy checklist
+
+- Run all SQL migrations on your **production Supabase** project (see [Database setup](#database-setup)).
+- Add your Railway domain to Firebase **Authentication → Settings → Authorized domains**.
+- Promote your first admin user in Supabase (see [Promote your first admin](#promote-your-first-admin)).
+
+#### Split services (optional)
+
+To deploy frontend and backend as **separate Railway services**:
+
+| Service | Root directory | Build | Start |
+|---------|----------------|-------|-------|
+| Backend | `/backend` | — | `npm start` |
+| Frontend | `/frontend` | `npm run build` | Serve `dist/` via static host |
+
+Set cross-service variables:
+
+```env
+# Frontend service
+VITE_API_URL=https://${{Backend.RAILWAY_PUBLIC_DOMAIN}}
+
+# Backend service
+CORS_ALLOWED_ORIGINS=https://${{Frontend.RAILWAY_PUBLIC_DOMAIN}}
+```
+
+---
+
+### Backend (generic hosting)
 
 - Set all `backend/.env` variables in your hosting environment.
 - Use `npm start` as the process command.
 - Ensure `CORS_ALLOWED_ORIGINS` includes your production frontend URL.
 - The service role key must remain server-side only.
 
-### Frontend
+### Frontend (generic hosting)
 
 - Set `VITE_API_URL` to your production API URL at **build time**.
 - Build with `npm run build`; serve the `frontend/dist` folder via any static host (Vercel, Netlify, Cloudflare Pages, Nginx, etc.).
@@ -548,6 +615,6 @@ Private repository. All rights reserved.
 
 ## Contact
 
-- **General:** hello@outsourcesoft.com
-- **Support:** support@outsourcesoft.com
-- **Partnerships:** partners@outsourcesoft.com
+- **General:** hello@co-helper.com
+- **Support:** support@co-helper.com
+- **Partnerships:** partners@co-helper.com

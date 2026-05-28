@@ -2,17 +2,17 @@ import { useEffect, useState } from "react"
 import { getMe, updateMe, type User } from "../api/users"
 import { getMyExpertProfile, updateMyExpertProfile } from "../api/expertProfile"
 import { api } from "../lib/api"
-import { Box, Button, Fieldset, Grid, Input, NativeSelect, Spinner, Stack, Text, Textarea } from "@chakra-ui/react"
+import { Box, Button, Fieldset, Grid, Spinner, Stack, Text } from "@chakra-ui/react"
 import { Switch } from "@/components/ui/switch"
 import { useForm } from "react-hook-form"
 import { Field } from "@/components/ui/field"
+import { FormInput, FormNativeSelect, FormTextarea } from "@/components/ui/form-controls"
 import { PageShell } from "@/components/ui/PageShell"
 import {
   APP_BG_SUBTLE,
   APP_BORDER,
   APP_BTN_PRIMARY,
   APP_CARD,
-  APP_INPUT_STYLE,
   APP_INK,
   APP_LABEL,
   APP_MUTED,
@@ -50,7 +50,7 @@ export default function ProfilePage() {
       phone: "",
       contactPref: "email",
       bio: "",
-      locationCity: "Istanbul",
+      locationCity: "Remote",
       capacityNotes: "",
       isAvailable: true,
     },
@@ -79,7 +79,7 @@ export default function ProfilePage() {
                 phone: contact.phone ?? "",
                 contactPref: contact.contactPref ?? "email",
                 bio: expertProfile.bio ?? "",
-                locationCity: expertProfile.locationCity ?? "Istanbul",
+                locationCity: expertProfile.locationCity ?? "Remote",
                 capacityNotes: expertProfile.capacityNotes ?? "",
                 isAvailable: expertProfile.isAvailable ?? true,
               })
@@ -184,18 +184,18 @@ export default function ProfilePage() {
                   <Stack gap={4}>
                     <Grid templateColumns={{ base: "1fr", sm: "1fr 1fr" }} gap={4}>
                       <Field label="First name">
-                        <Input type="text" placeholder="First name" {...APP_INPUT_STYLE} {...personalForm.register("firstName")} />
+                        <FormInput type="text" placeholder="First name" {...personalForm.register("firstName")} />
                       </Field>
                       <Field label="Last name">
-                        <Input type="text" placeholder="Last name" {...APP_INPUT_STYLE} {...personalForm.register("lastName")} />
+                        <FormInput type="text" placeholder="Last name" {...personalForm.register("lastName")} />
                       </Field>
                     </Grid>
                     <Field label="Username">
-                      <Input type="text" placeholder="Choose a username" {...APP_INPUT_STYLE} {...personalForm.register("username")} />
+                      <FormInput type="text" placeholder="Choose a username" {...personalForm.register("username")} />
                     </Field>
                     {!isExpert && (
                       <Field label="Company / organisation" helperText="Your company or factory name.">
-                        <Input type="text" placeholder="e.g. Anadolu Tekstil A.Ş." {...APP_INPUT_STYLE} {...personalForm.register("companyName")} />
+                        <FormInput type="text" placeholder="e.g. Anadolu Tekstil A.Ş." {...personalForm.register("companyName")} />
                       </Field>
                     )}
                   </Stack>
@@ -238,48 +238,42 @@ export default function ProfilePage() {
               ) : (
                 <Stack gap={4}>
                   <Field label="Company name" helperText="Your business or factory name as shown to clients and admins.">
-                    <Input
+                    <FormInput
                       type="text"
                       placeholder="e.g. Anadolu Tekstil A.Ş."
-                      {...APP_INPUT_STYLE}
                       {...personalForm.register("companyName")}
                     />
                   </Field>
 
                   <Grid templateColumns={{ base: "1fr", sm: "1fr 1fr" }} gap={4}>
                     <Field label="Phone">
-                      <Input type="tel" placeholder="+90 555 000 0000" {...APP_INPUT_STYLE} {...partnerForm.register("phone")} />
+                      <FormInput type="tel" placeholder="+1 555 000 0000" {...partnerForm.register("phone")} />
                     </Field>
                     <Field label="Preferred contact">
-                      <NativeSelect.Root {...APP_INPUT_STYLE}>
-                        <NativeSelect.Field {...partnerForm.register("contactPref")}>
-                          <option value="email">Email</option>
-                          <option value="phone">Phone</option>
-                          <option value="both">Email & phone</option>
-                        </NativeSelect.Field>
-                        <NativeSelect.Indicator />
-                      </NativeSelect.Root>
+                      <FormNativeSelect {...partnerForm.register("contactPref")}>
+                        <option value="email">Email</option>
+                        <option value="phone">Phone</option>
+                        <option value="both">Email & phone</option>
+                      </FormNativeSelect>
                     </Field>
                   </Grid>
 
                   <Field label="Location">
-                    <Input type="text" placeholder="City" {...APP_INPUT_STYLE} {...partnerForm.register("locationCity")} />
+                    <FormInput type="text" placeholder="City" {...partnerForm.register("locationCity")} />
                   </Field>
 
                   <Field label="About your company">
-                    <Textarea
+                    <FormTextarea
                       rows={4}
                       placeholder="Describe your capabilities, experience, and specialisations…"
-                      {...APP_INPUT_STYLE}
                       {...partnerForm.register("bio")}
                     />
                   </Field>
 
                   <Field label="Capacity notes" helperText="Lead times, minimum order quantities, or current availability.">
-                    <Textarea
+                    <FormTextarea
                       rows={3}
                       placeholder="e.g. 2-week lead time, MOQ 500 units…"
-                      {...APP_INPUT_STYLE}
                       {...partnerForm.register("capacityNotes")}
                     />
                   </Field>

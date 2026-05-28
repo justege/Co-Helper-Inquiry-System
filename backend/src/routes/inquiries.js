@@ -4,11 +4,9 @@ import { createSignedUploadUrl } from "../storage.js";
 import { requireAuth } from "../middleware/auth.js";
 import { attachRole } from "../middleware/requireRole.js";
 
-const router = Router();
+import { validateInquiryInput, toInquiryResponse } from "../lib/inquiryValidation.js";
 
-const URGENCIES = ["low", "medium", "high", "critical"];
-const TYPES = ["service", "tool_sourcing"];
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const router = Router();
 
 function toProjectOffer(po, { includePartners = false } = {}) {
   const base = {
@@ -46,80 +44,43 @@ function toProjectOffer(po, { includePartners = false } = {}) {
 }
 
 function toInquiry(r, { includePartners = false } = {}) {
+  const base = toInquiryResponse(r);
   return {
-    id: r.id,
-    clientId: r.client_id,
-    categoryId: r.category_id,
-    category: r.categories
-      ? { id: r.categories.id, name: r.categories.name, type: r.categories.type }
-      : undefined,
-    title: r.title,
-    description: r.description,
-    type: r.type,
-    urgency: r.urgency,
-    targetStartDate: r.target_start_date ?? null,
-    targetEndDate: r.target_end_date ?? null,
-    estimatedQuantity: r.estimated_quantity ?? null,
-    status: r.status,
+    ...base,
     projectOffers: r.project_offers
       ? r.project_offers.map((po) => toProjectOffer(po, { includePartners }))
       : undefined,
-    createdAt: r.created_at,
-    updatedAt: r.updated_at,
   };
 }
 
 // POST /api/inquiries
 router.post("/", requireAuth, attachRole, async (req, res) => {
+  const validation = validateInquiryInput(req.body);
+  if (validation.error) return res.status(400).json({ error: validation.error });
+
   const {
     title,
     description,
     categoryId,
     type,
-    urgency = "medium",
-    targetStartDate = null,
-    targetEndDate = null,
-    estimatedQuantity = null,
-  } = req.body ?? {};
-
-  if (!title || typeof title !== "string" || title.trim().length < 3 || title.trim().length > 255)
-    return res.status(400).json({ error: "title must be 3–255 characters" });
-
-  if (!description || typeof description !== "string" || description.trim().length < 10)
-    return res.status(400).json({ error: "description must be at least 10 characters" });
-
-  if (!categoryId || !UUID_RE.test(categoryId))
-    return res.status(400).json({ error: "categoryId must be a valid UUID" });
-
-  if (!TYPES.includes(type))
-    return res.status(400).json({ error: "type must be 'service' or 'tool_sourcing'" });
-
-  if (!URGENCIES.includes(urgency))
-    return res.status(400).json({ error: "urgency must be low, medium, high, or critical" });
-
-  if (
-    type === "tool_sourcing" &&
-    (!Number.isInteger(estimatedQuantity) || estimatedQuantity <= 0)
-  )
-    return res.status(400).json({
-      error: "estimatedQuantity (positive integer) is required for tool_sourcing inquiries",
-    });
-
-  if (targetStartDate && targetEndDate && targetStartDate > targetEndDate)
-    return res.status(400).json({ error: "targetStartDate must be on or before targetEndDate" });
+    urgency,
+    targetStartDate,
+    targetEndDate,
+    estimatedQuantity,
+  } = validation.data;
 
   const { data, error } = await supabase
     .from("inquiries")
     .insert({
       client_id: req.dbUser.id,
       category_id: categoryId,
-      title: title.trim(),
-      description: description.trim(),
+      title,
+      description,
       type,
       urgency,
-      target_start_date: targetStartDate || null,
-      target_end_date: targetEndDate || null,
-      estimated_quantity: type === "tool_sourcing" ? estimatedQuantity : null,
+      target_start_date: targetStartDate,
+      target_end_date: targetEndDate,
+      estimated_quantity: estimatedQuantity,
       status: "pending",
     })
     .select()

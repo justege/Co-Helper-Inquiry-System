@@ -277,7 +277,7 @@ function OfferCard({
                 <Box display="flex" flexDir={{ base: "column", sm: "row" }} gap={2} mt={3}>
                   <Button
                     flex={1} size="sm" h="38px" borderRadius="8px" fontWeight="600"
-                    bg={ACCENT} color="white" _hover={{ bg: "#152E52" }}
+                    bg={ACCENT} color="white" _hover={{ bg: "#0a5240" }}
                     loading={action === "escalate"}
                     onClick={doEscalate}
                   >
@@ -296,7 +296,7 @@ function OfferCard({
               <Box>
                 <Button
                   w="full" h="42px" borderRadius="8px" fontWeight="600" fontSize="0.875rem"
-                  bg={ACCENT} color="white" _hover={{ bg: "#152E52" }}
+                  bg={ACCENT} color="white" _hover={{ bg: "#0a5240" }}
                   loading={action === "accept"}
                   disabled={action !== null}
                   onClick={doAccept}
@@ -427,7 +427,7 @@ function DocumentsSection({ inquiryId }: { inquiryId: string }) {
           <Button
             size="xs" h="28px" px={3} borderRadius="6px" fontWeight="600"
             bg={ACCENT} color="white" fontSize="0.75rem"
-            _hover={{ bg: "#152E52" }}
+            _hover={{ bg: "#0a5240" }}
             loading={uploading}
             onClick={() => fileRef.current?.click()}
           >
@@ -535,7 +535,7 @@ export default function InquiryDetailPage() {
     return (
       <PageShell title="Loading…" backHref="/app/inquiries" backLabel="My inquiries">
         <Box display="flex" alignItems="center" gap={2} py={6}>
-          <Spinner size="sm" color="blue.500" />
+          <Spinner size="sm" color="green.600" />
           <Text fontSize="sm" color="#64748B">Loading inquiry…</Text>
         </Box>
       </PageShell>
@@ -577,7 +577,7 @@ export default function InquiryDetailPage() {
       >
         <Grid templateColumns={{ base: "1fr 1fr", sm: "repeat(3, 1fr)", lg: "repeat(6, 1fr)" }} gap={4}>
           <MetaItem label="Category" value={inquiry.category?.name ?? "—"} />
-          <MetaItem label="Type" value={inquiry.type === "tool_sourcing" ? "Tool / Sourcing" : "Service"} />
+          <MetaItem label="Type" value={inquiry.type === "tool_sourcing" ? "Fixed Project" : "Ongoing Service"} />
           <MetaItem label="Urgency" value={URGENCY_LABEL[inquiry.urgency]} />
           <MetaItem label="Offers" value={String(allOffers.length)} />
           <MetaItem label="Submitted" value={DATE_FMT(inquiry.createdAt)} />
@@ -619,7 +619,7 @@ export default function InquiryDetailPage() {
             <Card label="Details">
               <Stack gap={0}>
                 <Row label="Category" value={inquiry.category?.name ?? "—"} />
-                <Row label="Type" value={inquiry.type === "tool_sourcing" ? "Tool / Sourcing" : "Service"} />
+                <Row label="Type" value={inquiry.type === "tool_sourcing" ? "Fixed Project" : "Ongoing Service"} />
                 <Row label="Urgency" value={URGENCY_LABEL[inquiry.urgency]} />
                 {inquiry.targetStartDate && <Row label="Start date" value={DATE_FMT(inquiry.targetStartDate)} />}
                 {inquiry.targetEndDate && <Row label="End date" value={DATE_FMT(inquiry.targetEndDate)} />}

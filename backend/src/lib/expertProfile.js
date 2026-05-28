@@ -2,7 +2,7 @@ export function toExpertProfile(row) {
   if (!row) return null;
   return {
     bio: row.bio ?? null,
-    locationCity: row.location_city ?? "Istanbul",
+    locationCity: row.location_city ?? "Remote",
     capacityNotes: row.capacity_notes ?? null,
     isAvailable: row.is_available ?? true,
     score: row.score != null ? Number(row.score) : null,

@@ -1,4 +1,4 @@
-import { api } from "../lib/api";
+import { api, publicGet } from "../lib/api";
 import type { BusinessType } from "./inquiries";
 
 export interface Category {
@@ -7,8 +7,8 @@ export interface Category {
   slug: string;
   type: BusinessType;
   description: string | null;
-  createdAt: string;
-  createdBy: string | null;
+  createdAt?: string;
+  createdBy?: string | null;
 }
 
 export const getCategories = (opts?: { type?: BusinessType }) => {
@@ -16,6 +16,13 @@ export const getCategories = (opts?: { type?: BusinessType }) => {
     ? `/api/categories?type=${opts.type}`
     : "/api/categories";
   return api.get<Category[]>(path);
+};
+
+export const getPublicCategories = (opts?: { type?: BusinessType }) => {
+  const path = opts?.type
+    ? `/api/public/categories?type=${opts.type}`
+    : "/api/public/categories";
+  return publicGet<Category[]>(path);
 };
 export const getCategory = (id: string) => api.get<Category>(`/api/categories/${id}`);
 export const createCategory = (payload: {

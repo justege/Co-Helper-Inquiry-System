@@ -1,4 +1,4 @@
-import { api } from "../lib/api";
+import { api, postWithToken } from "../lib/api";
 
 export type BusinessType = "service" | "tool_sourcing";
 export type Urgency = "low" | "medium" | "high" | "critical";
@@ -80,6 +80,22 @@ export const getMyInquiries = () => api.get<Inquiry[]>("/api/inquiries/mine");
 export const getInquiry = (id: string) => api.get<Inquiry>(`/api/inquiries/${id}`);
 export const createInquiry = (data: CreateInquiryInput) =>
   api.post<Inquiry>("/api/inquiries", data);
+
+export interface LandingInquirySubmissionInput extends CreateInquiryInput {
+  username: string;
+  email: string;
+  password: string;
+}
+
+export const submitLandingInquiry = (
+  data: Omit<LandingInquirySubmissionInput, "email" | "password">,
+  token: string
+) =>
+  postWithToken<{ inquiry: Inquiry }>(
+    "/api/public/inquiry-submission",
+    data,
+    token
+  );
 
 // ── Documents ──────────────────────────────────────────────────────────────────
 

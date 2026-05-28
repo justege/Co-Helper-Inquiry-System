@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
-import { Link } from "react-router-dom"
-import { Box, Button, NativeSelect, Spinner, Text } from "@chakra-ui/react"
+import { Link, useLocation } from "react-router-dom"
+import { Box, Button, Spinner, Text } from "@chakra-ui/react"
+import { FormNativeSelect } from "@/components/ui/form-controls"
 import {
   getMyInquiries,
   type Inquiry,
@@ -13,7 +14,6 @@ import {
   APP_BG_SUBTLE,
   APP_BTN_PRIMARY,
   APP_CARD,
-  APP_INPUT_STYLE,
   APP_INK,
   APP_LABEL,
   APP_MUTED,
@@ -43,12 +43,18 @@ export default function InquiriesListPage() {
   const [filterStatus, setFilterStatus] = useState<InquiryStatus | "all">("all")
   const [filterType, setFilterType] = useState<BusinessType | "all">("all")
 
+  const location = useLocation()
+
   useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError(null)
     getMyInquiries()
-      .then(setInquiries)
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false))
-  }, [])
+      .then((data) => { if (!cancelled) setInquiries(data) })
+      .catch((err: Error) => { if (!cancelled) setError(err.message) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [location.key])
 
   const counts = useMemo(() => inquiries.reduce<Record<string, number>>((acc, i) => {
     acc[i.status] = (acc[i.status] ?? 0) + 1
@@ -107,29 +113,27 @@ export default function InquiriesListPage() {
               </Text>
             </Box>
             <Box display="flex" gap={2} alignItems="center" flexWrap="wrap">
-              <NativeSelect.Root {...APP_INPUT_STYLE} size="sm" w={{ base: "full", sm: "180px" }} h="34px">
-                <NativeSelect.Field
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value as InquiryStatus | "all")}
-                >
-                  <option value="all">All statuses</option>
-                  {ALL_STATUSES.map((s) => (
-                    <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-                  ))}
-                </NativeSelect.Field>
-                <NativeSelect.Indicator />
-              </NativeSelect.Root>
-              <NativeSelect.Root {...APP_INPUT_STYLE} size="sm" w={{ base: "full", sm: "140px" }} h="34px">
-                <NativeSelect.Field
-                  value={filterType}
-                  onChange={(e) => setFilterType(e.target.value as BusinessType | "all")}
-                >
-                  <option value="all">All types</option>
-                  <option value="service">Service</option>
-                  <option value="tool_sourcing">Sourcing</option>
-                </NativeSelect.Field>
-                <NativeSelect.Indicator />
-              </NativeSelect.Root>
+              <FormNativeSelect
+                selectSize="sm"
+                rootProps={{ w: { base: "full", sm: "180px" } }}
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value as InquiryStatus | "all")}
+              >
+                <option value="all">All statuses</option>
+                {ALL_STATUSES.map((s) => (
+                  <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+                ))}
+              </FormNativeSelect>
+              <FormNativeSelect
+                selectSize="sm"
+                rootProps={{ w: { base: "full", sm: "140px" } }}
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value as BusinessType | "all")}
+              >
+                <option value="all">All types</option>
+                <option value="service">Service</option>
+                <option value="tool_sourcing">Fixed Project</option>
+              </FormNativeSelect>
             </Box>
             {(filterStatus !== "all" || filterType !== "all") && (
               <Box display="flex" gap={1.5} overflowX="auto" mt={2} pb={0.5}>
@@ -152,7 +156,7 @@ export default function InquiriesListPage() {
                 )}
                 {typeCounts.tool_sourcing > 0 && (
                   <AppFilterChip active={false} onClick={() => setFilterType("tool_sourcing")}>
-                    Sourcing · {typeCounts.tool_sourcing}
+                    Fixed Project · {typeCounts.tool_sourcing}
                   </AppFilterChip>
                 )}
               </Box>
@@ -187,7 +191,7 @@ export default function InquiriesListPage() {
                     </Text>
                     <Text fontSize="0.75rem" color={APP_LABEL}>·</Text>
                     <Text fontSize="0.75rem" color={APP_MUTED} textTransform="capitalize">
-                      {inq.type === "tool_sourcing" ? "Sourcing" : "Service"}
+                      {inq.type === "tool_sourcing" ? "Fixed Project" : "Ongoing Service"}
                     </Text>
                   </Box>
                 </Box>

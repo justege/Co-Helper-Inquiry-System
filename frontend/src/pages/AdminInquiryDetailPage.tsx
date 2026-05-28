@@ -6,14 +6,12 @@ import {
   Box,
   Button,
   Grid,
-  Input,
-  NativeSelect,
   Spinner,
   Stack,
   Text,
-  Textarea,
   Tabs,
 } from "@chakra-ui/react"
+import { FormInput, FormNativeSelect, FormTextarea } from "@/components/ui/form-controls"
 import {
   LuBuilding2,
   LuCalendar,
@@ -85,22 +83,13 @@ interface ExpertUser {
 
 const CARD = { bg: "white", border: "1px solid #D8DCE8", borderRadius: "14px", overflow: "hidden" as const }
 
-const INPUT_STYLE = {
-  bg: "white",
-  borderColor: "#D8DCE8",
-  borderRadius: "8px",
-  fontSize: "0.9375rem",
-  _focusVisible: { borderColor: "#1563B2", boxShadow: "0 0 0 3px rgba(21,99,178,0.15)" },
-  _placeholder: { color: "#B8C0D0" },
-}
-
-const BTN_PRIMARY = { bg: "#1563B2", color: "white", fontWeight: "600", borderRadius: "8px", _hover: { bg: "#1252A0" } }
+const BTN_PRIMARY = { bg: "#0F6E56", color: "white", fontWeight: "600", borderRadius: "8px", _hover: { bg: "#0a5240" } }
 const BTN_GHOST = { variant: "ghost" as const, fontWeight: "600", borderRadius: "8px" }
 
 const INQUIRY_STATUS: Record<string, { bg: string; color: string; label: string }> = {
   pending:     { bg: "#EFF2F8", color: "#374151", label: "Pending" },
   matching:    { bg: "#FEF3C7", color: "#92400E", label: "Matching" },
-  offered:     { bg: "#EFF6FF", color: "#1E40AF", label: "Offered" },
+  offered:     { bg: "#F0FAF5", color: "#1E40AF", label: "Offered" },
   accepted:    { bg: "#ECFDF5", color: "#065F46", label: "Accepted" },
   in_progress: { bg: "#F0FDF4", color: "#15803D", label: "In Production" },
   delivered:   { bg: "#DCFCE7", color: "#166534", label: "Delivered" },
@@ -114,7 +103,7 @@ const URGENCY_COLOR: Record<string, string> = {
 
 const OFFER_STATUS: Record<string, { bg: string; color: string; label: string }> = {
   draft:    { bg: "#EFF2F8", color: "#374151", label: "Draft" },
-  sent:     { bg: "#EFF6FF", color: "#1E40AF", label: "Sent" },
+  sent:     { bg: "#F0FAF5", color: "#1E40AF", label: "Sent" },
   accepted: { bg: "#ECFDF5", color: "#065F46", label: "Accepted" },
   declined: { bg: "#FEF2F2", color: "#991B1B", label: "Declined" },
 }
@@ -419,9 +408,9 @@ export default function AdminInquiryDetailPage() {
                         <Box key={note.id} px={5} py={4} borderBottom={i < notes.length - 1 ? "1px solid #EFF1F6" : undefined}>
                           <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={2} mb={1.5}>
                             <Box display="flex" alignItems="center" gap={2}>
-                              <Box w="26px" h="26px" bg="#EFF6FF" rounded="full" flexShrink={0}
+                              <Box w="26px" h="26px" bg="#F0FAF5" rounded="full" flexShrink={0}
                                 display="flex" alignItems="center" justifyContent="center"
-                                fontSize="0.65rem" fontWeight="800" color="#1563B2">
+                                fontSize="0.65rem" fontWeight="800" color="#0F6E56">
                                 {authorName.charAt(0).toUpperCase()}
                               </Box>
                               <Box>
@@ -451,8 +440,7 @@ export default function AdminInquiryDetailPage() {
 
                 {/* Add note form */}
                 <Box as="form" onSubmit={handleNoteSubmit(onAddNote)} px={5} py={4} borderTop="1px solid #EFF1F6">
-                  <Textarea
-                    {...INPUT_STYLE}
+                  <FormTextarea
                     rows={3}
                     placeholder="Add an internal note…"
                     mb={3}
@@ -598,12 +586,12 @@ export default function AdminInquiryDetailPage() {
                                 display="flex" alignItems="center" justifyContent="space-between" gap={3}
                                 p={3} borderRadius="10px" border="1px solid #D8DCE8" bg="#F8F9FC"
                                 cursor="pointer" transition="all 0.1s"
-                                _hover={{ borderColor: "#1563B2", bg: "#EFF6FF" }}
+                                _hover={{ borderColor: "#0F6E56", bg: "#F0FAF5" }}
                                 onClick={() => handleAssign(expert.id)}
                               >
                                 <Box display="flex" alignItems="center" gap={2.5} flex="1" minW={0}>
-                                  <Box w="32px" h="32px" bg="#EFF6FF" rounded="8px" display="flex" alignItems="center"
-                                    justifyContent="center" fontSize="0.75rem" fontWeight="800" color="#1563B2" flexShrink={0}>
+                                  <Box w="32px" h="32px" bg="#F0FAF5" rounded="8px" display="flex" alignItems="center"
+                                    justifyContent="center" fontSize="0.75rem" fontWeight="800" color="#0F6E56" flexShrink={0}>
                                     {name.charAt(0).toUpperCase()}
                                   </Box>
                                   <Box minW={0}>
@@ -612,7 +600,7 @@ export default function AdminInquiryDetailPage() {
                                     </Text>
                                     <Box display="flex" gap={1.5} flexWrap="wrap" mt="1px">
                                       {expert.categories.slice(0, 2).map((c) => (
-                                        <Badge key={c.id} bg="#EFF6FF" color="#1E40AF" rounded="full" px={1.5} py="0px" fontSize="0.6rem" fontWeight="700">
+                                        <Badge key={c.id} bg="#F0FAF5" color="#1E40AF" rounded="full" px={1.5} py="0px" fontSize="0.6rem" fontWeight="700">
                                           {c.name}
                                         </Badge>
                                       ))}
@@ -621,8 +609,8 @@ export default function AdminInquiryDetailPage() {
                                 </Box>
                                 {expert.profile?.score != null && (
                                   <Box display="flex" alignItems="center" gap={1}>
-                                    <LuStar size={11} color="#1563B2" />
-                                    <Text fontSize="0.75rem" fontWeight="700" color="#1563B2">{expert.profile.score.toFixed(1)}</Text>
+                                    <LuStar size={11} color="#0F6E56" />
+                                    <Text fontSize="0.75rem" fontWeight="700" color="#0F6E56">{expert.profile.score.toFixed(1)}</Text>
                                   </Box>
                                 )}
                               </Box>
@@ -663,18 +651,16 @@ export default function AdminInquiryDetailPage() {
                   {inquiry.urgency} urgency
                 </Text>
               </Box>
-              <NativeSelect.Root {...INPUT_STYLE} opacity={statusSaving ? 0.6 : 1}>
-                <NativeSelect.Field
-                  value={inquiry.status}
-                  onChange={(e) => handleStatusChange(e.target.value)}
-                  style={{ pointerEvents: statusSaving ? "none" : "auto" }}
-                >
-                  {Object.entries(INQUIRY_STATUS).map(([key, conf]) => (
-                    <option key={key} value={key}>{conf.label}</option>
-                  ))}
-                </NativeSelect.Field>
-                <NativeSelect.Indicator />
-              </NativeSelect.Root>
+              <FormNativeSelect
+                value={inquiry.status}
+                onChange={(e) => handleStatusChange(e.target.value)}
+                rootProps={{ opacity: statusSaving ? 0.6 : 1 }}
+                style={{ pointerEvents: statusSaving ? "none" : "auto" }}
+              >
+                {Object.entries(INQUIRY_STATUS).map(([key, conf]) => (
+                  <option key={key} value={key}>{conf.label}</option>
+                ))}
+              </FormNativeSelect>
             </Box>
           </Box>
 
@@ -687,7 +673,7 @@ export default function AdminInquiryDetailPage() {
             </Box>
             <Box p={5}>
               <Box display="flex" alignItems="center" gap={2.5} mb={2}>
-                <Box w="36px" h="36px" bg="#EFF6FF" rounded="9px" display="flex" alignItems="center" justifyContent="center" color="#1563B2" flexShrink={0}>
+                <Box w="36px" h="36px" bg="#F0FAF5" rounded="9px" display="flex" alignItems="center" justifyContent="center" color="#0F6E56" flexShrink={0}>
                   <LuUser size={16} />
                 </Box>
                 <Box>
@@ -715,7 +701,7 @@ export default function AdminInquiryDetailPage() {
               <Stack gap={2.5}>
                 <MetaRow label="Submitted" value={new Date(inquiry.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })} />
                 <MetaRow label="Updated" value={new Date(inquiry.updatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })} />
-                <MetaRow label="Type" value={inquiry.type === "tool_sourcing" ? "Tool / Sourcing" : "Service"} />
+                <MetaRow label="Type" value={inquiry.type === "tool_sourcing" ? "Fixed Project" : "Ongoing Service"} />
                 {inquiry.targetStartDate && <MetaRow label="Start" value={inquiry.targetStartDate} />}
                 {inquiry.targetEndDate && <MetaRow label="Deadline" value={inquiry.targetEndDate} />}
                 {inquiry.estimatedQuantity && <MetaRow label="Quantity" value={inquiry.estimatedQuantity.toLocaleString("tr-TR")} />}
@@ -727,7 +713,7 @@ export default function AdminInquiryDetailPage() {
           {inquiry.assignedExpertId && (
             <Box {...CARD}>
               <Box px={5} py={3.5} borderBottom="1px solid #EFF1F6" display="flex" alignItems="center" gap={2}>
-                <LuUsers size={13} color="#1563B2" />
+                <LuUsers size={13} color="#0F6E56" />
                 <Text fontSize="0.6875rem" fontWeight="700" color="#8A96A8" letterSpacing="0.09em" textTransform="uppercase">
                   Assigned Expert
                 </Text>
@@ -735,8 +721,8 @@ export default function AdminInquiryDetailPage() {
               <Box p={5}>
                 {assignedExpert ? (
                   <Box display="flex" alignItems="center" gap={2.5}>
-                    <Box w="30px" h="30px" bg="#EFF6FF" rounded="7px" display="flex" alignItems="center" justifyContent="center"
-                      fontSize="0.75rem" fontWeight="800" color="#1563B2" flexShrink={0}>
+                    <Box w="30px" h="30px" bg="#F0FAF5" rounded="7px" display="flex" alignItems="center" justifyContent="center"
+                      fontSize="0.75rem" fontWeight="800" color="#0F6E56" flexShrink={0}>
                       {([assignedExpert.firstName, assignedExpert.lastName].filter(Boolean).join(" ") || "?").charAt(0)}
                     </Box>
                     <Box>
@@ -760,7 +746,7 @@ export default function AdminInquiryDetailPage() {
         <DialogContent style={{ borderRadius: "16px", border: "1px solid #D8DCE8", overflow: "hidden", boxShadow: "0 24px 64px rgba(11,21,40,0.2)" }}>
           <Box bg="#0B1528" px={6} py={4} display="flex" alignItems="center" justifyContent="space-between">
             <Box display="flex" alignItems="center" gap={2.5}>
-              <Box w="7px" h="7px" bg="#1563B2" rounded="full" />
+              <Box w="7px" h="7px" bg="#0F6E56" rounded="full" />
               <DialogTitle style={{ color: "white", fontWeight: 700, fontSize: "0.9375rem", margin: 0 }}>
                 {editingOfferId ? "Edit Offer" : "Create Offer"}
               </DialogTitle>
@@ -778,16 +764,17 @@ export default function AdminInquiryDetailPage() {
             <Stack gap={4}>
               <Field label="" invalid={!!offerErrors.expertId} errorText={offerErrors.expertId?.message}>
                 <OfferFieldLabel>Partner</OfferFieldLabel>
-                <NativeSelect.Root {...INPUT_STYLE} opacity={offerLocked ? 0.6 : 1}>
-                  <NativeSelect.Field {...regOffer("expertId", { required: "Select a partner" })} disabled={offerLocked}>
-                    <option value="">— Select partner —</option>
-                    {experts.map((e) => {
-                      const name = [e.firstName, e.lastName].filter(Boolean).join(" ") || e.email
-                      return <option key={e.id} value={e.id}>{name} ({e.email})</option>
-                    })}
-                  </NativeSelect.Field>
-                  <NativeSelect.Indicator />
-                </NativeSelect.Root>
+                <FormNativeSelect
+                  {...regOffer("expertId", { required: "Select a partner" })}
+                  disabled={offerLocked}
+                  rootProps={{ opacity: offerLocked ? 0.6 : 1 }}
+                >
+                  <option value="">— Select partner —</option>
+                  {experts.map((e) => {
+                    const name = [e.firstName, e.lastName].filter(Boolean).join(" ") || e.email
+                    return <option key={e.id} value={e.id}>{name} ({e.email})</option>
+                  })}
+                </FormNativeSelect>
               </Field>
 
               {selectedExpert && (
@@ -806,12 +793,12 @@ export default function AdminInquiryDetailPage() {
               <Grid templateColumns="1fr 1fr" gap={4}>
                 <Field label="" invalid={!!offerErrors.proposedPrice} errorText={offerErrors.proposedPrice?.message}>
                   <OfferFieldLabel>Partner price (€)</OfferFieldLabel>
-                  <Input {...INPUT_STYLE} type="number" min={0} step={0.01} placeholder="e.g. 4500"
+                  <FormInput type="number" min={0} step={0.01} placeholder="e.g. 4500"
                     disabled={offerLocked} {...regOffer("proposedPrice", { required: "Required" })} />
                 </Field>
                 <Field label="" invalid={!!offerErrors.clientPrice} errorText={offerErrors.clientPrice?.message}>
                   <OfferFieldLabel>Client price (€)</OfferFieldLabel>
-                  <Input {...INPUT_STYLE} type="number" min={0} step={0.01} placeholder="e.g. 5500"
+                  <FormInput type="number" min={0} step={0.01} placeholder="e.g. 5500"
                     disabled={offerLocked} {...regOffer("clientPrice", { required: "Required" })} />
                 </Field>
               </Grid>
@@ -819,18 +806,18 @@ export default function AdminInquiryDetailPage() {
               <Grid templateColumns="1fr 1fr" gap={4}>
                 <Box>
                   <OfferFieldLabel>Lead time (days)</OfferFieldLabel>
-                  <Input {...INPUT_STYLE} type="number" min={1} placeholder="e.g. 30"
+                  <FormInput type="number" min={1} placeholder="e.g. 30"
                     disabled={offerLocked} {...regOffer("leadTimeDays")} />
                 </Box>
                 <Box>
                   <OfferFieldLabel>Offer valid until</OfferFieldLabel>
-                  <Input type="date" {...INPUT_STYLE} disabled={offerLocked} {...regOffer("validUntil")} />
+                  <FormInput type="date" disabled={offerLocked} {...regOffer("validUntil")} />
                 </Box>
               </Grid>
 
               <Box>
                 <OfferFieldLabel>Offer details & notes</OfferFieldLabel>
-                <Textarea {...INPUT_STYLE} rows={4}
+                <FormTextarea rows={4}
                   placeholder="Scope, materials, delivery terms, exclusions — visible to the client when sent…"
                   disabled={offerLocked} {...regOffer("notes")} />
               </Box>

@@ -1,14 +1,15 @@
 import { useNavigate, Link } from "react-router-dom"
-import { Box, Button, Input, Text, VStack } from "@chakra-ui/react"
+import { Box, Button, Text, VStack } from "@chakra-ui/react"
 import { useForm } from "react-hook-form"
 import { Field } from "@/components/ui/field"
 import { PasswordInput } from "@/components/ui/password-input"
+import { FormInput, formInvalidBorder } from "@/components/ui/form-controls"
 import { AuthShell } from "@/components/auth/AuthShell"
 import { AuthDivider, SocialAuthButtons } from "@/components/auth/SocialAuthButtons"
 import { authFieldLabel, authInputProps, authPrimaryButtonProps } from "@/components/auth/authStyles"
 import { useAuthContext } from "../components/auth/AuthContext"
 import { updateMe } from "../api/users"
-import izmirPng from "@/assets/izmir.png"
+import loginPng from "@/assets/login.png"
 
 type RegisterFields = {
   username: string
@@ -55,15 +56,15 @@ export default function RegisterPage() {
   return (
     <AuthShell
       title="Create account"
-      subtitle="Join OutsourceSoft and start sourcing today."
+      subtitle="Join Co-Helper and start your first project today."
       promo={{
-        tagline: "Turkey's B2B marketplace — post, match, deliver.",
-        imageSrc: izmirPng,
+        tagline: "Digital services, managed for you — worldwide.",
+        imageSrc: loginPng,
       }}
       footer={
         <>
           Already have an account?{" "}
-          <Box as={Link} to="/login" color="#1563B2" fontWeight="700" _hover={{ textDecoration: "underline" }}>
+          <Box as={Link} to="/login" color="#0F6E56" fontWeight="700" _hover={{ textDecoration: "underline" }}>
             Sign In
           </Box>
         </>
@@ -81,12 +82,12 @@ export default function RegisterPage() {
           errorText={errors.username?.message}
           invalid={!!errors.username}
         >
-          <Input
+          <FormInput
             type="text"
             placeholder="Choose a username"
             autoComplete="username"
             {...authInputProps}
-            borderColor={errors.username ? "red.400" : authInputProps.borderColor}
+            {...formInvalidBorder(!!errors.username)}
             {...register("username")}
           />
         </Field>
@@ -96,11 +97,11 @@ export default function RegisterPage() {
           errorText={errors.email?.message}
           invalid={!!errors.email}
         >
-          <Input
+          <FormInput
             type="email"
             autoComplete="email"
             {...authInputProps}
-            borderColor={errors.email ? "red.400" : authInputProps.borderColor}
+            {...formInvalidBorder(!!errors.email)}
             {...register("email", {
               required: "Email is required",
               pattern: { value: /\S+@\S+\.\S+/, message: "Enter a valid email" },
@@ -116,7 +117,7 @@ export default function RegisterPage() {
           <PasswordInput
             autoComplete="new-password"
             {...authInputProps}
-            borderColor={errors.password ? "red.400" : authInputProps.borderColor}
+            {...formInvalidBorder(!!errors.password)}
             {...register("password", {
               required: "Password is required",
               minLength: { value: 6, message: "Password must be at least 6 characters" },

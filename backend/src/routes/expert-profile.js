@@ -19,7 +19,7 @@ router.get("/me", async (req, res) => {
     if (error) throw error;
     res.json(toExpertProfile(data) ?? {
       bio: null,
-      locationCity: "Istanbul",
+      locationCity: "Remote",
       capacityNotes: null,
       isAvailable: true,
       score: null,
@@ -38,7 +38,7 @@ router.put("/me", async (req, res) => {
   const updates = { user_id: req.dbUser.id, updated_at: new Date().toISOString() };
 
   if (bio !== undefined) updates.bio = bio?.trim() || null;
-  if (locationCity !== undefined) updates.location_city = locationCity?.trim() || "Istanbul";
+  if (locationCity !== undefined) updates.location_city = locationCity?.trim() || "Remote";
   if (capacityNotes !== undefined) updates.capacity_notes = capacityNotes?.trim() || null;
   if (isAvailable !== undefined) updates.is_available = Boolean(isAvailable);
 

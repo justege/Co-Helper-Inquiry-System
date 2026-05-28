@@ -6,16 +6,20 @@ import {
   Button,
   Fieldset,
   Grid,
-  Input,
-  NativeSelect,
   RadioGroup,
   Stack,
   Text,
-  Textarea,
 } from "@chakra-ui/react"
 import { Field } from "@/components/ui/field"
+import {
+  FormInput,
+  FormNativeSelect,
+  FormTextarea,
+  formInvalidBorder,
+} from "@/components/ui/form-controls"
 import { PageShell } from "@/components/ui/PageShell"
 import { auth } from "../lib/firebase"
+import { api } from "../lib/api"
 import type { CreateInquiryInput, Inquiry, BusinessType, Urgency } from "../api/inquiries"
 import { getCategories, type Category } from "../api/categories"
 
@@ -25,18 +29,6 @@ const URGENCY_OPTIONS: { value: Urgency; label: string; accent: string }[] = [
   { value: "high",     label: "High",     accent: "#B91C1C" },
   { value: "critical", label: "Critical", accent: "#7F1D1D" },
 ]
-
-const INPUT = {
-  bg: "white",
-  borderColor: "#D8DCE8",
-  borderRadius: "10px",
-  fontSize: "0.9375rem",
-  _placeholder: { color: "#B8C0D0" },
-  _focusVisible: {
-    borderColor: "#1563B2",
-    boxShadow: "0 0 0 3px rgba(21,99,178,0.15)",
-  },
-}
 
 export default function NewInquiryPage() {
   const navigate = useNavigate()
@@ -71,7 +63,6 @@ export default function NewInquiryPage() {
       setError("root", { message: "Not signed in" })
       return
     }
-    const token = await auth.currentUser.getIdToken()
     const payload = {
       ...values,
       estimatedQuantity:
@@ -81,25 +72,19 @@ export default function NewInquiryPage() {
       targetStartDate: values.targetStartDate || null,
       targetEndDate:   values.targetEndDate || null,
     }
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/inquiries`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify(payload),
-    })
-    if (!res.ok) {
-      const body: { error?: string } = await res.json().catch(() => ({}))
-      setError("root", { message: body.error ?? `HTTP ${res.status}` })
-      return
+    try {
+      const created = await api.post<Inquiry>("/api/inquiries", payload)
+      navigate(`/app/inquiries/${created.id}`)
+    } catch (err) {
+      setError("root", { message: err instanceof Error ? err.message : "Request failed" })
     }
-    const created: Inquiry = await res.json()
-    navigate(`/app/inquiries/${created.id}`)
   }
 
   return (
     <PageShell
       eyebrow="Marketplace"
       title="Post a new inquiry"
-      subtitle="Describe your needs — Turkish experts will submit bids."
+      subtitle="Describe your needs — a project manager will match specialists and deliver on time."
       backHref="/app/inquiries"
       backLabel="My inquiries"
     >
@@ -128,47 +113,42 @@ export default function NewInquiryPage() {
             {/* Type + Category */}
             <Grid templateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={5} mb={5}>
               <Field label="Inquiry type" invalid={!!errors.type} errorText={errors.type?.message} required>
-                <NativeSelect.Root {...INPUT}>
-                  <NativeSelect.Field {...register("type", { required: "Type is required" })}>
-                    <option value="service">Service</option>
-                    <option value="tool_sourcing">Tool / Sourcing</option>
-                  </NativeSelect.Field>
-                  <NativeSelect.Indicator />
-                </NativeSelect.Root>
+                <FormNativeSelect {...register("type", { required: "Type is required" })}>
+                  <option value="service">Ongoing Service</option>
+                  <option value="tool_sourcing">Fixed Project</option>
+                </FormNativeSelect>
               </Field>
 
               <Field label="Category" invalid={!!errors.categoryId} errorText={errors.categoryId?.message} required>
-                <NativeSelect.Root
-                  {...INPUT}
-                  opacity={catLoading || categories.length === 0 ? 0.5 : 1}
-                  pointerEvents={catLoading || categories.length === 0 ? "none" : undefined}
+                <FormNativeSelect
+                  {...register("categoryId", { required: "Category is required" })}
+                  rootProps={{
+                    opacity: catLoading || categories.length === 0 ? 0.5 : 1,
+                    pointerEvents: catLoading || categories.length === 0 ? "none" : undefined,
+                  }}
                 >
-                  <NativeSelect.Field {...register("categoryId", { required: "Category is required" })}>
-                    {catLoading ? (
-                      <option value="">Loading…</option>
-                    ) : categories.length === 0 ? (
-                      <option value="">No categories for this type</option>
-                    ) : (
-                      <>
-                        <option value="">Select a category</option>
-                        {categories.map((c) => (
-                          <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                      </>
-                    )}
-                  </NativeSelect.Field>
-                  <NativeSelect.Indicator />
-                </NativeSelect.Root>
+                  {catLoading ? (
+                    <option value="">Loading…</option>
+                  ) : categories.length === 0 ? (
+                    <option value="">No categories for this type</option>
+                  ) : (
+                    <>
+                      <option value="">Select a category</option>
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </>
+                  )}
+                </FormNativeSelect>
               </Field>
             </Grid>
 
             {/* Title */}
             <Box mb={5}>
               <Field label="Title" invalid={!!errors.title} errorText={errors.title?.message} required>
-                <Input
+                <FormInput
                   placeholder="e.g., 500 custom steel molds for automotive parts"
-                  {...INPUT}
-                  borderColor={errors.title ? "#FECACA" : "#D8DCE8"}
+                  {...formInvalidBorder(!!errors.title)}
                   {...register("title", {
                     required: "Title is required",
                     minLength: { value: 3, message: "At least 3 characters" },
@@ -181,11 +161,10 @@ export default function NewInquiryPage() {
             {/* Description */}
             <Box mb={5}>
               <Field label="Description" invalid={!!errors.description} errorText={errors.description?.message} required>
-                <Textarea
+                <FormTextarea
                   placeholder="Describe your requirements, specs, materials, quality standards…"
                   rows={5}
-                  {...INPUT}
-                  borderColor={errors.description ? "#FECACA" : "#D8DCE8"}
+                  {...formInvalidBorder(!!errors.description)}
                   {...register("description", {
                     required: "Description is required",
                     minLength: { value: 10, message: "At least 10 characters" },
@@ -233,12 +212,11 @@ export default function NewInquiryPage() {
 
               <Grid templateColumns={{ base: "1fr", sm: "1fr 1fr" }} gap={4} flex={1}>
                 <Field label="Target start date" invalid={!!errors.targetStartDate} errorText={errors.targetStartDate?.message}>
-                  <Input type="date" {...INPUT} {...register("targetStartDate")} />
+                  <FormInput type="date" {...register("targetStartDate")} />
                 </Field>
                 <Field label="Target end date" invalid={!!errors.targetEndDate} errorText={errors.targetEndDate?.message}>
-                  <Input
+                  <FormInput
                     type="date"
-                    {...INPUT}
                     {...register("targetEndDate", {
                       validate: (val) => {
                         if (!val || !targetStart) return true
@@ -250,21 +228,22 @@ export default function NewInquiryPage() {
               </Grid>
             </Stack>
 
-            {/* Quantity — tool_sourcing only */}
+            {/* Scope — fixed project only */}
             {businessType === "tool_sourcing" && (
               <Box mb={5}>
                 <Field
-                  label="Estimated quantity"
-                  helperText="Number of units to source or produce"
+                  label="Estimated scope"
+                  helperText="Approximate hours, deliverables, or units for this project"
                   invalid={!!errors.estimatedQuantity}
                   errorText={errors.estimatedQuantity?.message}
                   required
                 >
-                  <Input
-                    type="number" min={1} placeholder="e.g., 500"
-                    {...INPUT}
+                  <FormInput
+                    type="number"
+                    min={1}
+                    placeholder="e.g., 40"
                     {...register("estimatedQuantity", {
-                      required: "Quantity is required for sourcing inquiries",
+                      required: "Scope estimate is required for fixed projects",
                       min: { value: 1, message: "At least 1" },
                       valueAsNumber: true,
                     })}
@@ -277,7 +256,7 @@ export default function NewInquiryPage() {
             <Box pt={2} borderTop="1px solid #EFF1F6" display="flex" justifyContent="flex-end">
               <Button
                 type="submit"
-                bg="#1563B2"
+                bg="#0F6E56"
                 color="white"
                 fontWeight="700"
                 size="lg"
@@ -285,7 +264,7 @@ export default function NewInquiryPage() {
                 borderRadius="10px"
                 loading={isSubmitting}
                 loadingText="Submitting…"
-                _hover={{ bg: "#1252A0" }}
+                _hover={{ bg: "#0a5240" }}
               >
                 Submit Inquiry
               </Button>

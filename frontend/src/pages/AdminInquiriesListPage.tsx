@@ -4,12 +4,11 @@ import {
   Box,
   Button,
   Grid,
-  Input,
-  NativeSelect,
   Spinner,
   Stack,
   Text,
 } from "@chakra-ui/react"
+import { FormInput, FormNativeSelect } from "@/components/ui/form-controls"
 import {
   LuArrowRight,
   LuRefreshCw,
@@ -23,7 +22,6 @@ import {
   APP_BORDER,
   APP_BG_SUBTLE,
   APP_CARD,
-  APP_INPUT_STYLE,
   APP_INK,
   APP_LABEL,
   APP_MUTED,
@@ -136,8 +134,7 @@ export default function AdminInquiriesListPage() {
                   <Box position="absolute" left={3} top="50%" transform="translateY(-50%)" color={APP_LABEL} zIndex={1}>
                     <LuSearch size={14} />
                   </Box>
-                  <Input
-                    {...APP_INPUT_STYLE}
+                  <FormInput
                     size="sm"
                     h="34px"
                     pl={9}
@@ -148,19 +145,21 @@ export default function AdminInquiriesListPage() {
                 </Box>
               </Box>
               <Box display="flex" gap={2} alignItems="center" flexWrap="wrap">
-                <NativeSelect.Root {...APP_INPUT_STYLE} size="sm" w="160px" h="34px">
-                  <NativeSelect.Field value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                    <option value="all">All statuses</option>
-                    <option value="needs_attention">Needs attention</option>
-                    {PIPELINE_STAGES.map((group) => (
-                      <option key={group.key} value={`group:${group.key}`}>{group.label}</option>
-                    ))}
-                    {Object.entries(STATUS_LABELS).map(([key, label]) => (
-                      <option key={key} value={key}>{label}</option>
-                    ))}
-                  </NativeSelect.Field>
-                  <NativeSelect.Indicator />
-                </NativeSelect.Root>
+                <FormNativeSelect
+                  selectSize="sm"
+                  rootProps={{ w: "160px" }}
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <option value="all">All statuses</option>
+                  <option value="needs_attention">Needs attention</option>
+                  {PIPELINE_STAGES.map((group) => (
+                    <option key={group.key} value={`group:${group.key}`}>{group.label}</option>
+                  ))}
+                  {Object.entries(STATUS_LABELS).map(([key, label]) => (
+                    <option key={key} value={key}>{label}</option>
+                  ))}
+                </FormNativeSelect>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -288,8 +287,7 @@ export default function AdminInquiriesListPage() {
               <Box position="absolute" left={3} top="50%" transform="translateY(-50%)" color={APP_LABEL} zIndex={1}>
                 <LuSearch size={14} />
               </Box>
-              <Input
-                {...APP_INPUT_STYLE}
+              <FormInput
                 size="sm"
                 h="34px"
                 pl={9}

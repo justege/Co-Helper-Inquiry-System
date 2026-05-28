@@ -11,7 +11,7 @@ import {
 } from "@/api/inquiries";
 
 const BORDER = "#D8DCE8";
-const ACCENT = "#1563B2";
+const ACCENT = "#0F6E56";
 
 const DATE_FMT = (d: string) =>
   new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
@@ -130,7 +130,7 @@ export function InquiryDocumentsSection({ inquiryId }: { inquiryId: string }) {
             bg={ACCENT}
             color="white"
             fontSize="0.75rem"
-            _hover={{ bg: "#1252A0" }}
+            _hover={{ bg: "#0a5240" }}
             loading={uploading}
             onClick={() => fileRef.current?.click()}
           >

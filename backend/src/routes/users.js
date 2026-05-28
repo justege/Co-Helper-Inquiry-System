@@ -2,41 +2,28 @@ import { Router } from "express";
 import supabase from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { isSuperadmin, isAdminOrAbove } from "../middleware/requireRole.js";
+import { ensureUserByFirebaseUid } from "../lib/userProfile.js";
 
 const router = Router();
 
 // ── GET /api/users/me ──────────────────────────────────────────────────────────
 router.get("/me", requireAuth, async (req, res) => {
   try {
-    // Check if user already exists
-    const { data: existing } = await supabase
-      .from("users")
-        .select("*, user_categories(category_id, categories(*))")
-        .eq("firebase_uid", req.uid)
-        .maybeSingle();
+    await ensureUserByFirebaseUid({
+      firebaseUid: req.uid,
+      email: req.firebaseUser.email ?? "",
+    });
 
-    if (existing) {
-      // Update email only — never overwrite the user's role
-      const { data, error } = await supabase
-        .from("users")
-        .update({ email: req.firebaseUser.email ?? "" })
-        .eq("firebase_uid", req.uid)
-        .select("*, user_categories(category_id, categories(*))")
-        .single();
-      if (error) throw error;
-      return res.json(toUser(data));
-    }
-
-    // New user — create with default role 'client'
     const { data, error } = await supabase
       .from("users")
-      .insert({ firebase_uid: req.uid, email: req.firebaseUser.email ?? "", role: "client" })
       .select("*, user_categories(category_id, categories(*))")
+      .eq("firebase_uid", req.uid)
       .single();
+
     if (error) throw error;
     res.json(toUser(data));
   } catch (err) {
-    console.error(err);
+    console.error("[users/me]", err);
     res.status(500).json({ error: err.message });
   }
 });

@@ -6,33 +6,33 @@ import { INK, MUTED, RULE, SURFACE } from "@/components/marketing/tokens"
 const OPENINGS = [
   {
     title: "Senior Backend Engineer",
-    location: "Istanbul · Hybrid",
+    location: "Remote · Global",
     team: "Engineering",
-    description: "Build and scale the APIs that power inquiry management, offer workflows, and partner integrations.",
+    description: "Build and scale the APIs that power project management, specialist matching, and delivery workflows.",
   },
   {
-    title: "Partner Success Manager",
-    location: "Izmir · On-site",
+    title: "Project Manager",
+    location: "Remote · EU timezone",
     team: "Operations",
-    description: "Onboard and support Turkish manufacturing partners. Ensure quality standards and platform adoption.",
+    description: "Coordinate vetted specialists, manage client projects, and ensure on-time delivery across digital service categories.",
   },
   {
     title: "Product Designer",
-    location: "Remote · EU timezone",
+    location: "Remote · Global",
     team: "Product",
-    description: "Design procurement workflows for global buyers and partner-facing tools for manufacturers.",
+    description: "Design client-facing project workflows and specialist tools for a global digital outsourcing platform.",
   },
   {
     title: "Enterprise Sales Representative",
-    location: "Berlin · Hybrid",
+    location: "Remote · Americas",
     team: "Sales",
-    description: "Work with procurement teams at mid-market and enterprise companies sourcing from Turkey.",
+    description: "Work with mid-market and enterprise companies outsourcing software, marketing, and e-commerce services.",
   },
 ]
 
 const BENEFITS = [
   "Competitive salary and equity",
-  "Hybrid and remote-friendly roles",
+  "Fully remote-friendly roles",
   "Private health insurance",
   "Professional development budget",
   "Annual team offsite",
@@ -44,7 +44,7 @@ export default function CareersPage() {
       <PageHero
         label="Company"
         title="Careers"
-        subtitle="Join us in building the infrastructure for transparent B2B sourcing from Turkey."
+        subtitle="Join us in building the trusted platform for outsourcing digital services worldwide."
       />
 
       <ContentSection>

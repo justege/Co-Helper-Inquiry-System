@@ -1,32 +1,25 @@
 import { Box, Heading, Text } from "@chakra-ui/react"
 import { Link } from "react-router-dom"
 import { LuChevronLeft } from "react-icons/lu"
-import istanbulPng from "@/assets/istanbul.png"
 
 export const PAGE_MAX_W = "960px"
 
 interface PageShellProps {
-  /** Page title — rendered large in the island */
   title: string
-  /** Optional small line below the title */
   subtitle?: string
-  /** Small all-caps eyebrow above the title */
   eyebrow?: string
-  /** Back link rendered as an arrow in the top-left of the island */
   backHref?: string
   backLabel?: string
-  /** Optional React node placed top-right of the island (e.g. a CTA button) */
   action?: React.ReactNode
-  /** Stretch max width beyond PAGE_MAX_W (for admin / wide layouts) */
   wide?: boolean
   children: React.ReactNode
 }
 
 /**
- * Universal page wrapper.
+ * Universal authorized-area page wrapper.
  *
- * Renders a "island" hero (Istanbul skyline, uniform dark overlay, centered
- * text) followed by content at the same max-width.
+ * Renders a brand-consistent ink island header followed by content.
+ * No external images — pure Co-Helper brand DNA.
  */
 export function PageShell({
   title,
@@ -46,50 +39,62 @@ export function PageShell({
       pt={{ base: 4, md: 6 }}
       pb={{ base: "88px", lg: 10 }}
       minH="100vh"
-      bg="#EFF1F6"
+      bg="#F2F4F0"
     >
-      {/* ── Island ─────────────────────────────────────────────────────────── */}
+      {/* ── Island header ──────────────────────────────────────────────────── */}
       <Box maxW={maxW} mx="auto" mb={{ base: 4, md: 6 }}>
         <Box
           borderRadius={{ base: "16px", md: "20px" }}
           overflow="hidden"
           position="relative"
-          h={{ base: "168px", md: "210px" }}
-          bgImage={`url(${istanbulPng})`}
-          bgSize="cover"
-          style={{ backgroundPosition: "center 38%" }}
+          h={{ base: "160px", md: "200px" }}
+          bg="#0E1B17"
         >
-          {/* Uniform dark overlay for strong readability */}
+          {/* Subtle grid lines */}
+          <svg aria-hidden style={{
+            position: "absolute", inset: 0, width: "100%", height: "100%",
+            pointerEvents: "none",
+          }} viewBox="0 0 960 200" preserveAspectRatio="xMidYMid slice">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <line key={`v${i}`} x1={i * 110} y1="0" x2={i * 110} y2="200"
+                stroke="#fff" strokeWidth="0.5" opacity="0.04" />
+            ))}
+            {Array.from({ length: 5 }).map((_, i) => (
+              <line key={`h${i}`} x1="0" y1={i * 52} x2="960" y2={i * 52}
+                stroke="#fff" strokeWidth="0.5" opacity="0.04" />
+            ))}
+          </svg>
+
+          {/* Green glow — bottom left */}
           <Box
             position="absolute"
-            inset={0}
-            background="linear-gradient(180deg, rgba(8,16,32,0.78) 0%, rgba(8,16,32,0.68) 100%)"
+            bottom="-60px" left="-40px"
+            w="260px" h="260px"
+            borderRadius="full"
+            bg="rgba(15,110,86,0.18)"
+            filter="blur(60px)"
+            pointerEvents="none"
           />
 
-          {/* Subtle top border accent */}
+          {/* Top accent bar — green */}
           <Box
-            position="absolute"
-            top={0}
-            left={0}
-            right={0}
-            h="3px"
-            background="linear-gradient(90deg, #1563B2 0%, rgba(21,99,178,0.3) 100%)"
+            position="absolute" top={0} left={0} right={0} h="3px"
+            background="linear-gradient(90deg, #0F6E56 0%, rgba(15,110,86,0.2) 100%)"
             zIndex={3}
           />
 
-          {/* Back button — top left */}
+          {/* Back link */}
           {backHref && (
             <Link
               to={backHref}
               style={{
                 position: "absolute",
-                top: "20px",
-                left: "24px",
+                top: "20px", left: "24px",
                 zIndex: 4,
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "4px",
-                color: "rgba(255,255,255,0.55)",
+                color: "rgba(255,255,255,0.45)",
                 fontSize: "0.75rem",
                 fontWeight: 600,
                 letterSpacing: "0.02em",
@@ -114,48 +119,36 @@ export function PageShell({
             </Box>
           )}
 
-          {/* Text content — centered horizontally and vertically */}
+          {/* Text — centered */}
           <Box
-            position="absolute"
-            inset={0}
-            zIndex={2}
-            display="flex"
-            flexDir="column"
-            alignItems="center"
-            justifyContent="center"
+            position="absolute" inset={0} zIndex={2}
+            display="flex" flexDir="column"
+            alignItems="center" justifyContent="center"
             textAlign="center"
             px={{ base: 6, md: 12 }}
             pt={backHref ? "20px" : 0}
           >
             {eyebrow && (
               <Text
-                fontSize="0.6875rem"
-                fontWeight="700"
-                color="rgba(160,195,240,0.8)"
-                letterSpacing="0.12em"
-                textTransform="uppercase"
-                mb={2}
+                fontSize="0.6875rem" fontWeight="700"
+                color="rgba(167,215,197,0.75)"
+                letterSpacing="0.14em" textTransform="uppercase" mb={2}
               >
                 {eyebrow}
               </Text>
             )}
             <Heading
               fontSize={{ base: "1.5rem", md: "2rem" }}
-              fontWeight="700"
-              color="white"
-              letterSpacing="-0.03em"
-              lineHeight="1.2"
+              fontWeight="700" color="white"
+              letterSpacing="-0.03em" lineHeight="1.2"
             >
               {title}
             </Heading>
             {subtitle && (
               <Text
                 fontSize={{ base: "0.8125rem", md: "0.9375rem" }}
-                color="rgba(255,255,255,0.5)"
-                fontWeight="400"
-                mt={2}
-                lineHeight="1.5"
-                maxW="520px"
+                color="rgba(255,255,255,0.45)"
+                fontWeight="400" mt={2} lineHeight="1.5" maxW="520px"
               >
                 {subtitle}
               </Text>
@@ -164,7 +157,7 @@ export function PageShell({
         </Box>
       </Box>
 
-      {/* ── Content — same max-width as island ─────────────────────────────── */}
+      {/* ── Content ─────────────────────────────────────────────────────────── */}
       <Box maxW={maxW} mx="auto">
         {children}
       </Box>

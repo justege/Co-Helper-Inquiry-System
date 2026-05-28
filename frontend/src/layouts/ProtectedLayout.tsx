@@ -31,6 +31,7 @@ interface NavItem {
   label: string
   adminOnly?: boolean
   partnerOnly?: boolean
+  clientOnly?: boolean
 }
 
 const sections: { label: string; items: NavItem[] }[] = [
@@ -41,15 +42,15 @@ const sections: { label: string; items: NavItem[] }[] = [
   {
     label: "Marketplace",
     items: [
-      { to: "/app/inquiries/new", icon: LuPenLine, label: "New Inquiry" },
-      { to: "/app/inquiries", icon: LuInbox, label: "My Inquiries" },
+      { to: "/app/inquiries/new", icon: LuPenLine, label: "New Inquiry", clientOnly: true },
+      { to: "/app/inquiries", icon: LuInbox, label: "My Inquiries", clientOnly: true },
+      { to: "/app/partner-services", icon: LuShieldCheck, label: "My Services", partnerOnly: true },
     ],
   },
   {
     label: "Account",
     items: [
       { to: "/app/profile",           icon: LuUser,     label: "Profile" },
-      { to: "/app/partner-services",  icon: LuShieldCheck, label: "My Services", partnerOnly: true },
       { to: "/app/settings",          icon: LuSettings, label: "Settings" },
     ],
   },
@@ -67,8 +68,9 @@ const sections: { label: string; items: NavItem[] }[] = [
 
 const mobileNav: (NavItem & { emphasis?: boolean })[] = [
   { to: "/app/dashboard",     icon: LuLayoutDashboard, label: "Home" },
-  { to: "/app/inquiries",     icon: LuInbox,           label: "Inquiries" },
-  { to: "/app/inquiries/new", icon: LuPenLine,         label: "New", emphasis: true },
+  { to: "/app/inquiries",     icon: LuInbox,           label: "Inquiries", clientOnly: true },
+  { to: "/app/inquiries/new", icon: LuPenLine,         label: "New", emphasis: true, clientOnly: true },
+  { to: "/app/partner-services", icon: LuShieldCheck,  label: "Services", partnerOnly: true },
   { to: "/app/settings",       icon: LuSettings,        label: "Settings" },
   { to: "/app/profile",       icon: LuUser,            label: "Profile" },
 ]
@@ -102,7 +104,7 @@ export default function ProtectedLayout() {
 
   async function handleLogout() {
     await logout()
-    navigate("/login", { replace: true })
+    navigate(isPartner ? "/partner/login" : "/login", { replace: true })
   }
 
   return (
@@ -134,7 +136,7 @@ export default function ProtectedLayout() {
           <Box
             w="28px"
             h="28px"
-            bg="#1563B2"
+            bg="#0F6E56"
             rounded="md"
             display="flex"
             alignItems="center"
@@ -144,7 +146,7 @@ export default function ProtectedLayout() {
             <Box w="9px" h="9px" bg="white" rounded="sm" transform="rotate(45deg)" />
           </Box>
           <Text fontSize="0.75rem" fontWeight="800" color="white" letterSpacing="0.05em" textTransform="uppercase">
-            OutsourceSoft
+            Co-Helper
           </Text>
         </Box>
 
@@ -154,7 +156,8 @@ export default function ProtectedLayout() {
             const visibleItems = section.items.filter(
               (item) =>
                 (!item.adminOnly || isSuperadminOrAdmin) &&
-                (!item.partnerOnly || isPartner)
+                (!item.partnerOnly || isPartner) &&
+                (!item.clientOnly || !isPartner)
             )
             if (visibleItems.length === 0) return null
             return (
@@ -256,7 +259,14 @@ export default function ProtectedLayout() {
           borderTop: "1px solid rgba(0,0,0,0.08)",
         }}
       >
-        {mobileNav.map((item) => (
+        {mobileNav
+          .filter(
+            (item) =>
+              (!item.partnerOnly || isPartner) &&
+              (!item.clientOnly || !isPartner)
+          )
+          .slice(0, 5)
+          .map((item) => (
           <MobileNavItem key={item.to} item={item} />
         ))}
       </Box>
@@ -321,12 +331,12 @@ function MobileNavItem({ item }: { item: NavItem & { emphasis?: boolean } }) {
               w="42px"
               h="42px"
               rounded="full"
-              bg={isActive ? "#1252A0" : "#1563B2"}
+              bg={isActive ? "#0a5240" : "#0F6E56"}
               display="flex"
               alignItems="center"
               justifyContent="center"
               color="white"
-              shadow="0 4px 12px rgba(21,99,178,0.4)"
+              shadow="0 4px 12px rgba(15,110,86,0.4)"
               transform="translateY(-6px)"
               transition="all 0.15s"
             >
@@ -340,7 +350,7 @@ function MobileNavItem({ item }: { item: NavItem & { emphasis?: boolean } }) {
               justifyContent="center"
               w="26px"
               h="26px"
-              color={isActive ? "#1563B2" : "#8A96A8"}
+              color={isActive ? "#0F6E56" : "#8A96A8"}
               transition="color 0.1s"
             >
               <Icon size={21} />
@@ -351,7 +361,7 @@ function MobileNavItem({ item }: { item: NavItem & { emphasis?: boolean } }) {
               as="span"
               fontSize="0.6rem"
               fontWeight={isActive ? "700" : "500"}
-              color={isActive ? "#1563B2" : "#8A96A8"}
+              color={isActive ? "#0F6E56" : "#8A96A8"}
               letterSpacing="0.01em"
             >
               {item.label}

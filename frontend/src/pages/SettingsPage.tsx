@@ -4,12 +4,12 @@ import {
   Box,
   Button,
   Grid,
-  Input,
-  NativeSelect,
   Spinner,
   Stack,
   Text,
 } from "@chakra-ui/react"
+import { Field } from "@/components/ui/field"
+import { FormInput, FormNativeSelect } from "@/components/ui/form-controls"
 import {
   LuMail,
   LuPhone,
@@ -18,7 +18,6 @@ import {
   LuPlus,
   LuTrash2,
 } from "react-icons/lu"
-import { Field } from "@/components/ui/field"
 import { PageShell } from "@/components/ui/PageShell"
 import { getMe, type User } from "@/api/users"
 import { api } from "@/lib/api"
@@ -38,21 +37,12 @@ import {
 
 const CARD = { bg: "white", border: "1px solid #D8DCE8", borderRadius: "14px" }
 
-const INPUT_STYLE = {
-  bg: "white",
-  borderColor: "#D8DCE8",
-  borderRadius: "8px",
-  fontSize: "0.9375rem",
-  _focusVisible: { borderColor: "#1563B2", boxShadow: "0 0 0 3px rgba(21,99,178,0.15)" },
-  _placeholder: { color: "#B8C0D0" },
-}
-
 const BTN_PRIMARY = {
-  bg: "#1563B2",
+  bg: "#0F6E56",
   color: "white",
   fontWeight: "600",
   borderRadius: "8px",
-  _hover: { bg: "#1252A0" },
+  _hover: { bg: "#0a5240" },
 }
 
 const BTN_GHOST = {
@@ -124,7 +114,7 @@ export default function SettingsPage() {
                 <Text fontSize="0.8rem" color="#B91C1C" mt={2}>{passwordError}</Text>
               )}
             </Box>
-            <Button {...BTN_GHOST} size="sm" color="#1563B2" onClick={handlePasswordReset} flexShrink={0}>
+            <Button {...BTN_GHOST} size="sm" color="#0F6E56" onClick={handlePasswordReset} flexShrink={0}>
               Send reset link
             </Button>
           </Box>
@@ -172,7 +162,7 @@ function ContactSection({ profile }: { profile: User | null }) {
         <Grid templateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={5}>
           <Box>
             <FieldLabel>Email address</FieldLabel>
-            <Input {...INPUT_STYLE} value={profile?.email ?? ""} readOnly opacity={0.6} cursor="not-allowed" />
+            <FormInput value={profile?.email ?? ""} readOnly opacity={0.6} cursor="not-allowed" />
             <Text fontSize="0.75rem" color="#8A96A8" mt={1.5}>Managed via your login provider.</Text>
           </Box>
 
@@ -180,20 +170,17 @@ function ContactSection({ profile }: { profile: User | null }) {
             <FieldLabel>Phone number</FieldLabel>
             <Box display="flex" alignItems="center" gap={2}>
               <LuPhone size={15} color="#8A96A8" style={{ flexShrink: 0 }} />
-              <Input {...INPUT_STYLE} flex={1} placeholder="+90 555 000 00 00" {...register("phone")} />
+              <FormInput flex={1} placeholder="+1 555 000 0000" {...register("phone")} />
             </Box>
           </Field>
 
           <Box>
             <FieldLabel>Preferred contact method</FieldLabel>
-            <NativeSelect.Root {...INPUT_STYLE}>
-              <NativeSelect.Field {...register("contactPref")}>
-                <option value="email">Email</option>
-                <option value="phone">Phone</option>
-                <option value="both">Email &amp; Phone</option>
-              </NativeSelect.Field>
-              <NativeSelect.Indicator />
-            </NativeSelect.Root>
+            <FormNativeSelect {...register("contactPref")}>
+              <option value="email">Email</option>
+              <option value="phone">Phone</option>
+              <option value="both">Email &amp; Phone</option>
+            </FormNativeSelect>
           </Box>
         </Grid>
 
@@ -337,7 +324,7 @@ function TeamSection({ profile }: { profile: User | null }) {
         <DialogContent style={{ borderRadius: "16px", border: "1px solid #D8DCE8", overflow: "hidden", boxShadow: "0 20px 60px rgba(11,21,40,0.18)" }}>
           <Box bg="#0B1528" px={6} py={4} display="flex" alignItems="center" justifyContent="space-between">
             <Box display="flex" alignItems="center" gap={2.5}>
-              <Box w="7px" h="7px" bg="#1563B2" rounded="full" />
+              <Box w="7px" h="7px" bg="#0F6E56" rounded="full" />
               <DialogTitle style={{ color: "white", fontWeight: 700, fontSize: "0.9375rem", margin: 0 }}>
                 Invite Team Member
               </DialogTitle>
@@ -354,8 +341,7 @@ function TeamSection({ profile }: { profile: User | null }) {
                 <strong style={{ color: "#0D1B2E" }}>{profile.companyName}</strong>.
               </Text>
               <Field label="Email address" invalid={!!inviteErrors.email} errorText={inviteErrors.email?.message}>
-                <Input
-                  {...INPUT_STYLE}
+                <FormInput
                   type="email"
                   placeholder="colleague@company.com"
                   {...register("email", {
@@ -399,7 +385,7 @@ function SectionCard({
     <Box {...CARD} overflow="hidden">
       <Box px={5} py={3.5} borderBottom="1px solid #EFF1F6" display="flex" alignItems="center" justifyContent="space-between" gap={3}>
         <Box display="flex" alignItems="center" gap={2.5}>
-          <Box color="#1563B2">{icon}</Box>
+          <Box color="#0F6E56">{icon}</Box>
           <Text fontSize="0.875rem" fontWeight="700" color="#0D1B2E">{title}</Text>
         </Box>
         {action}

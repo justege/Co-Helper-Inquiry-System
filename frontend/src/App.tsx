@@ -8,6 +8,8 @@ import { SetupBanner } from "./components/ui/SetupBanner";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import PartnerLoginPage from "./pages/PartnerLoginPage";
+import PartnerRegisterPage from "./pages/PartnerRegisterPage";
 import DashboardPage from "./pages/DashboardPage";
 import ProfilePage from "./pages/ProfilePage";
 import SettingsPage from "./pages/SettingsPage";
@@ -48,6 +50,8 @@ export default function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/partner/login" element={<PartnerLoginPage />} />
+            <Route path="/partner/register" element={<PartnerRegisterPage />} />
             <Route path="/how-it-works" element={<HowItWorksPage />} />
             <Route path="/pricing" element={<PricingPage />} />
             <Route path="/integrations" element={<IntegrationsPage />} />

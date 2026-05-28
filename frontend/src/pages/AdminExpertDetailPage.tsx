@@ -5,13 +5,11 @@ import {
   Box,
   Button,
   Grid,
-  Input,
-  NativeSelect,
   Spinner,
   Stack,
   Text,
-  Textarea,
 } from "@chakra-ui/react"
+import { FormInput } from "@/components/ui/form-controls"
 import {
   LuArrowLeft,
   LuBuilding2,
@@ -36,7 +34,6 @@ import {
   APP_BTN_GHOST,
   APP_BTN_PRIMARY,
   APP_CARD,
-  APP_INPUT_STYLE,
   APP_INK,
   APP_LABEL,
   APP_MUTED,
@@ -325,8 +322,7 @@ export default function AdminExpertDetailPage() {
             <Box as="form" onSubmit={handleSubmit(onScoreSubmit)}>
               <Stack gap={4}>
                 <Field label="Score (0 – 10)">
-                  <Input
-                    {...APP_INPUT_STYLE}
+                  <FormInput
                     type="number"
                     min={0}
                     max={10}
@@ -335,7 +331,7 @@ export default function AdminExpertDetailPage() {
                   />
                 </Field>
                 <Field label="Internal notes (optional)">
-                  <Input {...APP_INPUT_STYLE} placeholder="Scoring context" {...register("notes")} />
+                  <FormInput placeholder="Scoring context" {...register("notes")} />
                 </Field>
                 {scoreError && <Text fontSize="sm" color="#B91C1C">{scoreError}</Text>}
                 <Box display="flex" gap={2}>

@@ -2,12 +2,11 @@ import { createSystem, defaultConfig, defineConfig } from "@chakra-ui/react"
 
 const config = defineConfig({
   globalCss: {
-    html: { background: "#EFF1F6" },
+    html: { background: "#F2F4F0" },
     body: {
       fontFamily: "body",
-      color: "#0D1B2E",
-      background: "#EFF1F6",
-      WebkitFontSmoothing: "antialiased",
+      color: "#0E1B17",
+      background: "#F2F4F0",
     },
   },
   theme: {
@@ -17,31 +16,38 @@ const config = defineConfig({
         heading: { value: "'Montserrat', system-ui, sans-serif" },
       },
       colors: {
-        // Primary corporate blue — used for CTAs, active states, links
-        blue: {
-          50:  { value: "#EFF6FF" },
-          100: { value: "#DBEAFE" },
-          200: { value: "#BFDBFE" },
-          300: { value: "#93C5FD" },
-          400: { value: "#60A5FA" },
-          500: { value: "#1563B2" },
-          600: { value: "#1252A0" },
-          700: { value: "#0F4080" },
-          800: { value: "#0C3060" },
-          900: { value: "#081F40" },
+        // Co-Helper brand — Trust Green
+        green: {
+          50:  { value: "#F0FAF5" },
+          100: { value: "#D6EFE4" },
+          200: { value: "#A7D7C5" },
+          300: { value: "#6ABFA2" },
+          400: { value: "#3DA07E" },
+          500: { value: "#0F6E56" },
+          600: { value: "#0a5240" },
+          700: { value: "#083F30" },
+          800: { value: "#052B20" },
+          900: { value: "#031810" },
         },
-        // Neutral slate grays for text and borders
+        // Neutral grays — ink-tinted
         gray: {
-          50:  { value: "#F8F9FC" },
-          100: { value: "#EFF1F6" },
-          200: { value: "#D8DCE8" },
-          300: { value: "#B8C0D0" },
+          50:  { value: "#F5F7FA" },
+          100: { value: "#F2F4F0" },
+          200: { value: "#E5E7EB" },
+          300: { value: "#C4C9D0" },
           400: { value: "#8A96A8" },
-          500: { value: "#64748B" },
-          600: { value: "#4A5568" },
+          500: { value: "#6B7280" },
+          600: { value: "#4B5563" },
           700: { value: "#2D3748" },
           800: { value: "#1A2535" },
-          900: { value: "#0D1B2E" },
+          900: { value: "#0E1B17" },
+        },
+        // Lime — action & CTA
+        amber: {
+          50:  { value: "#F4FFE0" },
+          400: { value: "#D8FF86" },
+          500: { value: "#C4EB72" },
+          600: { value: "#B0D65E" },
         },
       },
     },

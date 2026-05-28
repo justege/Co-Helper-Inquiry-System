@@ -6,18 +6,18 @@ import { INK, MUTED, RULE, SURFACE } from "@/components/marketing/tokens"
 const PRESS_ITEMS = [
   {
     date: "April 2026",
-    outlet: "Supply Chain Digital",
-    title: "OutsourceSoft launches structured B2B sourcing platform for Turkish manufacturing",
+    outlet: "TechCrunch",
+    title: "Co-Helper launches managed outsourcing platform for digital services",
   },
   {
     date: "March 2026",
-    outlet: "Procurement Leaders",
-    title: "How digital platforms are reducing friction in cross-border sourcing",
+    outlet: "Remote Work Weekly",
+    title: "How dedicated project managers are replacing freelance marketplaces",
   },
   {
     date: "February 2026",
-    outlet: "Turkish Export Council",
-    title: "New marketplace connects verified Turkish exporters with European buyers",
+    outlet: "SaaS Magazine",
+    title: "New platform connects businesses with vetted global specialists — no direct developer contact needed",
   },
 ]
 
@@ -54,7 +54,7 @@ export default function PressPage() {
               <Text fontSize="0.875rem" color={MUTED} lineHeight="1.65" mb={4}>
                 For press inquiries, interview requests, and media assets, contact our communications team.
               </Text>
-              <Text fontSize="0.875rem" fontWeight="600" color={INK}>press@outsourcesoft.com</Text>
+              <Text fontSize="0.875rem" fontWeight="600" color={INK}>press@co-helper.com</Text>
             </Box>
 
             <Box p={7} bg="white" borderRadius="8px" border={`1px solid ${RULE}`}>
@@ -68,9 +68,9 @@ export default function PressPage() {
             <Box p={7} bg="white" borderRadius="8px" border={`1px solid ${RULE}`}>
               <Heading fontSize="1rem" fontWeight="600" color={INK} mb={3}>Company boilerplate</Heading>
               <Text fontSize="0.875rem" color={MUTED} lineHeight="1.75">
-                OutsourceSoft is a B2B procurement platform connecting global buyers with verified Turkish
-                manufacturers and service partners. The platform manages the full sourcing workflow — from
-                inquiry to delivery — with structured offers, document management, and real-time tracking.
+                Co-Helper is a digital services outsourcing platform connecting businesses worldwide with
+                vetted specialists. Every project is assigned a dedicated project manager who coordinates
+                delivery — so clients never need to speak to developers directly.
               </Text>
             </Box>
           </Stack>

@@ -4,17 +4,17 @@ import { ContentSection, PageHero, ProseBlock } from "@/components/marketing/Mar
 import { INK, MUTED, RULE, SURFACE } from "@/components/marketing/tokens"
 
 const VALUES = [
-  { title: "Transparency", body: "Every inquiry, offer, and milestone is visible to all parties. No hidden commissions or opaque intermediaries." },
-  { title: "Verification", body: "Partners are reviewed before they can bid. Buyers work with manufacturers and service firms that meet our standards." },
-  { title: "Efficiency", body: "Structured workflows replace email chains and spreadsheets. Procurement teams save time at every stage." },
-  { title: "Trust", body: "We build long-term relationships between global buyers and Turkish suppliers — not one-off transactions." },
+  { title: "Clarity", body: "Every project, milestone, and deliverable lives in one platform. Fixed quotes upfront — no hidden fees or opaque handoffs between developers." },
+  { title: "Verification", body: "Developers are reviewed on portfolio, test tasks, and references before they join the network. You work with vetted engineers, not open marketplace roulette." },
+  { title: "Planability", body: "Committed delivery dates and escrow-protected payments make every build predictable. Your PM owns the timeline so you can plan around shipping, not chasing." },
+  { title: "Accountability", body: "One named project manager per build — not a rotating account team. We build long-term delivery relationships, not one-off gig transactions." },
 ]
 
 const STATS = [
-  { v: "500+", l: "Verified partners" },
-  { v: "18", l: "Manufacturing categories" },
-  { v: "55+", l: "Delivery destinations" },
-  { v: "24h", l: "Average first bid" },
+  { v: "50+",  l: "Software services in catalog" },
+  { v: "500+", l: "Verified specialists" },
+  { v: "40+",  l: "Countries covered" },
+  { v: "<24h", l: "Average quote turnaround" },
 ]
 
 export default function AboutPage() {
@@ -22,26 +22,27 @@ export default function AboutPage() {
     <MarketingLayout>
       <PageHero
         label="Company"
-        title="About OutsourceSoft"
-        subtitle="We connect global procurement teams with Turkey's verified manufacturers and service partners — transparently, efficiently, and at scale."
+        title="About Co-Helper"
+        subtitle="We connect businesses with vetted software developers — and assign one dedicated project manager to deliver every build on time."
       />
 
       <ContentSection>
         <Grid templateColumns={{ base: "1fr", lg: "1fr 1fr" }} gap={12} mb={16}>
           <ProseBlock>
             <p>
-              OutsourceSoft was founded to solve a persistent problem in international sourcing: finding reliable
-              Turkish suppliers is easy in theory, but managing inquiries, comparing offers, and tracking delivery
-              across time zones and languages remains fragmented and inefficient.
+              Co-Helper was founded to solve a persistent problem in software outsourcing: finding skilled
+              developers is easy, but managing them across scopes, time zones, and deadlines remains
+              fragmented — especially when you have to coordinate every sprint yourself.
             </p>
             <p>
-              Our platform brings the entire procurement workflow into one place — from the first product brief
-              to the final shipment confirmation. Buyers gain visibility and control. Partners receive qualified
-              leads without cold outreach.
+              Our platform brings the entire dev workflow into one place — from the first project brief
+              to production delivery. Clients get a dedicated project manager who scopes work, matches
+              vetted engineers, and owns quality. Developers receive qualified briefs without chasing clients.
             </p>
             <p>
-              Headquartered in Istanbul with operations across Izmir, Bursa, and Ankara, we serve procurement
-              teams across Europe, the Middle East, and beyond.
+              Headquartered in Berlin with Europe-based PMs and a global specialist network, we serve
+              startups, product teams, and growing companies who need MVPs, full-stack apps, mobile builds,
+              automations, and e-commerce — delivered reliably, without the hiring overhead.
             </p>
           </ProseBlock>
           <Grid templateColumns="repeat(2,1fr)" gap={4}>

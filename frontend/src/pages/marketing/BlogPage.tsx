@@ -6,40 +6,40 @@ import { INK, MUTED, RULE } from "@/components/marketing/tokens"
 
 const POSTS = [
   {
-    category: "Sourcing",
+    category: "Outsourcing",
     date: "May 12, 2026",
-    title: "Why European buyers are shifting textile production to Turkey",
-    excerpt: "Cost advantages, EU Customs Union membership, and established supply chains make Turkey a strategic choice for apparel sourcing.",
+    title: "Why businesses are moving from freelancers to managed outsourcing",
+    excerpt: "Dedicated project managers, vetted specialists, and structured delivery beat the chaos of managing contractors yourself.",
   },
   {
     category: "Platform",
     date: "April 28, 2026",
-    title: "Introducing structured offer comparison for procurement teams",
-    excerpt: "Compare partner bids side by side with standardised fields for price, lead time, and payment terms.",
+    title: "Introducing dedicated project managers on every Co-Helper project",
+    excerpt: "One PM coordinates specialists, tracks milestones, and keeps clients updated — no need to speak to developers directly.",
   },
   {
     category: "Industry",
     date: "April 3, 2026",
-    title: "Turkey's automotive supply chain: opportunities for tier-2 suppliers",
-    excerpt: "How global OEMs source components from Turkish manufacturers — and what buyers should look for in a partner.",
+    title: "Building a Shopify store without hiring a full-time developer",
+    excerpt: "How e-commerce businesses outsource store setup, integrations, and ongoing management through Co-Helper.",
   },
   {
     category: "Guides",
     date: "March 15, 2026",
-    title: "A buyer's guide to posting your first inquiry",
-    excerpt: "What to include in your product brief, how to set realistic deadlines, and tips for receiving competitive bids.",
+    title: "A client's guide to posting your first project brief",
+    excerpt: "What to include in your brief, how to set realistic deadlines, and tips for getting the best results.",
   },
   {
-    category: "Partners",
+    category: "Specialists",
     date: "February 20, 2026",
-    title: "How verified partners win more business on OutsourceSoft",
-    excerpt: "Best practices for responding to inquiries, structuring offers, and maintaining high partner ratings.",
+    title: "How verified specialists win more projects on Co-Helper",
+    excerpt: "Best practices for delivering quality work, maintaining high ratings, and building long-term client relationships.",
   },
   {
-    category: "Logistics",
+    category: "Remote Work",
     date: "January 30, 2026",
-    title: "Shipping from Istanbul and Izmir to European markets",
-    excerpt: "Transit times, documentation requirements, and freight options for buyers sourcing from Turkey's major ports.",
+    title: "Managing global development teams across time zones",
+    excerpt: "How Co-Helper project managers coordinate specialists in the Americas, Europe, and Asia-Pacific for 24/7 progress.",
   },
 ]
 
@@ -49,7 +49,7 @@ export default function BlogPage() {
       <PageHero
         label="Company"
         title="Blog"
-        subtitle="Insights on Turkish manufacturing, procurement best practices, and platform updates."
+        subtitle="Insights on digital outsourcing, project management best practices, and platform updates."
       />
 
       <ContentSection>

@@ -63,7 +63,7 @@ export default function ChangelogPage() {
       <PageHero
         label="Platform"
         title="Changelog"
-        subtitle="Product updates, new features, and improvements to the OutsourceSoft platform."
+        subtitle="Product updates, new features, and improvements to the Co-Helper platform."
       />
 
       <ContentSection narrow>

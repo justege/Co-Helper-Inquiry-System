@@ -8,24 +8,24 @@ const TOPICS = [
   {
     title: "Getting started",
     links: [
-      { label: "How to create a buyer account", to: "/how-it-works" },
-      { label: "Posting your first inquiry", to: "/how-it-works" },
+      { label: "How to create a client account", to: "/how-it-works" },
+      { label: "Posting your first project brief", to: "/how-it-works" },
       { label: "Understanding the dashboard", to: "/how-it-works" },
     ],
   },
   {
-    title: "Inquiries & offers",
+    title: "Projects & delivery",
     links: [
-      { label: "Writing an effective product brief", to: "/how-it-works" },
-      { label: "Comparing partner offers", to: "/how-it-works" },
-      { label: "Accepting and managing orders", to: "/how-it-works" },
+      { label: "Writing an effective project brief", to: "/how-it-works" },
+      { label: "Working with your project manager", to: "/how-it-works" },
+      { label: "Tracking milestones and deliverables", to: "/how-it-works" },
     ],
   },
   {
-    title: "For partners",
+    title: "For specialists",
     links: [
-      { label: "Applying as a verified partner", to: "/partners" },
-      { label: "Submitting structured offers", to: "/partners" },
+      { label: "Applying to the specialist network", to: "/partners" },
+      { label: "Delivering projects through Co-Helper", to: "/partners" },
       { label: "Publishing your service catalogue", to: "/partners" },
     ],
   },
@@ -45,7 +45,7 @@ export default function HelpPage() {
       <PageHero
         label="Support"
         title="Help Center"
-        subtitle="Guides and answers for buyers, partners, and procurement teams."
+        subtitle="Guides and answers for clients, specialists, and project managers."
       />
 
       <ContentSection>
