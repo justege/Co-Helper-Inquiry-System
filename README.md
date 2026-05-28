@@ -495,6 +495,7 @@ This repo is configured for a **single Railway service** that builds the Vite fr
 1. Push this repo to GitHub (if not already).
 2. In [Railway](https://railway.com/new), choose **Deploy from GitHub repo** and select the repository.
 3. Railway reads `railway.toml` at the repo root — no extra build/start configuration needed.
+4. **Critical:** In **Service → Settings → Root Directory**, leave the field **empty** (repo root). If it is set to `/backend`, the build fails with `Missing script: "install:all"` because the monorepo build scripts and frontend source are at the repository root.
 
 #### 2. Set environment variables
 
@@ -596,6 +597,10 @@ The user exists in Firebase but not in PostgreSQL. Call `GET /api/users/me` once
 ### CORS errors
 
 Add your frontend origin to `CORS_ALLOWED_ORIGINS` in `backend/.env`.
+
+### Railway build fails with `Missing script: "install:all"`
+
+The service **Root Directory** is set to `/backend` instead of the repo root. Open **Service → Settings → Root Directory**, clear the field, and redeploy. The single-service setup builds the frontend from `/frontend` and serves it via the Express API at `/backend`.
 
 ### Schema cache errors after migration
 

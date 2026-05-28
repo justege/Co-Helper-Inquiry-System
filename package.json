@@ -8,7 +8,7 @@
     "dev": "concurrently --names \"API,VITE\" --prefix-colors \"cyan,magenta\" \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend": "cd frontend && npm run dev",
-    "install:all": "npm install --prefix backend && npm install --prefix frontend",
+    "install:all": "npm ci --prefix backend && npm ci --prefix frontend",
     "build": "npm run build:frontend",
     "build:frontend": "npm --prefix frontend run build",
     "start": "npm --prefix backend start"

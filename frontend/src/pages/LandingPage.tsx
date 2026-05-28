@@ -1,8 +1,15 @@
-// no useState needed — matrix comparison is static
 import { Box, Flex, Grid, Heading, Stack, Text } from "@chakra-ui/react"
 import { Link } from "react-router-dom"
 import { MarketingFooter, AnnounceBar } from "@/components/marketing/MarketingUI"
 import LandingInquiryForm from "@/components/landing/LandingInquiryForm"
+import {
+  CodeTypewriter,
+  MatrixColHeader,
+  MatrixRow,
+  ScrollColorText,
+  ScrollReveal,
+  TypewriterSubline,
+} from "@/components/landing/LandingEffects"
 import { AMBER, AMBER_HOVER, BLUE, GREEN, INK, MUTED, RULE } from "@/components/marketing/tokens"
 import programmer1 from "@/assets/Programmer1.png"
 import programmer2 from "@/assets/Programmer2.png"
@@ -172,23 +179,6 @@ function CheckIcon({ pass }: { pass: boolean }) {
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
       <circle cx="10" cy="10" r="9" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
       <path d="M7.5 7.5L12.5 12.5M12.5 7.5L7.5 12.5" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  )
-}
-
-function CheckIconLight({ pass }: { pass: boolean }) {
-  if (pass) {
-    return (
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-        <circle cx="10" cy="10" r="9" fill={`${GREEN}22`} stroke={`${GREEN}60`} strokeWidth="1" />
-        <path d="M6.5 10L8.5 12L13.5 7.5" stroke={GREEN} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    )
-  }
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <circle cx="10" cy="10" r="9" fill={LIGHT} stroke={RULE} strokeWidth="1" />
-      <path d="M7.5 7.5L12.5 12.5M12.5 7.5L7.5 12.5" stroke="#D1D5DB" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   )
 }
@@ -515,55 +505,63 @@ export default function LandingPage() {
         {/* Nav + content — above video */}
         <Box position="relative" zIndex={3} display="flex" flexDir="column">
         <AnnounceBar />
-        <Box maxW="1200px" mx="auto" px={{ base: 5, md: 8 }} pt={{ base: 5, md: 6 }} pb={0} w="full">
+        <Box maxW="1280px" mx="auto" px={{ base: 5, md: 8 }} pt={{ base: 5, md: 6 }} pb={0} w="full">
           <NavBar light />
         </Box>
 
         {/* Hero content */}
-        <Box maxW="1200px" mx="auto" px={{ base: 5, md: 8 }}
-          pt={{ base: 16, md: 20 }} pb={{ base: 16, md: 20 }}>
+        <Box maxW="1280px" mx="auto" px={{ base: 5, md: 8 }}
+          pt={{ base: 10, md: 12 }} pb={{ base: 12, md: 14 }}>
           <Grid
-            templateColumns={{ base: "1fr", lg: "1fr 460px" }}
-            gap={{ base: 12, lg: 16 }}
+            templateColumns={{ base: "1fr", lg: "minmax(0, 1fr) 580px" }}
+            gap={{ base: 10, lg: 14 }}
             alignItems="center"
           >
             {/* Left */}
-            <Box>
+            <Box maxW={{ lg: "520px" }}>
+
+              <Text
+                fontSize="0.6875rem" fontWeight="700"
+                color="rgba(255,255,255,0.45)" letterSpacing="0.14em"
+                textTransform="uppercase" mb={4}
+                fontFamily="var(--font-heading)"
+              >
+                Managed software delivery
+              </Text>
 
               {/* Headline */}
               <Heading
                 as="h1"
-                fontSize={{ base: "2.75rem", md: "3.75rem", lg: "4.5rem" }}
-                fontWeight="800" lineHeight="1.04" letterSpacing="-0.04em"
-                mb={6} fontFamily="var(--font-heading)"
+                fontSize={{ base: "2rem", md: "2.375rem", lg: "2.625rem" }}
+                fontWeight="700" lineHeight="1.12" letterSpacing="-0.03em"
+                mb={4} fontFamily="var(--font-heading)"
               >
                 <Box as="span" color="white" display="block">Software development,</Box>
                 <Box as="span" color="white" display="block">managed on one platform.</Box>
-                <Box as="span" color={G_ON_DARK} display="block">Predictable delivery.</Box>
+                <Box as="span" color={G_ON_DARK} display="block" mt={1}>Predictable delivery.</Box>
               </Heading>
 
               <Text
-                fontSize={{ base: "1rem", md: "1.125rem" }}
-                color="rgba(255,255,255,0.55)"
-                lineHeight="1.78" maxW="480px" mb={10}
+                fontSize={{ base: "0.9375rem", md: "1rem" }}
+                color="rgba(255,255,255,0.58)"
+                lineHeight="1.65" maxW="440px" mb={6}
               >
-                Steer every build centrally through Co-Helper — with a dedicated project manager
-                and vetted developers. Fixed quotes within 24 hours, committed delivery dates,
-                and zero freelancer coordination on your side.
+                Steer every build centrally through Co-Helper — dedicated PM, vetted developers,
+                fixed quotes within 24 hours, and zero freelancer coordination on your side.
               </Text>
 
-              <Flex gap={3} flexWrap="wrap" mb={14}>
+              <Flex gap={2.5} flexWrap="wrap" mb={8}>
                 <Link to="/register" style={{ textDecoration: "none" }}>
-                  <Box px={5} py="11px" borderRadius="6px" fontWeight="700" fontSize="0.9375rem"
+                  <Box px={4} py="9px" borderRadius="6px" fontWeight="700" fontSize="0.875rem"
                     bg={AMBER} color={INK} border={`1px solid ${AMBER}`}
                     _hover={{ bg: AMBER_HOVER }} transition="all 0.15s">
                     Post a project →
                   </Box>
                 </Link>
                 <Link to="/how-it-works" style={{ textDecoration: "none" }}>
-                  <Box px={5} py="11px" borderRadius="6px" fontWeight="600" fontSize="0.9375rem"
-                    bg="transparent" color="rgba(255,255,255,0.8)"
-                    border="1px solid rgba(255,255,255,0.22)"
+                  <Box px={4} py="9px" borderRadius="6px" fontWeight="600" fontSize="0.875rem"
+                    bg="transparent" color="rgba(255,255,255,0.78)"
+                    border="1px solid rgba(255,255,255,0.2)"
                     _hover={{ bg: "rgba(255,255,255,0.06)", color: "white" }}
                     transition="all 0.15s">
                     How it works
@@ -572,24 +570,38 @@ export default function LandingPage() {
               </Flex>
 
               {/* Stats */}
-              <Flex gap={10} flexWrap="wrap">
+              <Flex
+                gap={0} flexWrap="wrap"
+                borderTop="1px solid rgba(255,255,255,0.1)"
+                pt={5}
+              >
                 {[
                   { v: "50+",   l: "Dev services"   },
                   { v: "< 24h", l: "Quote returned" },
                   { v: "€0",    l: "Upfront risk"   },
-                ].map((s) => (
-                  <Box key={s.l}>
-                    <Text fontSize={{ base: "1.625rem", md: "1.875rem" }} fontWeight="800"
-                      color="white" letterSpacing="-0.04em" lineHeight="1"
-                      fontFamily="var(--font-heading)">{s.v}</Text>
-                    <Text fontSize="0.75rem" color="rgba(255,255,255,0.35)" mt={1}>{s.l}</Text>
-                  </Box>
+                ].map((s, i) => (
+                  <Flex
+                    key={s.l} align="center"
+                    pr={{ base: 6, md: 8 }}
+                    mr={{ base: 6, md: 8 }}
+                    borderRight={i < 2 ? "1px solid rgba(255,255,255,0.1)" : undefined}
+                  >
+                    <Box>
+                      <Text fontSize={{ base: "1.25rem", md: "1.375rem" }} fontWeight="700"
+                        color="white" letterSpacing="-0.03em" lineHeight="1"
+                        fontFamily="var(--font-heading)">{s.v}</Text>
+                      <Text fontSize="0.6875rem" color="rgba(255,255,255,0.38)" mt={1}
+                        letterSpacing="0.02em">{s.l}</Text>
+                    </Box>
+                  </Flex>
                 ))}
               </Flex>
             </Box>
 
             {/* Right: form */}
-            <LandingInquiryForm />
+            <Box w="full" minW={0}>
+              <LandingInquiryForm />
+            </Box>
           </Grid>
         </Box>
         </Box>{/* end zIndex wrapper */}
@@ -635,19 +647,21 @@ export default function LandingPage() {
                 title: "Budget and timing under control.",
                 body: "Fixed quotes and defined delivery windows make every sprint planable. You know what ships when — before work starts — without surprise scope creep or open-ended retainers.",
               },
-            ].map((item) => (
-              <Box key={item.tag} p={8} bg={LIGHT} borderRadius="12px" border={`1px solid ${RULE}`}
-                _hover={{ borderColor: GREEN, bg: "white", boxShadow: `0 4px 20px rgba(15,110,86,0.06)` }}
-                transition="all 0.2s">
-                <Box display="inline-flex" px={2.5} py="3px" borderRadius="99px" mb={5}
-                  bg={`${GREEN}12`} border={`1px solid ${GREEN}30`}>
-                  <Text fontSize="0.65rem" fontWeight="700" color={GREEN}
-                    letterSpacing="0.06em">{item.tag}</Text>
+            ].map((item, i) => (
+              <ScrollReveal key={item.tag} delay={i * 100}>
+                <Box p={8} bg={LIGHT} borderRadius="12px" border={`1px solid ${RULE}`}
+                  _hover={{ borderColor: GREEN, bg: "white", boxShadow: `0 4px 20px rgba(15,110,86,0.06)` }}
+                  transition="all 0.2s">
+                  <Box display="inline-flex" px={2.5} py="3px" borderRadius="99px" mb={5}
+                    bg={`${GREEN}12`} border={`1px solid ${GREEN}30`}>
+                    <Text fontSize="0.65rem" fontWeight="700" color={GREEN}
+                      letterSpacing="0.06em">{item.tag}</Text>
+                  </Box>
+                  <Text fontSize="1rem" fontWeight="700" color={INK} mb={3}
+                    letterSpacing="-0.015em" fontFamily="var(--font-heading)">{item.title}</Text>
+                  <Text fontSize="0.9rem" color={MUTED} lineHeight="1.75">{item.body}</Text>
                 </Box>
-                <Text fontSize="1rem" fontWeight="700" color={INK} mb={3}
-                  letterSpacing="-0.015em" fontFamily="var(--font-heading)">{item.title}</Text>
-                <Text fontSize="0.9rem" color={MUTED} lineHeight="1.75">{item.body}</Text>
-              </Box>
+              </ScrollReveal>
             ))}
           </Grid>
         </Box>
@@ -658,39 +672,57 @@ export default function LandingPage() {
         <Box maxW="1200px" mx="auto" px={{ base: 5, md: 8 }}>
           <Grid templateColumns={{ base: "1fr", lg: "1fr 1fr" }} gap={{ base: 12, lg: 20 }} alignItems="center">
             <Box>
-              <Text fontSize="0.7rem" fontWeight="700" color={GREEN}
-                letterSpacing="0.12em" textTransform="uppercase" mb={4}
-                fontFamily="var(--font-heading)">
-                The future of delivery
-              </Text>
-              <Heading
-                fontSize={{ base: "2rem", md: "2.75rem", lg: "3rem" }}
-                fontWeight="700" letterSpacing="-0.035em" lineHeight="1.1" mb={6}
-                fontFamily="var(--font-heading)"
-              >
-                Beyond hiring devs.
-                <Box as="span" display="block" color={MUTED} fontWeight="600" fontSize={{ base: "1.625rem", md: "2.125rem" }}>
-                  Managed software delivery, without the coordination tax.
-                </Box>
-              </Heading>
-              <Text fontSize={{ base: "0.9375rem", md: "1rem" }} color={MUTED} lineHeight="1.8" mb={6}>
-                Marketplaces sell access to freelancers and hand you all the risk: vetting,
-                stand-ups, time-zone juggling, code review. Co-Helper sells the opposite —
-                a finished build and a named PM accountable for it.
-              </Text>
-              <Text fontSize={{ base: "0.9375rem", md: "1rem" }} color={MUTED} lineHeight="1.8" mb={8}>
-                By building the entire model around a dedicated PM who absorbs the coordination
-                layer, your team gets fewer touchpoints, shorter feedback loops, and deliverables
-                that actually match the brief.
-              </Text>
-              <Link to="/register" style={{ textDecoration: "none" }}>
-                <Box display="inline-flex" alignItems="center"
-                  px={5} py="11px" borderRadius="6px" fontWeight="700" fontSize="0.875rem"
-                  bg={INK} color="white" border={`1px solid ${INK}`}
-                  _hover={{ bg: "#1a2e26" }} transition="all 0.15s">
-                  Post a project →
-                </Box>
-              </Link>
+              <ScrollReveal>
+                <Text fontSize="0.7rem" fontWeight="700" color={GREEN}
+                  letterSpacing="0.12em" textTransform="uppercase" mb={4}
+                  fontFamily="var(--font-heading)">
+                  The future of delivery
+                </Text>
+              </ScrollReveal>
+              <ScrollReveal delay={80}>
+                <Heading
+                  fontSize={{ base: "2rem", md: "2.75rem", lg: "3rem" }}
+                  fontWeight="700" letterSpacing="-0.035em" lineHeight="1.1" mb={2}
+                  fontFamily="var(--font-heading)"
+                >
+                  Beyond hiring devs.
+                </Heading>
+              </ScrollReveal>
+              <ScrollReveal delay={160}>
+                <TypewriterSubline
+                  phrases={[
+                    "Managed software delivery, without the coordination tax.",
+                    "One PM. Fixed quotes. Vetted dev team.",
+                    "Ship product — not meetings.",
+                  ]}
+                  fontSize={{ base: "1.125rem", md: "1.375rem", lg: "1.5rem" }}
+                />
+              </ScrollReveal>
+              <CodeTypewriter />
+              <ScrollReveal delay={240}>
+                <Text fontSize={{ base: "0.9375rem", md: "1rem" }} color={MUTED} lineHeight="1.8" mb={6} mt={6}>
+                  Marketplaces sell access to freelancers and hand you all the risk: vetting,
+                  stand-ups, time-zone juggling, code review. Co-Helper sells the opposite —
+                  a finished build and a named PM accountable for it.
+                </Text>
+              </ScrollReveal>
+              <ScrollReveal delay={320}>
+                <Text fontSize={{ base: "0.9375rem", md: "1rem" }} color={MUTED} lineHeight="1.8" mb={8}>
+                  By building the entire model around a dedicated PM who absorbs the coordination
+                  layer, your team gets fewer touchpoints, shorter feedback loops, and deliverables
+                  that actually match the brief.
+                </Text>
+              </ScrollReveal>
+              <ScrollReveal delay={400}>
+                <Link to="/register" style={{ textDecoration: "none" }}>
+                  <Box display="inline-flex" alignItems="center"
+                    px={5} py="11px" borderRadius="6px" fontWeight="700" fontSize="0.875rem"
+                    bg={INK} color="white" border={`1px solid ${INK}`}
+                    _hover={{ bg: "#1a2e26" }} transition="all 0.15s">
+                    Post a project →
+                  </Box>
+                </Link>
+              </ScrollReveal>
             </Box>
 
             {/* Right: feature list */}
@@ -716,21 +748,23 @@ export default function LandingPage() {
                   title: "Approved, then paid",
                   body: "Deliverables arrive in your portal. Your PM handles all revisions. You approve — escrow releases. That's the entire loop.",
                 },
-              ].map((item) => (
-                <Flex key={item.icon} gap={4} align="flex-start"
-                  p={5} borderRadius="10px" bg={LIGHT} border={`1px solid ${RULE}`}
-                  _hover={{ borderColor: GREEN, bg: "white", boxShadow: `0 4px 20px rgba(15,110,86,0.06)` }}
-                  transition="all 0.2s">
-                  <Box w="32px" h="32px" borderRadius="8px" bg={INK} flexShrink={0}
-                    display="flex" alignItems="center" justifyContent="center">
-                    <Text fontSize="0.7rem" fontWeight="700" color={G_ON_DARK}>{item.icon}</Text>
-                  </Box>
-                  <Box>
-                    <Text fontSize="0.9375rem" fontWeight="700" color={INK} mb={1.5}
-                      fontFamily="var(--font-heading)">{item.title}</Text>
-                    <Text fontSize="0.875rem" color={MUTED} lineHeight="1.7">{item.body}</Text>
-                  </Box>
-                </Flex>
+              ].map((item, i) => (
+                <ScrollReveal key={item.icon} delay={i * 90}>
+                  <Flex gap={4} align="flex-start"
+                    p={5} borderRadius="10px" bg={LIGHT} border={`1px solid ${RULE}`}
+                    _hover={{ borderColor: GREEN, bg: "white", boxShadow: `0 4px 20px rgba(15,110,86,0.06)` }}
+                    transition="all 0.2s">
+                    <Box w="32px" h="32px" borderRadius="8px" bg={INK} flexShrink={0}
+                      display="flex" alignItems="center" justifyContent="center">
+                      <Text fontSize="0.7rem" fontWeight="700" color={G_ON_DARK}>{item.icon}</Text>
+                    </Box>
+                    <Box>
+                      <Text fontSize="0.9375rem" fontWeight="700" color={INK} mb={1.5}
+                        fontFamily="var(--font-heading)">{item.title}</Text>
+                      <Text fontSize="0.875rem" color={MUTED} lineHeight="1.7">{item.body}</Text>
+                    </Box>
+                  </Flex>
+                </ScrollReveal>
               ))}
             </Stack>
           </Grid>
@@ -751,7 +785,10 @@ export default function LandingPage() {
             maxW="640px" fontFamily="var(--font-heading)"
           >
             World-class developers. Managed delivery.
-            <Box as="span" color={MUTED}> Built to ship product, not meetings.</Box>
+            {" "}
+            <ScrollColorText as="span" from={MUTED} to={GREEN} fontWeight="600">
+              Built to ship product, not meetings.
+            </ScrollColorText>
           </Heading>
           <Text fontSize="0.9375rem" color={MUTED} mb={14} maxW="520px" lineHeight="1.75">
             Whether you need an MVP, a Shopify build, API integrations, or a mobile app — one platform, one PM, one predictable process.
@@ -774,19 +811,21 @@ export default function LandingPage() {
                 title: "Structured, trusted delivery",
                 body: "Milestone tracking, documented deliverables, and proactive PM updates — so you always know where your project stands without chasing anyone.",
               },
-            ].map((c) => (
-              <Box key={c.tag} p={8} bg="white" borderRadius="12px" border={`1px solid ${RULE}`}
-                _hover={{ borderColor: GREEN, boxShadow: `0 4px 20px rgba(15,110,86,0.07)` }}
-                transition="all 0.2s">
-                <Box display="inline-flex" px={2.5} py="3px" borderRadius="99px" mb={5}
-                  bg={`${GREEN}12`} border={`1px solid ${GREEN}30`}>
-                  <Text fontSize="0.65rem" fontWeight="700" color={GREEN}
-                    letterSpacing="0.06em">{c.tag}</Text>
+            ].map((c, i) => (
+              <ScrollReveal key={c.tag} delay={i * 100}>
+                <Box p={8} bg="white" borderRadius="12px" border={`1px solid ${RULE}`}
+                  _hover={{ borderColor: GREEN, boxShadow: `0 4px 20px rgba(15,110,86,0.07)` }}
+                  transition="all 0.2s">
+                  <Box display="inline-flex" px={2.5} py="3px" borderRadius="99px" mb={5}
+                    bg={`${GREEN}12`} border={`1px solid ${GREEN}30`}>
+                    <Text fontSize="0.65rem" fontWeight="700" color={GREEN}
+                      letterSpacing="0.06em">{c.tag}</Text>
+                  </Box>
+                  <Text fontSize="1rem" fontWeight="700" color={INK} mb={3}
+                    letterSpacing="-0.015em" fontFamily="var(--font-heading)">{c.title}</Text>
+                  <Text fontSize="0.9rem" color={MUTED} lineHeight="1.75">{c.body}</Text>
                 </Box>
-                <Text fontSize="1rem" fontWeight="700" color={INK} mb={3}
-                  letterSpacing="-0.015em" fontFamily="var(--font-heading)">{c.title}</Text>
-                <Text fontSize="0.9rem" color={MUTED} lineHeight="1.75">{c.body}</Text>
-              </Box>
+              </ScrollReveal>
             ))}
           </Grid>
         </Box>
@@ -929,16 +968,27 @@ export default function LandingPage() {
             Co-Helper vs. classic dev solutions
           </Text>
           <Flex justify="space-between" align="flex-end" mb={14} flexWrap="wrap" gap={6}>
-            <Heading
-              fontSize={{ base: "1.875rem", md: "2.5rem" }}
-              fontWeight="700" color="white" letterSpacing="-0.034em"
-              maxW="540px" fontFamily="var(--font-heading)"
-            >
-              Agency, freelancer, in-house? Neither.
-            </Heading>
-            <Text fontSize="0.9375rem" color="rgba(255,255,255,0.4)" maxW="300px" lineHeight="1.75">
-              Managed software delivery with a dedicated PM, fixed quotes, and one platform for every build.
-            </Text>
+            <ScrollReveal>
+              <Heading
+                fontSize={{ base: "1.875rem", md: "2.5rem" }}
+                fontWeight="700" color="white" letterSpacing="-0.034em"
+                maxW="540px" fontFamily="var(--font-heading)"
+              >
+                Agency, freelancer, in-house?{" "}
+                <Box as="span" display="inline">
+                  <ScrollColorText as="span" from="rgba(255,255,255,0.45)" to="#86efac">
+                    Neither.
+                  </ScrollColorText>
+                </Box>
+              </Heading>
+            </ScrollReveal>
+            <ScrollReveal delay={120}>
+              <Text fontSize="0.9375rem" maxW="300px" lineHeight="1.75">
+                <ScrollColorText as="span" from="rgba(255,255,255,0.35)" to="rgba(255,255,255,0.72)">
+                  Managed software delivery with a dedicated PM, fixed quotes, and one platform for every build.
+                </ScrollColorText>
+              </Text>
+            </ScrollReveal>
           </Flex>
 
           {/* Table — horizontally scrollable on mobile */}
@@ -950,62 +1000,15 @@ export default function LandingPage() {
                 mb={3} px={5}
               >
                 <Box />
-                {MATRIX_COLS.map((col) => (
-                  <Box key={col} textAlign="center">
-                    <Text fontSize="0.7rem" fontWeight="700"
-                      color="rgba(255,255,255,0.35)" letterSpacing="0.06em"
-                      textTransform="uppercase">{col}</Text>
-                  </Box>
+                {MATRIX_COLS.map((col, i) => (
+                  <MatrixColHeader key={col} label={col} index={i} />
                 ))}
               </Grid>
 
               {/* Rows */}
               <Stack gap={2}>
-                {MATRIX_ROWS.map((row) => (
-                  <Box
-                    key={row.name}
-                    borderRadius="12px"
-                    bg={row.highlight ? G_ON_DARK : "rgba(255,255,255,0.04)"}
-                    border={row.highlight
-                      ? "none"
-                      : "1px solid rgba(255,255,255,0.06)"}
-                    overflow="hidden"
-                    transition="all 0.2s"
-                    _hover={row.highlight ? undefined : { bg: "rgba(255,255,255,0.06)" }}
-                  >
-                    <Grid
-                      templateColumns="240px repeat(8, 1fr)"
-                      alignItems="center"
-                      px={5} py={5}
-                    >
-                      {/* Name + desc */}
-                      <Box pr={6}>
-                        <Text
-                          fontSize="0.9375rem" fontWeight="700" mb={1}
-                          color={row.highlight ? INK : "white"}
-                          fontFamily="var(--font-heading)"
-                          letterSpacing="-0.01em"
-                        >
-                          {row.name}
-                        </Text>
-                        <Text
-                          fontSize="0.8rem" lineHeight="1.55"
-                          color={row.highlight ? "rgba(14,27,23,0.6)" : "rgba(255,255,255,0.35)"}
-                        >
-                          {row.desc}
-                        </Text>
-                      </Box>
-
-                      {/* Score cells */}
-                      {row.scores.map((pass, ci) => (
-                        <Flex key={ci} justify="center" align="center">
-                          {row.highlight
-                            ? <CheckIconLight pass={pass} />
-                            : <CheckIcon pass={pass} />}
-                        </Flex>
-                      ))}
-                    </Grid>
-                  </Box>
+                {MATRIX_ROWS.map((row, ri) => (
+                  <MatrixRow key={row.name} row={row} rowIndex={ri} />
                 ))}
               </Stack>
 

@@ -154,30 +154,36 @@ export default function LandingInquiryForm() {
     <Box
       as="form"
       onSubmit={handleSubmit(onSubmit)}
-      borderRadius="16px"
+      borderRadius="12px"
       overflow="hidden"
-      boxShadow="0 32px 80px rgba(0,0,0,0.32), 0 8px 24px rgba(0,0,0,0.16)"
+      border="1px solid rgba(255,255,255,0.08)"
+      boxShadow="0 24px 64px rgba(0,0,0,0.28), 0 1px 0 rgba(255,255,255,0.06) inset"
       w="full"
     >
       {/* ── Dark header ────────────────────────────────────────── */}
-      <Box bg={INK} px={{ base: 7, md: 9 }} pt={8} pb={7}>
+      <Box bg={INK} px={{ base: 6, md: 8 }} pt={6} pb={5}>
         {/* Brand label */}
-        <Flex align="center" gap={2} mb={6}>
-          <Box w="6px" h="6px" borderRadius="full" bg={GREEN} />
-          <Text fontSize="0.6875rem" fontWeight="700" color="rgba(255,255,255,0.4)"
-            letterSpacing="0.12em" textTransform="uppercase">
-            Co-Helper
+        <Flex align="center" justify="space-between" mb={5}>
+          <Flex align="center" gap={2}>
+            <Box w="5px" h="5px" borderRadius="full" bg={GREEN} />
+            <Text fontSize="0.6875rem" fontWeight="700" color="rgba(255,255,255,0.42)"
+              letterSpacing="0.12em" textTransform="uppercase">
+              Co-Helper
+            </Text>
+          </Flex>
+          <Text fontSize="0.6875rem" color="rgba(255,255,255,0.32)" fontWeight="500">
+            Step {step} of {TOTAL_STEPS}
           </Text>
         </Flex>
 
         {/* Step indicator */}
         <Box position="relative">
           <Box
-            position="absolute" top="16px" left="16px" right="16px"
+            position="absolute" top="14px" left="14px" right="14px"
             h="1px" bg="rgba(255,255,255,0.1)" zIndex={0}
           />
           <Box
-            position="absolute" top="16px" left="16px" h="1px"
+            position="absolute" top="14px" left="14px" h="1px"
             bg={GREEN} zIndex={1} transition="width 0.4s ease"
             style={{ width: `calc(${((step - 1) / (TOTAL_STEPS - 1)) * 100}% * ${(TOTAL_STEPS - 1) / TOTAL_STEPS * 1.0})` }}
           />
@@ -186,19 +192,19 @@ export default function LandingInquiryForm() {
               const done    = step > s.n
               const current = step === s.n
               return (
-                <Flex key={s.n} flexDir="column" alignItems="center" gap={2.5}>
+                <Flex key={s.n} flexDir="column" alignItems="center" gap={2}>
                   <Box
-                    w="32px" h="32px" borderRadius="full"
+                    w="28px" h="28px" borderRadius="full"
                     bg={done || current ? GREEN : "rgba(255,255,255,0.07)"}
-                    border={`2px solid ${done || current ? GREEN : "rgba(255,255,255,0.15)"}`}
+                    border={`1.5px solid ${done || current ? GREEN : "rgba(255,255,255,0.15)"}`}
                     display="flex" alignItems="center" justifyContent="center"
                     transition="all 0.3s"
-                    boxShadow={current ? `0 0 0 4px rgba(15,110,86,0.28)` : "none"}
+                    boxShadow={current ? `0 0 0 3px rgba(15,110,86,0.24)` : "none"}
                   >
                     {done ? (
-                      <Text fontSize="0.8125rem" color="white" fontWeight="700">✓</Text>
+                      <Text fontSize="0.75rem" color="white" fontWeight="700">✓</Text>
                     ) : (
-                      <Text fontSize="0.75rem" color={current ? "white" : "rgba(255,255,255,0.35)"}
+                      <Text fontSize="0.6875rem" color={current ? "white" : "rgba(255,255,255,0.35)"}
                         fontWeight="700">{s.n}</Text>
                     )}
                   </Box>
@@ -219,15 +225,15 @@ export default function LandingInquiryForm() {
       </Box>
 
       {/* ── Form body ──────────────────────────────────────────── */}
-      <Box bg="white" px={{ base: 7, md: 9 }} pt={7} pb={8}>
+      <Box bg="white" px={{ base: 6, md: 8 }} pt={6} pb={7}>
 
         {/* Step heading */}
-        <Box mb={6}>
-          <Text fontSize="1.125rem" fontWeight="700" color={INK} letterSpacing="-0.02em" mb={1}
+        <Box mb={5}>
+          <Text fontSize="1.0625rem" fontWeight="700" color={INK} letterSpacing="-0.02em" mb={0.5}
             style={{ opacity: visible ? 1 : 0, transition: "opacity 0.18s ease" }}>
             {meta.title}
           </Text>
-          <Text fontSize="0.875rem" color={MUTED}
+          <Text fontSize="0.8125rem" color={MUTED} lineHeight="1.5"
             style={{ opacity: visible ? 1 : 0, transition: "opacity 0.18s ease" }}>
             {meta.sub}
           </Text>
@@ -546,7 +552,7 @@ export default function LandingInquiryForm() {
         </Box>
 
         {/* ── Navigation bar ─────────────────────────────────── */}
-        <Flex align="center" justify="space-between" mt={7} pt={5}
+        <Flex align="center" justify="space-between" mt={6} pt={4}
           borderTop={`1px solid ${RULE}`}>
           {step > 1 ? (
             <Button
@@ -561,10 +567,6 @@ export default function LandingInquiryForm() {
           ) : (
             <Box />
           )}
-
-          <Text fontSize="0.8125rem" color="#9CA3AF" fontWeight="500">
-            Step {step} of {TOTAL_STEPS}
-          </Text>
 
           {step < TOTAL_STEPS ? (
             <Button
