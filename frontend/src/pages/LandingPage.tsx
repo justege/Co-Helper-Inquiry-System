@@ -538,18 +538,19 @@ export default function LandingPage() {
                 fontWeight="700" lineHeight="1.12" letterSpacing="-0.03em"
                 mb={4} fontFamily="var(--font-heading)"
               >
-                <Box as="span" color="white" display="block">Software development,</Box>
-                <Box as="span" color="white" display="block">managed on one platform.</Box>
-                <Box as="span" color={G_ON_DARK} display="block" mt={1}>Predictable delivery.</Box>
+                <Box as="span" color="white" display="block">Tell us what you need.</Box>
+                <Box as="span" color={G_ON_DARK} display="block" mt={1}>
+                  We get it built — no freelancer hunt.
+                </Box>
               </Heading>
 
               <Text
                 fontSize={{ base: "0.9375rem", md: "1rem" }}
                 color="rgba(255,255,255,0.58)"
-                lineHeight="1.65" maxW="440px" mb={6}
+                lineHeight="1.65" maxW="420px" mb={6}
               >
-                Steer every build centrally through Co-Helper — dedicated PM, vetted developers,
-                fixed quotes within 24 hours, and zero freelancer coordination on your side.
+                A dedicated PM, vetted developers, and a fixed quote within 24 hours —
+                on one platform.
               </Text>
 
               <Flex gap={2.5} flexWrap="wrap" mb={8}>
@@ -578,9 +579,9 @@ export default function LandingPage() {
                 pt={5}
               >
                 {[
+                  { v: "1 PM",  l: "Per project"    },
+                  { v: "< 24h", l: "Fixed quote"    },
                   { v: "50+",   l: "Dev services"   },
-                  { v: "< 24h", l: "Quote returned" },
-                  { v: "€0",    l: "Upfront risk"   },
                 ].map((s, i) => (
                   <Flex
                     key={s.l} align="center"
