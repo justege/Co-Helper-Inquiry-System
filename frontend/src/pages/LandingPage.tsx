@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react"
 import { Box, Flex, Grid, Heading, Stack, Text } from "@chakra-ui/react"
 import { Link } from "react-router-dom"
 import { MarketingFooter, AnnounceBar } from "@/components/marketing/MarketingUI"
@@ -456,6 +457,415 @@ function _Dashboard_DEAD() {
 }
 /* eslint-enable @typescript-eslint/no-unused-vars */
 
+// ─── Service catalog (interactive stack builder) ─────────────────────────────
+const SERVICE_CATALOG = [
+  {
+    id: "fullstack",
+    cat: "Full Stack Development",
+    items: [
+      { id: "saas-platform", label: "SaaS Platform Build" },
+      { id: "rest-graphql", label: "REST & GraphQL APIs" },
+      { id: "admin-tools", label: "Admin Dashboard & Tools" },
+    ],
+    live: true,
+  },
+  {
+    id: "mvp",
+    cat: "MVP & Product Builds",
+    items: [
+      { id: "saas-mvp", label: "SaaS MVP Build" },
+      { id: "startup-prototype", label: "Startup Prototype" },
+      { id: "marketplace-mvp", label: "Marketplace MVP" },
+    ],
+    live: true,
+  },
+  {
+    id: "mobile",
+    cat: "Mobile Apps",
+    items: [
+      { id: "react-native", label: "React Native App" },
+      { id: "native-ios", label: "Native iOS" },
+      { id: "native-android", label: "Native Android" },
+    ],
+    live: true,
+  },
+  {
+    id: "automation",
+    cat: "Automation & Integrations",
+    items: [
+      { id: "n8n", label: "n8n Workflows" },
+      { id: "crm", label: "CRM Integrations" },
+      { id: "webhooks", label: "Webhook & API Pipelines" },
+    ],
+    live: true,
+  },
+  {
+    id: "ecommerce",
+    cat: "E-commerce",
+    items: [
+      { id: "shopify-setup", label: "Shopify Store Setup" },
+      { id: "headless", label: "Headless Commerce" },
+      { id: "ecom-migration", label: "E-commerce Migration" },
+    ],
+    live: true,
+  },
+  {
+    id: "seo",
+    cat: "SEO & Marketing",
+    items: [
+      { id: "tech-seo", label: "Technical SEO Audit" },
+      { id: "ga4-gtm", label: "GA4 & GTM Setup" },
+      { id: "google-ads", label: "Google Ads Setup" },
+    ],
+    live: true,
+  },
+] as const
+
+const STACK_PRESETS = [
+  {
+    label: "SaaS MVP",
+    desc: "Ship a product fast",
+    ids: ["saas-mvp", "rest-graphql", "admin-tools"],
+  },
+  {
+    label: "Shopify launch",
+    desc: "Store + tracking",
+    ids: ["shopify-setup", "tech-seo", "ga4-gtm"],
+  },
+  {
+    label: "Mobile + API",
+    desc: "App with backend",
+    ids: ["react-native", "rest-graphql", "webhooks"],
+  },
+] as const
+
+const TOTAL_SERVICES = SERVICE_CATALOG.reduce((sum, cat) => sum + cat.items.length, 0)
+
+function stackLevel(count: number) {
+  if (count === 0) {
+    return { label: "Scout the catalog", pct: 0, hint: "Click services below or load a preset stack to start." }
+  }
+  if (count <= 2) {
+    return { label: "Starter stack", pct: 28, hint: "Nice — add integrations or launch services to round it out." }
+  }
+  if (count <= 5) {
+    return { label: "Build mode", pct: 55, hint: "You're shaping a real project scope. Keep going or post now." }
+  }
+  if (count <= 8) {
+    return { label: "Production ready", pct: 78, hint: "Solid breadth — one PM can quote this as a single brief." }
+  }
+  return { label: "Full delivery suite", pct: 100, hint: "Comprehensive scope — post this brief for a fixed quote." }
+}
+
+function ServiceCheckIcon({ active }: { active: boolean }) {
+  return (
+    <Box
+      w="16px" h="16px" borderRadius="4px" flexShrink={0}
+      border="1.5px solid"
+      borderColor={active ? GREEN : RULE}
+      bg={active ? GREEN : "white"}
+      display="flex" alignItems="center" justifyContent="center"
+      transition="all 0.18s cubic-bezier(0.22, 1, 0.36, 1)"
+      transform={active ? "scale(1.05)" : "scale(1)"}
+    >
+      {active && (
+        <svg width="8" height="6" viewBox="0 0 10 8" fill="none" aria-hidden>
+          <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+    </Box>
+  )
+}
+
+function ServiceCatalogSection() {
+  const [selected, setSelected] = useState<Set<string>>(() => new Set())
+  const [activePreset, setActivePreset] = useState<string | null>(null)
+
+  const selectedList = useMemo(
+    () =>
+      SERVICE_CATALOG.flatMap((cat) =>
+        cat.items.filter((item) => selected.has(item.id)).map((item) => ({ ...item, category: cat.cat })),
+      ),
+    [selected],
+  )
+
+  const categoriesUnlocked = useMemo(
+    () => SERVICE_CATALOG.filter((cat) => cat.items.some((item) => selected.has(item.id))).length,
+    [selected],
+  )
+
+  const level = stackLevel(selected.size)
+  const progressPct = Math.round((selected.size / TOTAL_SERVICES) * 100)
+
+  function toggle(id: string) {
+    setActivePreset(null)
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function applyPreset(preset: (typeof STACK_PRESETS)[number]) {
+    setSelected(new Set(preset.ids))
+    setActivePreset(preset.label)
+  }
+
+  function clearStack() {
+    setSelected(new Set())
+    setActivePreset(null)
+  }
+
+  return (
+    <Box py={{ base: 20, md: 28 }} bg="white" borderBottom={`1px solid ${RULE}`}>
+      <Box maxW="1200px" mx="auto" px={{ base: 5, md: 8 }}>
+        <Text fontSize="0.7rem" fontWeight="700" color={GREEN}
+          letterSpacing="0.12em" textTransform="uppercase" mb={4}
+          fontFamily="var(--font-heading)">
+          Our services
+        </Text>
+        <Flex justify="space-between" align="flex-end" mb={8} flexWrap="wrap" gap={6}>
+          <Box maxW="560px">
+            <Heading
+              fontSize={{ base: "1.875rem", md: "2.5rem" }}
+              fontWeight="700" letterSpacing="-0.034em"
+              fontFamily="var(--font-heading)" mb={3}
+            >
+              More than outsourcing — a full software delivery catalog.
+            </Heading>
+            <Text fontSize="0.9375rem" color={MUTED} lineHeight="1.7">
+              Build your project stack — click services to add them to a brief. One PM, one fixed quote.
+            </Text>
+          </Box>
+          <Link to="/register" style={{ textDecoration: "none" }}>
+            <Box px={5} py="10px" borderRadius="6px" fontWeight="600" fontSize="0.875rem"
+              bg="transparent" color={MUTED} border={`1px solid ${RULE}`}
+              _hover={{ borderColor: "#9CA3AF" }} transition="all 0.15s">
+              Post a project →
+            </Box>
+          </Link>
+        </Flex>
+
+        {/* Progress HUD */}
+        <Box
+          mb={6} p={{ base: 4, md: 5 }} borderRadius="14px"
+          bg={LIGHT} border={`1px solid ${RULE}`}
+        >
+          <Flex justify="space-between" align="flex-start" gap={4} flexWrap="wrap" mb={4}>
+            <Box>
+              <Flex align="center" gap={2} mb={1.5} flexWrap="wrap">
+                <Text fontSize="0.65rem" fontWeight="700" color={GREEN}
+                  letterSpacing="0.1em" textTransform="uppercase">
+                  Your stack
+                </Text>
+                <Box px={2} py="2px" borderRadius="99px" bg={`${GREEN}14`} border={`1px solid ${GREEN}30`}>
+                  <Text fontSize="0.6rem" fontWeight="700" color={GREEN}>{level.label}</Text>
+                </Box>
+              </Flex>
+              <Text fontSize={{ base: "1.125rem", md: "1.25rem" }} fontWeight="700" color={INK}
+                fontFamily="var(--font-heading)" letterSpacing="-0.02em">
+                {selected.size} of {TOTAL_SERVICES} services selected
+              </Text>
+              <Text fontSize="0.8125rem" color={MUTED} mt={1} maxW="480px" lineHeight="1.6">
+                {level.hint}
+              </Text>
+            </Box>
+            <Flex gap={2} align="center" flexWrap="wrap">
+              <Box px={3} py="6px" borderRadius="8px" bg="white" border={`1px solid ${RULE}`}>
+                <Text fontSize="0.6875rem" color={MUTED}>
+                  <Box as="span" fontWeight="700" color={INK}>{categoriesUnlocked}</Box>
+                  /{SERVICE_CATALOG.length} categories
+                </Text>
+              </Box>
+              {selected.size > 0 && (
+                <Box
+                  as="button" type="button" onClick={clearStack}
+                  px={3} py="6px" borderRadius="8px"
+                  bg="white" border={`1px solid ${RULE}`}
+                  fontSize="0.6875rem" fontWeight="600" color={MUTED}
+                  cursor="pointer" transition="all 0.15s"
+                  _hover={{ borderColor: "#9CA3AF", color: INK }}
+                >
+                  Clear stack
+                </Box>
+              )}
+            </Flex>
+          </Flex>
+
+          <Box h="8px" borderRadius="99px" bg="white" border={`1px solid ${RULE}`} overflow="hidden" mb={4}>
+            <Box
+              h="full" borderRadius="99px"
+              bg={`linear-gradient(90deg, ${GREEN} 0%, #34d399 100%)`}
+              transition="width 0.45s cubic-bezier(0.22, 1, 0.36, 1)"
+              style={{ width: `${Math.max(progressPct, selected.size > 0 ? 6 : 0)}%` }}
+            />
+          </Box>
+
+          <Flex gap={2} flexWrap="wrap" align="center">
+            <Text fontSize="0.6875rem" fontWeight="600" color={MUTED} mr={1}>Loadouts:</Text>
+            {STACK_PRESETS.map((preset) => {
+              const active = activePreset === preset.label
+              return (
+                <Box
+                  key={preset.label}
+                  as="button" type="button"
+                  onClick={() => applyPreset(preset)}
+                  px={3} py="7px" borderRadius="8px"
+                  border="1.5px solid"
+                  borderColor={active ? GREEN : RULE}
+                  bg={active ? `${GREEN}10` : "white"}
+                  cursor="pointer" transition="all 0.15s"
+                  _hover={{ borderColor: active ? GREEN : "#9CA3AF", transform: "translateY(-1px)" }}
+                >
+                  <Text fontSize="0.75rem" fontWeight="700" color={active ? GREEN : INK}>{preset.label}</Text>
+                  <Text fontSize="0.625rem" color={MUTED}>{preset.desc}</Text>
+                </Box>
+              )
+            })}
+          </Flex>
+        </Box>
+
+        {/* Category grid */}
+        <Grid templateColumns={{ base: "1fr", sm: "repeat(2,1fr)", md: "repeat(3,1fr)" }} gap={4}>
+          {SERVICE_CATALOG.map((s) => {
+            const pickedInCat = s.items.filter((item) => selected.has(item.id)).length
+            const catComplete = pickedInCat === s.items.length
+
+            return (
+              <Box
+                key={s.id} p={6} bg={LIGHT} borderRadius="12px"
+                border={pickedInCat > 0 ? `1.5px solid ${GREEN}55` : s.live ? `1px solid ${GREEN}30` : `1px solid ${RULE}`}
+                boxShadow={pickedInCat > 0 ? "0 6px 20px rgba(16,185,129,0.08)" : undefined}
+                transition="all 0.22s cubic-bezier(0.22, 1, 0.36, 1)"
+              >
+                <Flex justify="space-between" align="flex-start" mb={4}>
+                  <Box>
+                    <Text fontSize="0.9375rem" fontWeight="700" color={INK}
+                      fontFamily="var(--font-heading)">{s.cat}</Text>
+                    {pickedInCat > 0 && (
+                      <Text fontSize="0.6875rem" color={GREEN} fontWeight="600" mt={1}>
+                        {pickedInCat}/{s.items.length} in stack
+                      </Text>
+                    )}
+                  </Box>
+                  <Flex gap={1.5} align="center">
+                    {catComplete && (
+                      <Box px={2} py="2px" borderRadius="99px" bg={`${AMBER}18`} border={`1px solid ${AMBER}40`}>
+                        <Text fontSize="0.55rem" fontWeight="700" color="#92400e">Complete</Text>
+                      </Box>
+                    )}
+                    {s.live && (
+                      <Box px={2} py="2px" borderRadius="99px" bg={`${GREEN}14`} border={`1px solid ${GREEN}30`}>
+                        <Text fontSize="0.6rem" fontWeight="700" color={GREEN}>Live</Text>
+                      </Box>
+                    )}
+                  </Flex>
+                </Flex>
+                <Stack gap={2}>
+                  {s.items.map((item) => {
+                    const active = selected.has(item.id)
+                    return (
+                      <Box
+                        key={item.id}
+                        as="button" type="button"
+                        onClick={() => toggle(item.id)}
+                        w="full" textAlign="left"
+                        px={3} py={2.5} borderRadius="8px"
+                        bg={active ? "white" : "transparent"}
+                        border="1px solid"
+                        borderColor={active ? `${GREEN}50` : "transparent"}
+                        cursor="pointer"
+                        transition="all 0.16s ease"
+                        _hover={{
+                          bg: "white",
+                          borderColor: active ? `${GREEN}60` : RULE,
+                          transform: "translateX(2px)",
+                        }}
+                        aria-pressed={active}
+                      >
+                        <Flex align="center" gap={2.5}>
+                          <ServiceCheckIcon active={active} />
+                          <Text
+                            fontSize="0.8125rem"
+                            color={active ? INK : MUTED}
+                            fontWeight={active ? 600 : 400}
+                            transition="color 0.15s"
+                          >
+                            {item.label}
+                          </Text>
+                        </Flex>
+                      </Box>
+                    )
+                  })}
+                </Stack>
+              </Box>
+            )
+          })}
+        </Grid>
+
+        {/* Brief preview */}
+        <Box
+          mt={6} p={{ base: 5, md: 6 }} borderRadius="14px"
+          bg={selected.size > 0 ? INK : LIGHT}
+          border={`1px solid ${selected.size > 0 ? INK : RULE}`}
+          transition="all 0.35s cubic-bezier(0.22, 1, 0.36, 1)"
+        >
+          <Flex justify="space-between" align="flex-start" gap={4} flexWrap="wrap">
+            <Box flex={1} minW="240px">
+              <Text
+                fontSize="0.65rem" fontWeight="700"
+                color={selected.size > 0 ? G_ON_DARK : GREEN}
+                letterSpacing="0.1em" textTransform="uppercase" mb={2}
+              >
+                {selected.size > 0 ? "Brief preview" : "Your brief preview"}
+              </Text>
+              {selected.size === 0 ? (
+                <Text fontSize="0.875rem" color={MUTED} lineHeight="1.7">
+                  Selected services appear here — like equipping a loadout before you post.
+                </Text>
+              ) : (
+                <Flex gap={2} flexWrap="wrap">
+                  {selectedList.map((item) => (
+                    <Box
+                      key={item.id}
+                      px={3} py="6px" borderRadius="99px"
+                      bg="rgba(255,255,255,0.08)" border="1px solid rgba(255,255,255,0.12)"
+                    >
+                      <Text fontSize="0.75rem" fontWeight="600" color="white">{item.label}</Text>
+                    </Box>
+                  ))}
+                </Flex>
+              )}
+            </Box>
+            <Link to="/register" style={{ textDecoration: "none" }}>
+              <Box
+                px={5} py="11px" borderRadius="8px" fontWeight="700" fontSize="0.875rem"
+                bg={selected.size > 0 ? AMBER : "white"}
+                color={INK}
+                border={selected.size > 0 ? `1px solid ${AMBER}` : `1px solid ${RULE}`}
+                opacity={selected.size > 0 ? 1 : 0.72}
+                transition="all 0.2s"
+                _hover={{ bg: selected.size > 0 ? AMBER_HOVER : "white", transform: "translateY(-1px)" }}
+                whiteSpace="nowrap"
+              >
+                {selected.size > 0 ? `Post ${selected.size}-service brief →` : "Post a project →"}
+              </Box>
+            </Link>
+          </Flex>
+        </Box>
+
+        <Text fontSize="0.875rem" color={MUTED} mt={8} maxW="640px" lineHeight="1.7">
+          From MVPs and full-stack SaaS to mobile apps, automations, and e-commerce — 50+ scoped services, one PM, one fixed quote per project.{" "}
+          <Link to="/how-it-works" style={{ color: INK, fontWeight: 600, textDecoration: "underline", textUnderlineOffset: "2px" }}>
+            Explore all services →
+          </Link>
+        </Text>
+      </Box>
+    </Box>
+  )
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Page
 // ─────────────────────────────────────────────────────────────────────────────
@@ -897,70 +1307,7 @@ export default function LandingPage() {
       </Box>
 
       {/* ══ § OUR SERVICES ══════════════════════════════════════════════════ */}
-      <Box py={{ base: 20, md: 28 }} bg="white" borderBottom={`1px solid ${RULE}`}>
-        <Box maxW="1200px" mx="auto" px={{ base: 5, md: 8 }}>
-          <Text fontSize="0.7rem" fontWeight="700" color={GREEN}
-            letterSpacing="0.12em" textTransform="uppercase" mb={4}
-            fontFamily="var(--font-heading)">
-            Our services
-          </Text>
-          <Flex justify="space-between" align="flex-end" mb={12} flexWrap="wrap" gap={6}>
-            <Heading
-              fontSize={{ base: "1.875rem", md: "2.5rem" }}
-              fontWeight="700" letterSpacing="-0.034em" maxW="520px"
-              fontFamily="var(--font-heading)"
-            >
-              More than outsourcing — a full software delivery catalog.
-            </Heading>
-            <Link to="/register" style={{ textDecoration: "none" }}>
-              <Box px={5} py="10px" borderRadius="6px" fontWeight="600" fontSize="0.875rem"
-                bg="transparent" color={MUTED} border={`1px solid ${RULE}`}
-                _hover={{ borderColor: "#9CA3AF" }} transition="all 0.15s">
-                Post a project →
-              </Box>
-            </Link>
-          </Flex>
-
-          <Grid templateColumns={{ base: "1fr", sm: "repeat(2,1fr)", md: "repeat(3,1fr)" }} gap={4}>
-            {[
-              { cat: "Full Stack Development", items: ["SaaS Platform Build", "REST & GraphQL APIs", "Admin Dashboard & Tools"], live: true },
-              { cat: "MVP & Product Builds", items: ["SaaS MVP Build", "Startup Prototype", "Marketplace MVP"], live: true },
-              { cat: "Mobile Apps",            items: ["React Native App", "Native iOS", "Native Android"], live: true },
-              { cat: "Automation & Integrations", items: ["n8n Workflows", "CRM Integrations", "Webhook & API Pipelines"], live: true },
-              { cat: "E-commerce",           items: ["Shopify Store Setup", "Headless Commerce", "E-commerce Migration"], live: true },
-              { cat: "SEO & Marketing",      items: ["Technical SEO Audit", "GA4 & GTM Setup", "Google Ads Setup"], live: true },
-            ].map((s) => (
-              <Box key={s.cat} p={6} bg={LIGHT} borderRadius="12px"
-                border={s.live ? `1px solid ${GREEN}30` : `1px solid ${RULE}`}
-                _hover={{ bg: "white", boxShadow: "0 4px 16px rgba(0,0,0,0.06)" }}
-                transition="all 0.2s">
-                <Flex justify="space-between" align="flex-start" mb={4}>
-                  <Text fontSize="0.9375rem" fontWeight="700" color={INK}
-                    fontFamily="var(--font-heading)">{s.cat}</Text>
-                  <Box px={2} py="2px" borderRadius="99px" bg={`${GREEN}14`} border={`1px solid ${GREEN}30`}>
-                    <Text fontSize="0.6rem" fontWeight="700" color={GREEN}>Live</Text>
-                  </Box>
-                </Flex>
-                <Stack gap={1.5}>
-                  {s.items.map((item) => (
-                    <Flex key={item} align="center" gap={2}>
-                      <Box w="4px" h="4px" borderRadius="50%" bg={GREEN} flexShrink={0} />
-                      <Text fontSize="0.8125rem" color={MUTED}>{item}</Text>
-                    </Flex>
-                  ))}
-                </Stack>
-              </Box>
-            ))}
-          </Grid>
-
-          <Text fontSize="0.875rem" color={MUTED} mt={8} maxW="640px" lineHeight="1.7">
-            From MVPs and full-stack SaaS to mobile apps, automations, and e-commerce — 50+ scoped services, one PM, one fixed quote per project.{" "}
-            <Link to="/how-it-works" style={{ color: INK, fontWeight: 600, textDecoration: "underline", textUnderlineOffset: "2px" }}>
-              Explore all services →
-            </Link>
-          </Text>
-        </Box>
-      </Box>
+      <ServiceCatalogSection />
 
       {/* ══ § COMPARISON MATRIX ═════════════════════════════════════════════ */}
       <Box py={{ base: 20, md: 28 }} bg={INK}>
