@@ -471,11 +471,13 @@ export default function LandingPage() {
         bg={INK}
         pt={{ base: 0, lg: 0 }}
       >
-        {/* Background video */}
+        {/* Background video — scaled to crop AI watermark */}
         <Box
           as="video"
           position="absolute" inset={0} w="full" h="full"
-          objectFit="cover" zIndex={0}
+          objectFit="cover" objectPosition="50% 42%"
+          transform="scale(1.22)" transformOrigin="center center"
+          zIndex={0}
           // @ts-ignore — HTML video attrs passed as Box props
           autoPlay loop muted playsInline
           src="/assets/hero.mp4"
