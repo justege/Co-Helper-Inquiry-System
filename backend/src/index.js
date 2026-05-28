@@ -20,6 +20,8 @@ const isProduction = process.env.NODE_ENV === "production";
 const app = express();
 const PORT = process.env.PORT ?? 8000;
 
+const PRODUCTION_APP_ORIGIN = "https://co-helper-inquiry-system-production.up.railway.app";
+
 // ── Middleware ─────────────────────────────────────────────────────────────────
 const allowedOrigins = new Set(
   (process.env.CORS_ALLOWED_ORIGINS ?? "http://localhost:5173,http://localhost:3000")
@@ -27,6 +29,8 @@ const allowedOrigins = new Set(
     .map((o) => o.trim())
     .filter(Boolean)
 );
+
+allowedOrigins.add(PRODUCTION_APP_ORIGIN);
 
 if (process.env.RAILWAY_PUBLIC_DOMAIN) {
   allowedOrigins.add(`https://${process.env.RAILWAY_PUBLIC_DOMAIN}`);

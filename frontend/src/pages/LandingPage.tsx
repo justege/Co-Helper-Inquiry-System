@@ -529,19 +529,6 @@ export default function LandingPage() {
           >
             {/* Left */}
             <Box>
-              {/* Badge */}
-              <Box
-                display="inline-flex" alignItems="center" gap={2}
-                px={3} py="5px" borderRadius="99px" mb={8}
-                bg="rgba(255,255,255,0.06)"
-                border="1px solid rgba(255,255,255,0.1)"
-              >
-                <Box w="5px" h="5px" borderRadius="50%" bg={GREEN} />
-                <Text fontSize="0.75rem" fontWeight="600" color="rgba(255,255,255,0.6)"
-                  letterSpacing="0.06em">
-                  500+ vetted specialists · PM-led · Escrow-protected
-                </Text>
-              </Box>
 
               {/* Headline */}
               <Heading
