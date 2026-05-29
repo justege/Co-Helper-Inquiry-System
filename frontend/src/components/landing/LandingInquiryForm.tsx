@@ -22,10 +22,18 @@ import { getPublicCategories, type Category } from "@/api/categories"
 import { submitLandingInquiry } from "@/api/inquiries"
 import type { BusinessType, CreateInquiryInput, Urgency } from "@/api/inquiries"
 import { auth } from "@/lib/firebase"
+import AiInquiryChat, { type AiChatResult } from "@/components/ai/AiInquiryChat"
+import { draftToInquiryInput } from "@/lib/gemini"
+import avatarSrc from "@/assets/avatar.png"
 
 import { AMBER, AMBER_HOVER, GREEN, INK, MUTED, RULE } from "@/components/marketing/tokens"
-const G_LIGHT = "#F0FAF5"
+
+const G_LIGHT  = "#F0FAF5"
 const G_BORDER = "#A7D7C5"
+const AI_DARK  = "#0E1B17"
+const AI_BLUE  = "#185FA5"
+
+type FormMode = "standard" | "ai"
 
 type FormValues = CreateInquiryInput & {
   username: string
@@ -62,14 +70,260 @@ function FieldError({ message }: { message?: string }) {
   return <Text fontSize="0.75rem" color="#DC2626" mt={1}>{message}</Text>
 }
 
+// ─── Mode toggle ─────────────────────────────────────────────────────────────
+
+function ModeToggle({ mode, onChange }: { mode: FormMode; onChange: (m: FormMode) => void }) {
+  return (
+    <Flex
+      bg="rgba(255,255,255,0.06)" borderRadius="10px"
+      p="3px" gap="3px"
+      border="1px solid rgba(255,255,255,0.1)"
+    >
+      {(["standard", "ai"] as FormMode[]).map((m) => {
+        const active = mode === m
+        return (
+          <button
+            key={m}
+            type="button"
+            onClick={() => onChange(m)}
+            style={{
+              flex: 1,
+              padding: "6px 12px",
+              borderRadius: 8,
+              background: active ? "white" : "transparent",
+              color: active ? INK : "rgba(255,255,255,0.55)",
+              fontSize: "0.75rem",
+              fontWeight: active ? 700 : 500,
+              transition: "all 0.18s",
+              cursor: "pointer",
+              border: "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+            }}
+          >
+            {m === "ai" && (
+              <span style={{
+                width: 14, height: 14, borderRadius: "50%",
+                background: active ? AI_BLUE : "rgba(255,255,255,0.3)",
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                flexShrink: 0, transition: "background 0.18s",
+              }}>
+                <svg width="8" height="8" viewBox="0 0 12 12" fill="none">
+                  <circle cx="6" cy="6" r="2" fill="white" />
+                  <line x1="1.5" y1="3" x2="6" y2="6" stroke="white" strokeWidth="1.2" strokeLinecap="round" />
+                  <line x1="10.5" y1="3" x2="6" y2="6" stroke="white" strokeWidth="1.2" strokeLinecap="round" />
+                  <line x1="6" y1="10.5" x2="6" y2="6" stroke="white" strokeWidth="1.2" strokeLinecap="round" />
+                </svg>
+              </span>
+            )}
+            {m === "standard" ? "Standard" : "AI Co-Helper"}
+          </button>
+        )
+      })}
+    </Flex>
+  )
+}
+
+// ─── AI step — wraps AiInquiryChat within the multi-step shell ───────────────
+
+interface AiStepProps {
+  categories: Category[]
+  onComplete: (result: AiChatResult) => void
+}
+
+function AiStep({ categories, onComplete }: AiStepProps) {
+  return (
+    <Box
+      borderRadius="0 0 12px 12px"
+      overflow="hidden"
+      border="1px solid rgba(255,255,255,0.08)"
+      borderTop="none"
+      boxShadow="0 24px 64px rgba(0,0,0,0.28)"
+    >
+      {/* AI header strip */}
+      <Box bg={AI_DARK} px={5} py={3} borderBottom="1px solid rgba(255,255,255,0.06)">
+        <Flex align="center" gap={2.5}>
+          <Box
+            w="34px" h="34px" borderRadius="full" flexShrink={0}
+            overflow="hidden" border="2px solid rgba(255,255,255,0.3)"
+            boxShadow="0 2px 8px rgba(0,0,0,0.3)"
+          >
+            <img src={avatarSrc} alt="AI Project Manager"
+              style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top" }} />
+          </Box>
+          <Box>
+            <Text fontSize="0.8125rem" fontWeight="700" color="white" lineHeight="1.2">
+              AI Project Manager
+            </Text>
+            <Flex align="center" gap={1.5}>
+              <Box w="5px" h="5px" borderRadius="full" bg="#4ADE80"
+                style={{ animation: "pulse 2s infinite" }} />
+              <Text fontSize="0.6875rem" color="rgba(255,255,255,0.45)">
+                Gemini 2.5 Flash · Online
+              </Text>
+            </Flex>
+          </Box>
+        </Flex>
+      </Box>
+
+      {/* Chat area */}
+      <Box h="400px" bg="white">
+        <AiInquiryChat
+          categories={categories}
+          onComplete={onComplete}
+          variant="landing"
+        />
+      </Box>
+    </Box>
+  )
+}
+
+// ─── AI account step (step 3 after chat completes) ────────────────────────────
+
+interface AiAccountStepProps {
+  aiResult: AiChatResult
+  onSubmit: (values: { username: string; email: string; password: string }) => Promise<void>
+  isSubmitting: boolean
+  error?: string
+}
+
+function AiAccountStep({ aiResult, onSubmit, isSubmitting, error }: AiAccountStepProps) {
+  const [username, setUsername] = useState("")
+  const [email, setEmail]       = useState("")
+  const [password, setPassword] = useState("")
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+
+  function validate() {
+    const errs: Record<string, string> = {}
+    if (username.trim().length < 2) errs.username = "At least 2 characters"
+    if (!/\S+@\S+\.\S+/.test(email)) errs.email = "Invalid email"
+    if (password.length < 6) errs.password = "At least 6 characters"
+    setFieldErrors(errs)
+    return Object.keys(errs).length === 0
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (validate()) {
+      void onSubmit({ username: username.trim(), email: email.trim(), password })
+    }
+  }
+
+  const matched = aiResult.draft.categoryName
+
+  return (
+    <Box as="form" onSubmit={handleSubmit}>
+      {/* Brief summary */}
+      <Box
+        mb={5} p={4} borderRadius="10px"
+        bg={G_LIGHT} border={`1.5px solid ${G_BORDER}`}
+      >
+        <Text fontSize="0.6875rem" fontWeight="700" color={MUTED}
+          letterSpacing="0.1em" textTransform="uppercase" mb={2.5}>
+          Your AI-crafted brief
+        </Text>
+        <Flex wrap="wrap" gap={2}>
+          {[
+            aiResult.draft.type === "service" ? "Ongoing Service" : "Fixed Project",
+            aiResult.draft.title,
+            matched,
+            `Priority: ${aiResult.draft.urgency}`,
+          ].filter(Boolean).map((tag) => (
+            <Box key={tag as string}
+              px={3} py={1} bg="white" border={`1px solid ${RULE}`}
+              borderRadius="6px" fontSize="0.8125rem" fontWeight="500" color={INK}>
+              {tag}
+            </Box>
+          ))}
+        </Flex>
+      </Box>
+
+      {error && (
+        <Box bg="#FFF5F5" border="1.5px solid #FECACA" borderRadius="8px"
+          px={4} py={3} mb={5} display="flex" gap={3} alignItems="flex-start">
+          <Text color="#DC2626" mt="1px">⚠</Text>
+          <Text fontSize="0.875rem" color="#C53030" lineHeight="1.6">{error}</Text>
+        </Box>
+      )}
+
+      <Grid templateColumns={{ base: "1fr", sm: "1fr 1fr" }} gap={5} mb={5}>
+        <Box>
+          <Label required>Full name or username</Label>
+          <FormInput
+            size="lg" placeholder="e.g., johnsmith"
+            autoComplete="username"
+            value={username} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
+            {...formInvalidBorder(!!fieldErrors.username)}
+          />
+          <FieldError message={fieldErrors.username} />
+        </Box>
+        <Box>
+          <Label required>Work email</Label>
+          <FormInput
+            size="lg" type="email" placeholder="you@company.com"
+            autoComplete="email"
+            value={email} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+            {...formInvalidBorder(!!fieldErrors.email)}
+          />
+          <FieldError message={fieldErrors.email} />
+        </Box>
+      </Grid>
+
+      <Box mb={6}>
+        <Label required>Password</Label>
+        <PasswordInput
+          size="lg" placeholder="Min. 6 characters"
+          autoComplete="new-password"
+          {...FORM_INPUT_PROPS_LG}
+          value={password} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+          {...formInvalidBorder(!!fieldErrors.password)}
+        />
+        <FieldError message={fieldErrors.password} />
+      </Box>
+
+      <Button
+        type="submit" w="full" h="52px"
+        bg={AMBER} color={INK} fontWeight="700" fontSize="1rem"
+        borderRadius="10px"
+        loading={isSubmitting}
+        loadingText="Creating account & submitting…"
+        _hover={{ bg: AMBER_HOVER }}
+        _active={{ bg: "#c07a17" }}
+        mb={4}
+      >
+        Submit project & create account →
+      </Button>
+
+      <Text fontSize="0.75rem" color={MUTED} textAlign="center">
+        Already have an account?{" "}
+        <Link to="/login" style={{ color: GREEN, fontWeight: 600, textDecoration: "none" }}>
+          Sign in
+        </Link>
+      </Text>
+    </Box>
+  )
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
 export default function LandingInquiryForm() {
   const navigate = useNavigate()
   const { registerWithEmail } = useAuthContext()
+
+  const [mode, setMode] = useState<FormMode>("ai")
   const [categories, setCategories] = useState<Category[]>([])
   const [catLoading, setCatLoading] = useState(true)
   const [step, setStep] = useState(1)
   const [visible, setVisible] = useState(true)
 
+  // AI mode state
+  const [aiResult, setAiResult] = useState<AiChatResult | null>(null)
+  const [aiSubmitting, setAiSubmitting] = useState(false)
+  const [aiError, setAiError] = useState<string>()
+
+  // Standard form
   const {
     register,
     handleSubmit,
@@ -95,33 +349,67 @@ export default function LandingInquiryForm() {
       .finally(() => setCatLoading(false))
   }, [businessType])
 
+  // Also fetch all categories for AI mode (no type filter needed upfront)
+  const [allCategories, setAllCategories] = useState<Category[]>([])
+  useEffect(() => {
+    getPublicCategories()
+      .then(setAllCategories)
+      .catch(() => setAllCategories([]))
+  }, [])
+
   function fadeToStep(next: number) {
     setVisible(false)
     setTimeout(() => { setStep(next); setVisible(true) }, 180)
   }
 
-  async function handleContinue() {
-    const fieldsPerStep: Record<number, (keyof FormValues)[]> = {
-      1: ["type", "categoryId", "title", "description"],
-      2: ["urgency", "targetEndDate"],
-    }
-    if (step === 2 && businessType === "tool_sourcing") {
-      fieldsPerStep[2].push("estimatedQuantity")
-    }
-    const ok = await trigger(fieldsPerStep[step] ?? [])
-    if (ok) fadeToStep(step + 1)
+  function handleModeChange(m: FormMode) {
+    setMode(m)
+    setAiResult(null)
+    setAiError(undefined)
+    setStep(1)
   }
 
-  async function onSubmit(values: FormValues) {
+  // AI chat completes → move to account creation step
+  function handleAiComplete(result: AiChatResult) {
+    setAiResult(result)
+    // small delay so user sees summary, then advance
+    setTimeout(() => fadeToStep(3), 800)
+  }
+
+  // AI mode submit (account step)
+  async function handleAiAccountSubmit(values: { username: string; email: string; password: string }) {
+    if (!aiResult) return
+    setAiSubmitting(true)
+    setAiError(undefined)
     try {
       if (!auth) throw new Error("Firebase is not configured")
-
       if (!auth.currentUser) {
         await registerWithEmail(values.email, values.password)
       }
-
       if (!auth.currentUser) throw new Error("Account created but sign-in failed")
 
+      const token = await auth.currentUser.getIdToken(true)
+      const inquiryInput = draftToInquiryInput(aiResult.draft, aiResult.categoryId)
+      const { inquiry } = await submitLandingInquiry(
+        { username: values.username, ...inquiryInput },
+        token,
+      )
+      navigate(`/app/inquiries/${inquiry.id}`, { replace: true })
+    } catch (err: unknown) {
+      setAiError(err instanceof Error ? err.message : "Submission failed. Please try again.")
+    } finally {
+      setAiSubmitting(false)
+    }
+  }
+
+  // Standard form submit
+  async function onSubmit(values: FormValues) {
+    try {
+      if (!auth) throw new Error("Firebase is not configured")
+      if (!auth.currentUser) {
+        await registerWithEmail(values.email, values.password)
+      }
+      if (!auth.currentUser) throw new Error("Account created but sign-in failed")
       const token = await auth.currentUser.getIdToken(true)
       const { inquiry } = await submitLandingInquiry(
         {
@@ -138,7 +426,7 @@ export default function LandingInquiryForm() {
               ? Number(values.estimatedQuantity)
               : null,
         },
-        token
+        token,
       )
       navigate(`/app/inquiries/${inquiry.id}`, { replace: true })
     } catch (err: unknown) {
@@ -148,8 +436,96 @@ export default function LandingInquiryForm() {
     }
   }
 
+  async function handleContinue() {
+    const fieldsPerStep: Record<number, (keyof FormValues)[]> = {
+      1: ["type", "categoryId", "title", "description"],
+      2: ["urgency", "targetEndDate"],
+    }
+    if (step === 2 && businessType === "tool_sourcing") {
+      fieldsPerStep[2].push("estimatedQuantity")
+    }
+    const ok = await trigger(fieldsPerStep[step] ?? [])
+    if (ok) fadeToStep(step + 1)
+  }
+
   const meta = STEPS_META[step - 1]
 
+  // ── AI mode — chat phase (step 1 & 2 replaced by chat)
+  if (mode === "ai" && step < 3) {
+    return (
+      <Box w="full">
+        {/* Dark header with toggle */}
+        <Box
+          bg={INK} px={{ base: 5, md: 7 }} pt={5} pb={5}
+          borderRadius="12px 12px 0 0"
+          border="1px solid rgba(255,255,255,0.08)"
+          borderBottom="none"
+          boxShadow="0 24px 64px rgba(0,0,0,0.28)"
+        >
+          <Flex align="center" justify="space-between" mb={0}>
+            <Flex align="center" gap={2}>
+              <Box w="5px" h="5px" borderRadius="full" bg={GREEN} />
+              <Text fontSize="0.6875rem" fontWeight="700" color="rgba(255,255,255,0.42)"
+                letterSpacing="0.12em" textTransform="uppercase">
+                Co-Helper
+              </Text>
+            </Flex>
+            <ModeToggle mode={mode} onChange={handleModeChange} />
+          </Flex>
+        </Box>
+
+        <AiStep categories={allCategories.length > 0 ? allCategories : categories} onComplete={handleAiComplete} />
+      </Box>
+    )
+  }
+
+  // ── AI mode — account creation step (step 3)
+  if (mode === "ai" && step === 3 && aiResult) {
+    return (
+      <Box
+        borderRadius="12px" overflow="hidden"
+        border="1px solid rgba(255,255,255,0.08)"
+        boxShadow="0 24px 64px rgba(0,0,0,0.28), 0 1px 0 rgba(255,255,255,0.06) inset"
+        w="full"
+      >
+        {/* Header */}
+        <Box bg={INK} px={{ base: 6, md: 8 }} pt={6} pb={5}>
+          <Flex align="center" justify="space-between" mb={0}>
+            <Flex align="center" gap={2}>
+              <Box w="5px" h="5px" borderRadius="full" bg={GREEN} />
+              <Text fontSize="0.6875rem" fontWeight="700" color="rgba(255,255,255,0.42)"
+                letterSpacing="0.12em" textTransform="uppercase">
+                Co-Helper · AI Co-Helper
+              </Text>
+            </Flex>
+            <Text fontSize="0.6875rem" color="rgba(255,255,255,0.32)" fontWeight="500">
+              Step 3 of 3
+            </Text>
+          </Flex>
+        </Box>
+
+        <Box bg="white" px={{ base: 6, md: 8 }} pt={6} pb={7}>
+          <Box mb={5}>
+            <Text fontSize="1.0625rem" fontWeight="700" color={INK} letterSpacing="-0.02em" mb={0.5}>
+              Create your account
+            </Text>
+            <Text fontSize="0.8125rem" color={MUTED} lineHeight="1.5">
+              We'll set you up instantly — no credit card.
+            </Text>
+          </Box>
+
+          <AiAccountStep
+            aiResult={aiResult}
+            onSubmit={handleAiAccountSubmit}
+            isSubmitting={aiSubmitting}
+            error={aiError}
+          />
+        </Box>
+      </Box>
+    )
+  }
+
+  // ── Standard form ─────────────────────────────────────────────────────────
   return (
     <Box
       as="form"
@@ -160,9 +536,8 @@ export default function LandingInquiryForm() {
       boxShadow="0 24px 64px rgba(0,0,0,0.28), 0 1px 0 rgba(255,255,255,0.06) inset"
       w="full"
     >
-      {/* ── Dark header ────────────────────────────────────────── */}
+      {/* ── Dark header */}
       <Box bg={INK} px={{ base: 6, md: 8 }} pt={6} pb={5}>
-        {/* Brand label */}
         <Flex align="center" justify="space-between" mb={5}>
           <Flex align="center" gap={2}>
             <Box w="5px" h="5px" borderRadius="full" bg={GREEN} />
@@ -171,9 +546,12 @@ export default function LandingInquiryForm() {
               Co-Helper
             </Text>
           </Flex>
-          <Text fontSize="0.6875rem" color="rgba(255,255,255,0.32)" fontWeight="500">
-            Step {step} of {TOTAL_STEPS}
-          </Text>
+          <Flex align="center" gap={3}>
+            <ModeToggle mode={mode} onChange={handleModeChange} />
+            <Text fontSize="0.6875rem" color="rgba(255,255,255,0.32)" fontWeight="500">
+              Step {step} of {TOTAL_STEPS}
+            </Text>
+          </Flex>
         </Flex>
 
         {/* Step indicator */}
@@ -224,10 +602,9 @@ export default function LandingInquiryForm() {
         </Box>
       </Box>
 
-      {/* ── Form body ──────────────────────────────────────────── */}
+      {/* ── Form body */}
       <Box bg="white" px={{ base: 6, md: 8 }} pt={6} pb={7}>
 
-        {/* Step heading */}
         <Box mb={5}>
           <Text fontSize="1.0625rem" fontWeight="700" color={INK} letterSpacing="-0.02em" mb={0.5}
             style={{ opacity: visible ? 1 : 0, transition: "opacity 0.18s ease" }}>
@@ -239,7 +616,6 @@ export default function LandingInquiryForm() {
           </Text>
         </Box>
 
-        {/* Root error */}
         {errors.root && (
           <Box bg="#FFF5F5" border="1.5px solid #FECACA" borderRadius="8px"
             px={4} py={3} mb={5} display="flex" gap={3} alignItems="flex-start">
@@ -248,7 +624,6 @@ export default function LandingInquiryForm() {
           </Box>
         )}
 
-        {/* Step content */}
         <Box
           style={{
             opacity: visible ? 1 : 0,
@@ -257,16 +632,13 @@ export default function LandingInquiryForm() {
           }}
         >
 
-          {/* ── Step 1: Project ──────────────────────────────── */}
+          {/* Step 1 */}
           {step === 1 && (
             <Box>
               <Grid templateColumns={{ base: "1fr", sm: "1fr 1fr" }} gap={5} mb={5}>
                 <Box>
                   <Label required>Engagement type</Label>
-                  <FormNativeSelect
-                    selectSize="lg"
-                    {...register("type", { required: "Required" })}
-                  >
+                  <FormNativeSelect selectSize="lg" {...register("type", { required: "Required" })}>
                     <option value="service">Ongoing Service</option>
                     <option value="tool_sourcing">Fixed Project</option>
                   </FormNativeSelect>
@@ -318,9 +690,7 @@ export default function LandingInquiryForm() {
                 <FormTextarea
                   size="lg"
                   placeholder="Describe your goals, audience, tech stack, references, and any constraints or deadlines…"
-                  rows={5}
-                  py={3}
-                  lineHeight="1.7"
+                  rows={5} py={3} lineHeight="1.7"
                   {...formInvalidBorder(!!errors.description)}
                   {...register("description", {
                     required: "Required",
@@ -332,7 +702,7 @@ export default function LandingInquiryForm() {
             </Box>
           )}
 
-          {/* ── Step 2: Timeline ─────────────────────────────── */}
+          {/* Step 2 */}
           {step === 2 && (
             <Box>
               <Box mb={6}>
@@ -357,8 +727,7 @@ export default function LandingInquiryForm() {
                                 border="1.5px solid"
                                 borderColor={active ? opt.color : RULE}
                                 bg={active ? opt.activeBg : "#F9FAFB"}
-                                cursor="pointer"
-                                transition="all 0.14s"
+                                cursor="pointer" transition="all 0.14s"
                                 _hover={{ borderColor: opt.color + "80" }}
                               >
                                 <Flex align="center" gap={2.5} mb={1}>
@@ -395,8 +764,7 @@ export default function LandingInquiryForm() {
                 <Box>
                   <Label>Target end date</Label>
                   <FormInput
-                    size="lg"
-                    type="date"
+                    size="lg" type="date"
                     {...formInvalidBorder(!!errors.targetEndDate)}
                     {...register("targetEndDate", {
                       validate: (val) => {
@@ -416,10 +784,7 @@ export default function LandingInquiryForm() {
                     Approximate hours, deliverables, or units for this project
                   </Text>
                   <FormInput
-                    size="lg"
-                    type="number"
-                    min={1}
-                    placeholder="e.g., 40 hours"
+                    size="lg" type="number" min={1} placeholder="e.g., 40 hours"
                     {...register("estimatedQuantity", {
                       required: "Required for fixed projects",
                       min: { value: 1, message: "At least 1" },
@@ -450,16 +815,14 @@ export default function LandingInquiryForm() {
             </Box>
           )}
 
-          {/* ── Step 3: Account ──────────────────────────────── */}
+          {/* Step 3 */}
           {step === 3 && (
             <Box>
               <Grid templateColumns={{ base: "1fr", sm: "1fr 1fr" }} gap={5} mb={5}>
                 <Box>
                   <Label required>Full name or username</Label>
                   <FormInput
-                    size="lg"
-                    placeholder="e.g., johnsmith"
-                    autoComplete="username"
+                    size="lg" placeholder="e.g., johnsmith" autoComplete="username"
                     {...formInvalidBorder(!!errors.username)}
                     {...register("username", {
                       required: "Required",
@@ -471,10 +834,7 @@ export default function LandingInquiryForm() {
                 <Box>
                   <Label required>Work email</Label>
                   <FormInput
-                    size="lg"
-                    type="email"
-                    placeholder="you@company.com"
-                    autoComplete="email"
+                    size="lg" type="email" placeholder="you@company.com" autoComplete="email"
                     {...formInvalidBorder(!!errors.email)}
                     {...register("email", {
                       required: "Required",
@@ -488,9 +848,7 @@ export default function LandingInquiryForm() {
               <Box mb={6}>
                 <Label required>Password</Label>
                 <PasswordInput
-                  size="lg"
-                  placeholder="Min. 6 characters"
-                  autoComplete="new-password"
+                  size="lg" placeholder="Min. 6 characters" autoComplete="new-password"
                   {...FORM_INPUT_PROPS_LG}
                   {...formInvalidBorder(!!errors.password)}
                   {...register("password", {
@@ -501,11 +859,7 @@ export default function LandingInquiryForm() {
                 <FieldError message={errors.password?.message} />
               </Box>
 
-              {/* Project summary */}
-              <Box
-                p={5} mb={6} borderRadius="10px"
-                bg="#F9FAFB" border={`1.5px solid ${RULE}`}
-              >
+              <Box p={5} mb={6} borderRadius="10px" bg="#F9FAFB" border={`1.5px solid ${RULE}`}>
                 <Text fontSize="0.6875rem" fontWeight="700" color={MUTED}
                   letterSpacing="0.1em" textTransform="uppercase" mb={3}>
                   Your project summary
@@ -526,15 +880,11 @@ export default function LandingInquiryForm() {
               </Box>
 
               <Button
-                type="submit"
-                w="full" h="52px"
-                bg={AMBER} color={INK}
-                fontWeight="700" fontSize="1rem"
+                type="submit" w="full" h="52px"
+                bg={AMBER} color={INK} fontWeight="700" fontSize="1rem"
                 borderRadius="10px"
-                loading={isSubmitting}
-                loadingText="Creating account & submitting…"
-                _hover={{ bg: AMBER_HOVER }}
-                _active={{ bg: "#c07a17" }}
+                loading={isSubmitting} loadingText="Creating account & submitting…"
+                _hover={{ bg: AMBER_HOVER }} _active={{ bg: "#c07a17" }}
                 mb={4}
               >
                 Submit project & create account →
@@ -542,24 +892,21 @@ export default function LandingInquiryForm() {
 
               <Text fontSize="0.75rem" color={MUTED} textAlign="center">
                 Already have an account?{" "}
-                <Box as={Link} to="/login" color={GREEN} fontWeight="600"
-                  _hover={{ textDecoration: "underline" }}>
+                <Link to="/login" style={{ color: GREEN, fontWeight: 600, textDecoration: "none" }}>
                   Sign in
-                </Box>
+                </Link>
               </Text>
             </Box>
           )}
         </Box>
 
-        {/* ── Navigation bar ─────────────────────────────────── */}
-        <Flex align="center" justify="space-between" mt={6} pt={4}
-          borderTop={`1px solid ${RULE}`}>
+        {/* Nav bar */}
+        <Flex align="center" justify="space-between" mt={6} pt={4} borderTop={`1px solid ${RULE}`}>
           {step > 1 ? (
             <Button
               variant="ghost"
               fontSize="0.875rem" fontWeight="600" color={MUTED}
-              px={0} h="auto" py={0}
-              _hover={{ color: INK }}
+              px={0} h="auto" py={0} _hover={{ color: INK }}
               onClick={() => fadeToStep(step - 1)}
             >
               ← Back
@@ -571,8 +918,7 @@ export default function LandingInquiryForm() {
           {step < TOTAL_STEPS ? (
             <Button
               fontSize="0.875rem" fontWeight="700"
-              bg={INK} color="white"
-              px={6} h="40px" borderRadius="8px"
+              bg={INK} color="white" px={6} h="40px" borderRadius="8px"
               _hover={{ bg: "#1a3020" }}
               onClick={handleContinue}
             >
@@ -583,7 +929,6 @@ export default function LandingInquiryForm() {
           )}
         </Flex>
 
-        {/* Trust badges — step 1 only */}
         {step === 1 && (
           <Flex justify="center" gap={5} mt={5} flexWrap="wrap">
             {["Free for clients", "No credit card", "Cancel anytime"].map((t) => (
