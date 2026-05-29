@@ -32,6 +32,7 @@ import {
   APP_BG_SUBTLE,
   APP_BORDER,
   APP_BTN_GHOST,
+  APP_BTN_GHOST_ISLAND,
   APP_BTN_PRIMARY,
   APP_CARD,
   APP_INK,
@@ -131,7 +132,7 @@ export default function AdminExpertDetailPage() {
       wide
       action={
         <Link to="/app/admin/experts" style={{ textDecoration: "none" }}>
-          <Button {...APP_BTN_GHOST} size="sm" display="inline-flex" gap={1.5}>
+          <Button {...APP_BTN_GHOST_ISLAND} size="sm" h="34px" px={4} display="inline-flex" gap={1.5}>
             <LuArrowLeft size={14} /> Back to partners
           </Button>
         </Link>

@@ -140,7 +140,7 @@ export default function ProfilePage() {
     >
       {loading ? (
         <Box display="flex" alignItems="center" gap={2} py={6}>
-          <Spinner size="sm" color="gray.500" />
+          <Spinner size="sm" color="green.500" />
           <Text fontSize="sm" color={APP_MUTED}>Loading…</Text>
         </Box>
       ) : (
@@ -232,7 +232,7 @@ export default function ProfilePage() {
 
               {partnerLoading ? (
                 <Box display="flex" alignItems="center" gap={2} py={4}>
-                  <Spinner size="sm" color="gray.500" />
+                  <Spinner size="sm" color="green.500" />
                   <Text fontSize="sm" color={APP_MUTED}>Loading partner details…</Text>
                 </Box>
               ) : (

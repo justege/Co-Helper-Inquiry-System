@@ -12,14 +12,16 @@ interface PageShellProps {
   backLabel?: string
   action?: React.ReactNode
   wide?: boolean
+  /** Optional photo/image URL for the island background */
+  headerBgImage?: string
   children: React.ReactNode
 }
 
 /**
  * Universal authorized-area page wrapper.
  *
- * Renders a brand-consistent ink island header followed by content.
- * No external images — pure Co-Helper brand DNA.
+ * Renders a floating, rounded "island" header with an optional background
+ * image (or a clean gradient fallback), followed by the page content area.
  */
 export function PageShell({
   title,
@@ -29,130 +31,159 @@ export function PageShell({
   backLabel = "Back",
   action,
   wide,
+  headerBgImage,
   children,
 }: PageShellProps) {
   const maxW = wide ? "1280px" : PAGE_MAX_W
 
   return (
     <Box
-      px={{ base: 4, md: 6, lg: 8 }}
-      pt={{ base: 4, md: 6 }}
-      pb={{ base: "88px", lg: 10 }}
+      px={{ base: 3, md: 6, lg: 8 }}
+      pt={{ base: 4, md: 5 }}
+      pb={{ base: "96px", lg: 12 }}
       minH="100vh"
-      bg="#F2F4F0"
+      bg="#F7F8FA"
     >
-      {/* ── Island header ──────────────────────────────────────────────────── */}
-      <Box maxW={maxW} mx="auto" mb={{ base: 4, md: 6 }}>
+      {/* ── Island ──────────────────────────────────────────────────────────── */}
+      <Box maxW={maxW} mx="auto" mb={{ base: 4, md: 5 }}>
         <Box
           borderRadius={{ base: "16px", md: "20px" }}
           overflow="hidden"
           position="relative"
-          h={{ base: "160px", md: "200px" }}
-          bg="#0E1B17"
+          bg="#0B1C16"
         >
-          {/* Subtle grid lines */}
-          <svg aria-hidden style={{
-            position: "absolute", inset: 0, width: "100%", height: "100%",
-            pointerEvents: "none",
-          }} viewBox="0 0 960 200" preserveAspectRatio="xMidYMid slice">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <line key={`v${i}`} x1={i * 110} y1="0" x2={i * 110} y2="200"
-                stroke="#fff" strokeWidth="0.5" opacity="0.04" />
-            ))}
-            {Array.from({ length: 5 }).map((_, i) => (
-              <line key={`h${i}`} x1="0" y1={i * 52} x2="960" y2={i * 52}
-                stroke="#fff" strokeWidth="0.5" opacity="0.04" />
-            ))}
-          </svg>
+          {/* Background layer */}
+          {headerBgImage ? (
+            <>
+              <Box
+                position="absolute" inset={0}
+                style={{
+                  backgroundImage: `url(${headerBgImage})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center 40%",
+                }}
+              />
+              <Box
+                position="absolute" inset={0}
+                background="linear-gradient(155deg, rgba(6,14,28,0.88) 0%, rgba(8,18,26,0.62) 50%, rgba(6,14,28,0.84) 100%)"
+              />
+            </>
+          ) : (
+            <>
+              <Box
+                position="absolute" inset={0}
+                background="linear-gradient(135deg, #0B1C16 0%, #0F2219 55%, #081510 100%)"
+              />
+              {/* Dot grid */}
+              <Box
+                position="absolute" inset={0} pointerEvents="none"
+                style={{
+                  backgroundImage:
+                    "radial-gradient(circle, rgba(255,255,255,0.042) 1px, transparent 1px)",
+                  backgroundSize: "28px 28px",
+                }}
+              />
+              {/* Ambient glow — top right */}
+              <Box
+                position="absolute"
+                top="-50px" right="-50px"
+                w="260px" h="260px"
+                borderRadius="full"
+                bg="rgba(15,110,86,0.13)"
+                style={{ filter: "blur(72px)" }}
+                pointerEvents="none"
+              />
+            </>
+          )}
 
-          {/* Green glow — bottom left */}
-          <Box
-            position="absolute"
-            bottom="-60px" left="-40px"
-            w="260px" h="260px"
-            borderRadius="full"
-            bg="rgba(15,110,86,0.18)"
-            filter="blur(60px)"
-            pointerEvents="none"
-          />
-
-          {/* Top accent bar — green */}
+          {/* 3-px top accent bar */}
           <Box
             position="absolute" top={0} left={0} right={0} h="3px"
-            background="linear-gradient(90deg, #0F6E56 0%, rgba(15,110,86,0.2) 100%)"
+            background="linear-gradient(90deg, #0F6E56 0%, rgba(15,110,86,0.12) 100%)"
             zIndex={3}
           />
 
-          {/* Back link */}
-          {backHref && (
-            <Link
-              to={backHref}
-              style={{
-                position: "absolute",
-                top: "20px", left: "24px",
-                zIndex: 4,
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "4px",
-                color: "rgba(255,255,255,0.45)",
-                fontSize: "0.75rem",
-                fontWeight: 600,
-                letterSpacing: "0.02em",
-                textTransform: "uppercase",
-                textDecoration: "none",
-              }}
-            >
-              <LuChevronLeft size={13} />
-              {backLabel}
-            </Link>
-          )}
+          {/* ── Content ── */}
+          <Box position="relative" zIndex={2} px={{ base: 5, md: 7 }}>
 
-          {/* Action slot — top right */}
-          {action && (
+            {/* Back link row */}
+            {backHref && (
+              <Box pt={{ base: 4, md: 4 }} mb={1}>
+                <Link
+                  to={backHref}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    color: "rgba(255,255,255,0.36)",
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    letterSpacing: "0.015em",
+                    textDecoration: "none",
+                  }}
+                  onMouseEnter={(e) =>
+                    ((e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.68)")
+                  }
+                  onMouseLeave={(e) =>
+                    ((e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.36)")
+                  }
+                >
+                  <LuChevronLeft size={13} />
+                  {backLabel}
+                </Link>
+              </Box>
+            )}
+
+            {/* Main row: text (left) + action (right) */}
             <Box
-              position="absolute"
-              top={{ base: 4, md: 5 }}
-              right={{ base: 4, md: 6 }}
-              zIndex={4}
+              display="flex"
+              alignItems={subtitle ? "flex-start" : "center"}
+              justifyContent="space-between"
+              gap={4}
+              pt={backHref ? 2 : { base: 5, md: 6 }}
+              pb={{ base: 5, md: 6 }}
             >
-              {action}
-            </Box>
-          )}
+              <Box>
+                {eyebrow && (
+                  <Text
+                    fontSize="0.6875rem"
+                    fontWeight="700"
+                    color="rgba(106,191,162,0.7)"
+                    letterSpacing="0.12em"
+                    textTransform="uppercase"
+                    mb={1.5}
+                  >
+                    {eyebrow}
+                  </Text>
+                )}
+                <Heading
+                  fontSize={{ base: "1.5rem", md: "1.875rem" }}
+                  fontWeight="700"
+                  color="white"
+                  letterSpacing="-0.03em"
+                  lineHeight="1.2"
+                >
+                  {title}
+                </Heading>
+                {subtitle && (
+                  <Text
+                    fontSize={{ base: "0.8125rem", md: "0.9375rem" }}
+                    color="rgba(255,255,255,0.42)"
+                    fontWeight="400"
+                    mt={1.5}
+                    lineHeight="1.5"
+                  >
+                    {subtitle}
+                  </Text>
+                )}
+              </Box>
 
-          {/* Text — centered */}
-          <Box
-            position="absolute" inset={0} zIndex={2}
-            display="flex" flexDir="column"
-            alignItems="center" justifyContent="center"
-            textAlign="center"
-            px={{ base: 6, md: 12 }}
-            pt={backHref ? "20px" : 0}
-          >
-            {eyebrow && (
-              <Text
-                fontSize="0.6875rem" fontWeight="700"
-                color="rgba(167,215,197,0.75)"
-                letterSpacing="0.14em" textTransform="uppercase" mb={2}
-              >
-                {eyebrow}
-              </Text>
-            )}
-            <Heading
-              fontSize={{ base: "1.5rem", md: "2rem" }}
-              fontWeight="700" color="white"
-              letterSpacing="-0.03em" lineHeight="1.2"
-            >
-              {title}
-            </Heading>
-            {subtitle && (
-              <Text
-                fontSize={{ base: "0.8125rem", md: "0.9375rem" }}
-                color="rgba(255,255,255,0.45)"
-                fontWeight="400" mt={2} lineHeight="1.5" maxW="520px"
-              >
-                {subtitle}
-              </Text>
-            )}
+              {action && (
+                <Box flexShrink={0} pt="2px">
+                  {action}
+                </Box>
+              )}
+            </Box>
           </Box>
         </Box>
       </Box>

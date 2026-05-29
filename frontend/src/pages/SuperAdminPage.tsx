@@ -128,7 +128,7 @@ export default function SuperAdminPage() {
     return (
       <PageShell eyebrow="Administration" title="Control Panel" wide>
         <Box display="flex" alignItems="center" gap={3} py={8}>
-          <Spinner size="sm" color="blue.500" />
+          <Spinner size="sm" color="green.500" />
           <Text fontSize="sm" color="#64748B">Verifying access…</Text>
         </Box>
       </PageShell>
@@ -298,7 +298,7 @@ function CategoriesTab({ isSuperadmin }: { isSuperadmin: boolean }) {
 
         {loading ? (
           <Box px={5} py={6} display="flex" alignItems="center" gap={2}>
-            <Spinner size="sm" color="blue.500" /><Text fontSize="sm" color="#64748B">Loading…</Text>
+            <Spinner size="sm" color="green.500" /><Text fontSize="sm" color="#64748B">Loading…</Text>
           </Box>
         ) : filtered.length === 0 ? (
           <Box px={5} py={8} textAlign="center"><Text fontSize="sm" color="#8A96A8">No categories found.</Text></Box>
@@ -436,7 +436,7 @@ function InquiriesTab() {
 
         {loading ? (
           <Box px={5} py={6} display="flex" alignItems="center" gap={2}>
-            <Spinner size="sm" color="blue.500" />
+            <Spinner size="sm" color="green.500" />
             <Text fontSize="sm" color="#64748B">Loading inquiries…</Text>
           </Box>
         ) : filtered.length === 0 ? (
@@ -565,7 +565,7 @@ function ExpertsTab({ isSuperadmin }: { isSuperadmin: boolean }) {
 
       {loading ? (
         <Box {...CARD} px={5} py={6} display="flex" alignItems="center" gap={2}>
-          <Spinner size="sm" color="blue.500" />
+          <Spinner size="sm" color="green.500" />
           <Text fontSize="sm" color="#64748B">Loading experts…</Text>
         </Box>
       ) : experts.length === 0 ? (
@@ -776,7 +776,7 @@ function UsersTab({ isSuperadmin }: { isSuperadmin: boolean }) {
 
         {loading ? (
           <Box px={5} py={6} display="flex" alignItems="center" gap={2}>
-            <Spinner size="sm" color="blue.500" />
+            <Spinner size="sm" color="green.500" />
             <Text fontSize="sm" color="#64748B">Loading users…</Text>
           </Box>
         ) : filtered.length === 0 ? (

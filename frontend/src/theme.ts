@@ -2,18 +2,19 @@ import { createSystem, defaultConfig, defineConfig } from "@chakra-ui/react"
 
 const config = defineConfig({
   globalCss: {
-    html: { background: "#F2F4F0" },
+    html: { background: "#F7F8FA" },
     body: {
       fontFamily: "body",
       color: "#0E1B17",
-      background: "#F2F4F0",
+      background: "#F7F8FA",
+      fontFeatureSettings: '"cv02", "cv03", "cv04", "cv11"',
     },
   },
   theme: {
     tokens: {
       fonts: {
-        body: { value: "'Montserrat', system-ui, sans-serif" },
-        heading: { value: "'Montserrat', system-ui, sans-serif" },
+        body: { value: "'Inter', system-ui, -apple-system, sans-serif" },
+        heading: { value: "'Inter', system-ui, -apple-system, sans-serif" },
       },
       colors: {
         // Co-Helper brand — Trust Green

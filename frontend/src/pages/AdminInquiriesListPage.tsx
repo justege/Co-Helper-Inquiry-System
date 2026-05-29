@@ -13,9 +13,9 @@ import {
   LuArrowRight,
   LuRefreshCw,
   LuSearch,
-  LuClipboardList,
 } from "react-icons/lu"
 import { PageShell } from "@/components/ui/PageShell"
+import { AdminInquiriesEmptyState } from "@/components/ui/FeatureEmptyState"
 import { api } from "@/lib/api"
 import {
   APP_ACCENT,
@@ -126,7 +126,9 @@ export default function AdminInquiriesListPage() {
       wide
     >
       <Stack gap={4}>
-        <Box {...APP_CARD} display={{ base: "none", lg: "block" }}>
+        {!loading && inquiries.length === 0 && <AdminInquiriesEmptyState />}
+
+        <Box {...APP_CARD} display={{ base: "none", lg: inquiries.length === 0 ? "none" : "block" }}>
           <Box px={5} py={3} borderBottom={`1px solid ${APP_BORDER}`} bg={APP_BG_SUBTLE}>
             <Box display="flex" gap={3} alignItems="center" flexWrap="wrap" justifyContent="space-between" mb={2}>
               <Box display="flex" gap={2} alignItems="center" flex="1" minW="240px" maxW="400px">
@@ -219,14 +221,11 @@ export default function AdminInquiriesListPage() {
 
           {loading ? (
             <Box px={5} py={8} display="flex" alignItems="center" gap={2}>
-              <Spinner size="sm" color="gray.500" />
+              <Spinner size="sm" color="green.500" />
               <Text fontSize="sm" color={APP_MUTED}>Loading inquiries…</Text>
             </Box>
           ) : filtered.length === 0 ? (
-            <Box px={5} py={12} textAlign="center">
-              <Box color={APP_BORDER} mb={3} display="flex" justifyContent="center">
-                <LuClipboardList size={32} />
-              </Box>
+            <Box px={5} py={10} textAlign="center">
               <Text fontSize="sm" color={APP_LABEL} fontWeight="500">
                 {search || statusFilter !== "all" ? "No inquiries match your filters." : "No inquiries yet."}
               </Text>
@@ -281,7 +280,7 @@ export default function AdminInquiriesListPage() {
           )}
         </Box>
 
-        <Box {...APP_CARD} display={{ base: "block", lg: "none" }}>
+        <Box {...APP_CARD} display={{ base: inquiries.length === 0 ? "none" : "block", lg: "none" }}>
           <Box px={4} py={3} borderBottom={`1px solid ${APP_BORDER}`} bg={APP_BG_SUBTLE}>
             <Box position="relative" mb={2}>
               <Box position="absolute" left={3} top="50%" transform="translateY(-50%)" color={APP_LABEL} zIndex={1}>
@@ -314,7 +313,7 @@ export default function AdminInquiriesListPage() {
         <Stack gap={3} display={{ base: "flex", lg: "none" }}>
           {loading ? (
             <Box {...APP_CARD} p={6} display="flex" alignItems="center" gap={2}>
-              <Spinner size="sm" color="gray.500" />
+              <Spinner size="sm" color="green.500" />
               <Text fontSize="sm" color={APP_MUTED}>Loading inquiries…</Text>
             </Box>
           ) : filtered.length === 0 ? (

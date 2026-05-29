@@ -22,6 +22,12 @@ import { auth } from "../lib/firebase"
 import { api } from "../lib/api"
 import type { CreateInquiryInput, Inquiry, BusinessType, Urgency } from "../api/inquiries"
 import { getCategories, type Category } from "../api/categories"
+import {
+  APP_BORDER,
+  APP_BG_SUBTLE,
+  APP_BTN_PRIMARY,
+  APP_LABEL,
+} from "@/components/ui/appUi"
 
 const URGENCY_OPTIONS: { value: Urgency; label: string; accent: string }[] = [
   { value: "low",      label: "Low",      accent: "#64748B" },
@@ -98,15 +104,17 @@ export default function NewInquiryPage() {
         as="form"
         onSubmit={handleSubmit(onSubmit)}
         bg="white"
-        border="1px solid #D8DCE8"
+        border={`1px solid ${APP_BORDER}`}
         borderRadius="16px"
-        p={{ base: 5, md: 7 }}
+        overflow="hidden"
       >
-        <Box pb={4} mb={6} borderBottom="1px solid #EFF1F6">
-          <Text fontSize="0.6875rem" fontWeight="700" color="#8A96A8" letterSpacing="0.09em" textTransform="uppercase">
+        <Box px={{ base: 5, md: 7 }} py={4} mb={0} borderBottom={`1px solid ${APP_BORDER}`} bg={APP_BG_SUBTLE}>
+          <Text fontSize="0.6875rem" fontWeight="700" color={APP_LABEL} letterSpacing="0.09em" textTransform="uppercase">
             Inquiry Details
           </Text>
         </Box>
+
+        <Box p={{ base: 5, md: 7 }}>
 
         <Fieldset.Root>
           <Fieldset.Content>
@@ -253,24 +261,21 @@ export default function NewInquiryPage() {
             )}
 
             {/* Submit */}
-            <Box pt={2} borderTop="1px solid #EFF1F6" display="flex" justifyContent="flex-end">
+            <Box pt={2} borderTop={`1px solid ${APP_BORDER}`} display="flex" justifyContent="flex-end">
               <Button
+                {...APP_BTN_PRIMARY}
                 type="submit"
-                bg="#0F6E56"
-                color="white"
-                fontWeight="700"
                 size="lg"
                 px={10}
-                borderRadius="10px"
                 loading={isSubmitting}
                 loadingText="Submitting…"
-                _hover={{ bg: "#0a5240" }}
               >
                 Submit Inquiry
               </Button>
             </Box>
           </Fieldset.Content>
         </Fieldset.Root>
+        </Box>
       </Box>
     </PageShell>
   )

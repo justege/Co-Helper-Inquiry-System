@@ -32,24 +32,17 @@ import {
   DialogFooter,
   DialogCloseTrigger,
 } from "@/components/ui/dialog"
-
-// ── Design tokens ─────────────────────────────────────────────────────────────
-
-const CARD = { bg: "white", border: "1px solid #D8DCE8", borderRadius: "14px" }
-
-const BTN_PRIMARY = {
-  bg: "#0F6E56",
-  color: "white",
-  fontWeight: "600",
-  borderRadius: "8px",
-  _hover: { bg: "#0a5240" },
-}
-
-const BTN_GHOST = {
-  variant: "ghost" as const,
-  fontWeight: "600",
-  borderRadius: "8px",
-}
+import {
+  APP_ACCENT,
+  APP_BG_SUBTLE,
+  APP_BORDER,
+  APP_BTN_GHOST,
+  APP_BTN_PRIMARY,
+  APP_CARD,
+  APP_INK,
+  APP_LABEL,
+  APP_MUTED,
+} from "@/components/ui/appUi"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -87,8 +80,8 @@ export default function SettingsPage() {
     return (
       <PageShell eyebrow="Account" title="Settings" subtitle="Manage your workspace preferences">
         <Box display="flex" alignItems="center" gap={2} py={6}>
-          <Spinner size="sm" color="blue.500" />
-          <Text fontSize="sm" color="#64748B">Loading…</Text>
+          <Spinner size="sm" color="green.500" />
+          <Text fontSize="sm" color={APP_MUTED}>Loading…</Text>
         </Box>
       </PageShell>
     )
@@ -103,8 +96,8 @@ export default function SettingsPage() {
         <SectionCard icon={<LuShieldCheck size={16} />} title="Security">
           <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={4} flexWrap="wrap">
             <Box>
-              <Text fontSize="0.9rem" fontWeight="600" color="#0D1B2E" mb={1}>Password</Text>
-              <Text fontSize="0.8125rem" color="#64748B">
+              <Text fontSize="0.9rem" fontWeight="600" color={APP_INK} mb={1}>Password</Text>
+              <Text fontSize="0.8125rem" color={APP_MUTED}>
                 Send a reset link to <strong>{profile?.email}</strong> to change your password.
               </Text>
               {passwordSent && (
@@ -114,7 +107,7 @@ export default function SettingsPage() {
                 <Text fontSize="0.8rem" color="#B91C1C" mt={2}>{passwordError}</Text>
               )}
             </Box>
-            <Button {...BTN_GHOST} size="sm" color="#0F6E56" onClick={handlePasswordReset} flexShrink={0}>
+            <Button {...APP_BTN_GHOST} size="sm" color={APP_ACCENT} onClick={handlePasswordReset} flexShrink={0}>
               Send reset link
             </Button>
           </Box>
@@ -163,7 +156,7 @@ function ContactSection({ profile }: { profile: User | null }) {
           <Box>
             <FieldLabel>Email address</FieldLabel>
             <FormInput value={profile?.email ?? ""} readOnly opacity={0.6} cursor="not-allowed" />
-            <Text fontSize="0.75rem" color="#8A96A8" mt={1.5}>Managed via your login provider.</Text>
+            <Text fontSize="0.75rem" color={APP_LABEL} mt={1.5}>Managed via your login provider.</Text>
           </Box>
 
           <Field label="" invalid={!!errors.phone} errorText={errors.phone?.message}>
@@ -186,8 +179,8 @@ function ContactSection({ profile }: { profile: User | null }) {
 
         {errors.root && <Text fontSize="sm" color="#B91C1C" mt={3}>{errors.root.message}</Text>}
 
-        <Box display="flex" alignItems="center" gap={3} mt={5} pt={5} borderTop="1px solid #EFF1F6">
-          <Button {...BTN_PRIMARY} type="submit" size="sm" loading={isSubmitting}>Save Preferences</Button>
+        <Box display="flex" alignItems="center" gap={3} mt={5} pt={5} borderTop={`1px solid ${APP_BORDER}`}>
+          <Button {...APP_BTN_PRIMARY} type="submit" size="sm" loading={isSubmitting}>Save Preferences</Button>
           {saved && <Text fontSize="sm" color="#047857" fontWeight="600">✓ Saved</Text>}
         </Box>
       </Box>
@@ -244,7 +237,7 @@ function TeamSection({ profile }: { profile: User | null }) {
   if (!profile?.companyName) {
     return (
       <SectionCard icon={<LuUsers size={16} />} title="Team Members">
-        <Text fontSize="0.875rem" color="#64748B">
+        <Text fontSize="0.875rem" color={APP_MUTED}>
           Set a company name in your <strong>Profile</strong> to enable team management.
         </Text>
       </SectionCard>
@@ -257,50 +250,50 @@ function TeamSection({ profile }: { profile: User | null }) {
         icon={<LuUsers size={16} />}
         title="Team Members"
         action={
-          <Button {...BTN_PRIMARY} size="sm" onClick={() => setInviteOpen(true)} display="inline-flex" gap={1.5}>
+          <Button {...APP_BTN_PRIMARY} size="sm" onClick={() => setInviteOpen(true)} display="inline-flex" gap={1.5}>
             <LuPlus size={13} /> Invite Member
           </Button>
         }
       >
         {loading ? (
           <Box display="flex" alignItems="center" gap={2} py={3}>
-            <Spinner size="sm" color="blue.500" />
-            <Text fontSize="sm" color="#64748B">Loading…</Text>
+            <Spinner size="sm" color="green.500" />
+            <Text fontSize="sm" color={APP_MUTED}>Loading…</Text>
           </Box>
         ) : (
           <Stack gap={3}>
             {members.length === 0 && invitations.length === 0 ? (
-              <Text fontSize="0.875rem" color="#8A96A8">
-                No other members in <strong>{profile.companyName}</strong> yet.
-              </Text>
+            <Text fontSize="0.875rem" color={APP_LABEL}>
+              No other members in <strong>{profile.companyName}</strong> yet.
+            </Text>
             ) : (
               <>
                 {members.map((m) => (
                   <Box key={m.id} display="flex" alignItems="center" justifyContent="space-between" gap={3}
-                    px={4} py={3} bg="#F8F9FC" borderRadius="10px" border="1px solid #EFF1F6">
+                    px={4} py={3} bg={APP_BG_SUBTLE} borderRadius="10px" border={`1px solid ${APP_BORDER}`}>
                     <Box>
-                      <Text fontSize="0.875rem" fontWeight="600" color="#0D1B2E">
+                      <Text fontSize="0.875rem" fontWeight="600" color={APP_INK}>
                         {[m.firstName, m.lastName].filter(Boolean).join(" ") || m.email}
                       </Text>
                       {[m.firstName, m.lastName].filter(Boolean).length > 0 && (
-                        <Text fontSize="0.75rem" color="#8A96A8">{m.email}</Text>
+                        <Text fontSize="0.75rem" color={APP_LABEL}>{m.email}</Text>
                       )}
                     </Box>
-                    <Text fontSize="0.75rem" fontWeight="600" color="#64748B" textTransform="capitalize">{m.role}</Text>
+                    <Text fontSize="0.75rem" fontWeight="600" color={APP_MUTED} textTransform="capitalize">{m.role}</Text>
                   </Box>
                 ))}
 
                 {invitations.length > 0 && (
                   <Box mt={2}>
-                    <Text fontSize="0.6875rem" fontWeight="700" color="#8A96A8" letterSpacing="0.09em" textTransform="uppercase" mb={2}>
+                    <Text fontSize="0.6875rem" fontWeight="700" color={APP_LABEL} letterSpacing="0.09em" textTransform="uppercase" mb={2}>
                       Pending invitations
                     </Text>
                     {invitations.map((inv) => (
                       <Box key={inv.id} display="flex" alignItems="center" justifyContent="space-between" gap={3}
                         px={4} py={3} bg="#FFFBF0" borderRadius="10px" border="1px solid #FCD34D" mb={2}>
                         <Box>
-                          <Text fontSize="0.875rem" fontWeight="600" color="#0D1B2E">{inv.invited_email}</Text>
-                          <Text fontSize="0.75rem" color="#8A96A8">
+                          <Text fontSize="0.875rem" fontWeight="600" color={APP_INK}>{inv.invited_email}</Text>
+                          <Text fontSize="0.75rem" color={APP_LABEL}>
                             Invited {new Date(inv.created_at).toLocaleDateString("en-GB")}
                           </Text>
                         </Box>
@@ -322,7 +315,7 @@ function TeamSection({ profile }: { profile: User | null }) {
       {/* Invite Modal */}
       <DialogRoot open={inviteOpen} onOpenChange={({ open }) => { setInviteOpen(open); if (!open) resetInvite() }} size="sm">
         <DialogContent style={{ borderRadius: "16px", border: "1px solid #D8DCE8", overflow: "hidden", boxShadow: "0 20px 60px rgba(11,21,40,0.18)" }}>
-          <Box bg="#0B1528" px={6} py={4} display="flex" alignItems="center" justifyContent="space-between">
+          <Box bg="#0B1A15" px={6} py={4} display="flex" alignItems="center" justifyContent="space-between">
             <Box display="flex" alignItems="center" gap={2.5}>
               <Box w="7px" h="7px" bg="#0F6E56" rounded="full" />
               <DialogTitle style={{ color: "white", fontWeight: 700, fontSize: "0.9375rem", margin: 0 }}>
@@ -336,9 +329,9 @@ function TeamSection({ profile }: { profile: User | null }) {
 
           <Box as="form" onSubmit={handleSubmit(onInvite)}>
             <DialogBody px={6} py={5}>
-              <Text fontSize="0.875rem" color="#64748B" mb={4}>
+              <Text fontSize="0.875rem" color={APP_MUTED} mb={4}>
                 Enter the email address of the person you'd like to add to{" "}
-                <strong style={{ color: "#0D1B2E" }}>{profile.companyName}</strong>.
+                <strong style={{ color: APP_INK }}>{profile.companyName}</strong>.
               </Text>
               <Field label="Email address" invalid={!!inviteErrors.email} errorText={inviteErrors.email?.message}>
                 <FormInput
@@ -354,10 +347,10 @@ function TeamSection({ profile }: { profile: User | null }) {
             </DialogBody>
 
             <DialogFooter px={6} pb={5} pt={0} display="flex" gap={2}>
-              <Button {...BTN_PRIMARY} type="submit" loading={inviting} flex={1}>
+              <Button {...APP_BTN_PRIMARY} type="submit" loading={inviting} flex={1}>
                 Send Invitation
               </Button>
-              <Button {...BTN_GHOST} color="#64748B" onClick={() => { setInviteOpen(false); resetInvite() }}>
+              <Button {...APP_BTN_GHOST} color={APP_MUTED} onClick={() => { setInviteOpen(false); resetInvite() }}>
                 Cancel
               </Button>
             </DialogFooter>
@@ -382,11 +375,11 @@ function SectionCard({
   children: React.ReactNode
 }) {
   return (
-    <Box {...CARD} overflow="hidden">
-      <Box px={5} py={3.5} borderBottom="1px solid #EFF1F6" display="flex" alignItems="center" justifyContent="space-between" gap={3}>
+    <Box {...APP_CARD} overflow="hidden">
+      <Box px={5} py={3.5} borderBottom={`1px solid ${APP_BORDER}`} display="flex" alignItems="center" justifyContent="space-between" gap={3} bg={APP_BG_SUBTLE}>
         <Box display="flex" alignItems="center" gap={2.5}>
-          <Box color="#0F6E56">{icon}</Box>
-          <Text fontSize="0.875rem" fontWeight="700" color="#0D1B2E">{title}</Text>
+          <Box color={APP_ACCENT}>{icon}</Box>
+          <Text fontSize="0.875rem" fontWeight="700" color={APP_INK}>{title}</Text>
         </Box>
         {action}
       </Box>
@@ -397,7 +390,7 @@ function SectionCard({
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
-    <Text fontSize="0.75rem" fontWeight="600" color="#4A5568" mb={1.5} letterSpacing="0.01em">
+    <Text fontSize="0.75rem" fontWeight="600" color={APP_LABEL} mb={1.5} letterSpacing="0.01em">
       {children}
     </Text>
   )

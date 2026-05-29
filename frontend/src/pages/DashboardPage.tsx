@@ -4,8 +4,9 @@ import { useAuthContext } from "../components/auth/AuthContext"
 import { getMe, type User } from "../api/users"
 import { getMyInquiries, type Inquiry, type InquiryStatus } from "../api/inquiries"
 import { Box, Button, Spinner, Stack, Text } from "@chakra-ui/react"
-import { LuInbox, LuPenLine } from "react-icons/lu"
+import { LuInbox, LuPenLine, LuPlus } from "react-icons/lu"
 import { PageShell } from "@/components/ui/PageShell"
+import headerBg from "@/assets/Background.png"
 import {
   APP_ACCENT,
   APP_BORDER,
@@ -19,6 +20,7 @@ import {
   AppStatusText,
   formatStatusLabel,
 } from "@/components/ui/appUi"
+import { FeatureEmptyState, InquiryMockup } from "@/components/ui/FeatureEmptyState"
 
 const INQUIRY_STATUS_LABELS: Record<InquiryStatus, string> = {
   pending: "Submitted",
@@ -31,7 +33,13 @@ const INQUIRY_STATUS_LABELS: Record<InquiryStatus, string> = {
   cancelled: "Cancelled",
 }
 
-function StatLink({ to, icon, label, count }: { to: string; icon: React.ReactNode; label: string; count: number }) {
+const VALUE_BULLETS = [
+  "Describe your project and requirements in minutes",
+  "Get matched with vetted digital service partners",
+  "Review offers and kick off your project with confidence",
+]
+
+function StatChip({ to, icon, label, count }: { to: string; icon: React.ReactNode; label: string; count: number }) {
   return (
     <Link to={to} style={{ textDecoration: "none", flexShrink: 0 }}>
       <Box
@@ -57,6 +65,7 @@ function StatLink({ to, icon, label, count }: { to: string; icon: React.ReactNod
   )
 }
 
+
 export default function DashboardPage() {
   const { user } = useAuthContext()
   const [profile, setProfile] = useState<User | null>(null)
@@ -80,79 +89,84 @@ export default function DashboardPage() {
 
   return (
     <PageShell
-      eyebrow="B2B Marketplace"
+      eyebrow="Dashboard"
       title={`Welcome back${firstName ? `, ${firstName}` : ""}`}
-      subtitle={
-        loading
-          ? undefined
-          : profile?.companyName ?? `${inquiries.length} inquiries`
-      }
+      subtitle={profile?.companyName ?? undefined}
+      headerBgImage={headerBg}
       action={
         <Link to="/app/inquiries/new" style={{ textDecoration: "none" }}>
           <Button
             size="sm" h="34px" px={4}
-            bg="rgba(255,255,255,0.12)" color="white" fontWeight="600" fontSize="0.8125rem"
-            borderRadius="8px" border="1px solid rgba(255,255,255,0.25)"
-            _hover={{ bg: "rgba(255,255,255,0.2)" }}
+            bg="rgba(255,255,255,0.1)" color="white" fontWeight="600" fontSize="0.8125rem"
+            borderRadius="8px" border="1px solid rgba(255,255,255,0.18)"
+            transition="all 0.14s"
+            display="inline-flex" alignItems="center" gap={1.5}
+            _hover={{ bg: "rgba(255,255,255,0.18)", borderColor: "rgba(255,255,255,0.32)" }}
           >
+            <LuPlus size={14} />
             New inquiry
           </Button>
         </Link>
       }
     >
       {loading ? (
-        <Box display="flex" alignItems="center" gap={2} py={6}>
-          <Spinner size="sm" color="gray.500" />
+        <Box display="flex" alignItems="center" gap={2} py={8}>
+          <Spinner size="sm" color="green.500" />
           <Text fontSize="sm" color={APP_MUTED}>Loading…</Text>
         </Box>
+      ) : inquiries.length === 0 ? (
+        /* ── Empty / onboarding state ─────────────────────────────────────── */
+        <FeatureEmptyState
+          title="Find the right partner for your digital project"
+          bullets={VALUE_BULLETS}
+          cta={
+            <Link to="/app/inquiries/new" style={{ textDecoration: "none" }}>
+              <Button {...APP_BTN_PRIMARY} size="md" h="42px" px={6} fontSize="0.9375rem" display="inline-flex" alignItems="center" gap={2}>
+                <LuPlus size={16} />
+                Post your first inquiry
+              </Button>
+            </Link>
+          }
+          mockup={<InquiryMockup />}
+        />
       ) : (
+        /* ── Data state ───────────────────────────────────────────────────── */
         <Stack gap={4}>
           <Box {...APP_CARD}>
-            <Box px={5} py={3} borderBottom={`1px solid ${APP_BORDER}`} bg={APP_BG_SUBTLE}>
-              <Box display="flex" alignItems="center" justifyContent="space-between" gap={3} mb={2} flexWrap="wrap">
-                <Text fontSize="0.875rem" fontWeight="600" color={APP_INK}>Recent inquiries</Text>
+            <Box px={5} py={3.5} borderBottom={`1px solid ${APP_BORDER}`} bg={APP_BG_SUBTLE}>
+              <Box display="flex" alignItems="center" justifyContent="space-between" gap={3} mb={3} flexWrap="wrap">
+                <Text fontSize="0.8125rem" fontWeight="600" color={APP_INK}>Recent inquiries</Text>
                 <Link to="/app/inquiries" style={{ textDecoration: "none" }}>
                   <Text fontSize="0.8125rem" color={APP_MUTED} fontWeight="500" _hover={{ color: APP_ACCENT }}>
                     View all
                   </Text>
                 </Link>
               </Box>
-              <Box display="flex" gap={1.5} overflowX="auto" pb={0.5}>
-                <StatLink to="/app/inquiries" icon={<LuInbox size={12} />} label="Inquiries" count={inquiries.length} />
-                <StatLink to="/app/inquiries" icon={<LuPenLine size={12} />} label="Offers" count={offerCount} />
-                <StatLink to="/app/inquiries" icon={<LuInbox size={12} />} label="Active" count={activeCount} />
+              <Box display="flex" gap={2} overflowX="auto" pb={0.5}>
+                <StatChip to="/app/inquiries" icon={<LuInbox size={12} />} label="Inquiries" count={inquiries.length} />
+                <StatChip to="/app/inquiries" icon={<LuPenLine size={12} />} label="Offers" count={offerCount} />
+                <StatChip to="/app/inquiries" icon={<LuInbox size={12} />} label="Active" count={activeCount} />
               </Box>
             </Box>
 
-            {inquiries.length === 0 ? (
-              <Box px={5} py={10} textAlign="center">
-                <Text fontSize="0.875rem" color={APP_MUTED} mb={4}>No inquiries yet.</Text>
-                <Link to="/app/inquiries/new" style={{ textDecoration: "none" }}>
-                  <Button {...APP_BTN_PRIMARY} size="sm">Post your first inquiry</Button>
-                </Link>
-              </Box>
-            ) : (
-              <>
-                {recentInquiries.map((inq, i) => (
-                  <AppListRow
-                    key={inq.id}
-                    href={`/app/inquiries/${inq.id}`}
-                    isLast={i === recentInquiries.length - 1}
-                  >
-                    <Box flex="1" minW={0}>
-                      <Text fontSize="0.9375rem" fontWeight="600" color={APP_INK} overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
-                        {inq.title}
-                      </Text>
-                      <Text fontSize="0.75rem" color={APP_LABEL} mt={1}>
-                        {new Date(inq.createdAt).toLocaleDateString("tr-TR")}
-                        {inq.category?.name ? ` · ${inq.category.name}` : ""}
-                      </Text>
-                    </Box>
-                    <AppStatusText label={INQUIRY_STATUS_LABELS[inq.status] ?? formatStatusLabel(inq.status)} />
-                  </AppListRow>
-                ))}
-              </>
-            )}
+            {recentInquiries.map((inq, i) => (
+              <AppListRow
+                key={inq.id}
+                href={`/app/inquiries/${inq.id}`}
+                isLast={i === recentInquiries.length - 1}
+              >
+                <Box flex="1" minW={0}>
+                  <Text fontSize="0.9375rem" fontWeight="600" color={APP_INK} overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
+                    {inq.title}
+                  </Text>
+                  <Text fontSize="0.75rem" color={APP_LABEL} mt={0.5}>
+                    {new Date(inq.createdAt).toLocaleDateString("tr-TR")}
+                    {inq.category?.name ? ` · ${inq.category.name}` : ""}
+                  </Text>
+                </Box>
+                <AppStatusText label={INQUIRY_STATUS_LABELS[inq.status] ?? formatStatusLabel(inq.status)} />
+              </AppListRow>
+            ))}
           </Box>
         </Stack>
       )}

@@ -1,16 +1,20 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Montserrat:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-  --font-heading: "Space Grotesk", "Inter", system-ui, sans-serif;
-  --font-body:    "Inter", system-ui, sans-serif;
+  /* Marketing display headings keep a distinctive grotesque */
+  --font-heading: "Space Grotesk", "Inter", system-ui, -apple-system, sans-serif;
+  /* App UI + body text use the clean SaaS standard */
+  --font-body:    "Inter", system-ui, -apple-system, sans-serif;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
   font-family: var(--font-body);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 h1, h2, h3, h4, h5, h6 {

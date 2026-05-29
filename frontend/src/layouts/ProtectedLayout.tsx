@@ -17,11 +17,11 @@ import {
 } from "react-icons/lu"
 import type { IconType } from "react-icons"
 
-const SIDEBAR_BG = "#0B1528"
+const SIDEBAR_BG = "#0B1A15"
 const DIVIDER = "rgba(255,255,255,0.07)"
-const ACTIVE_BG = "rgba(21,99,178,0.22)"
-const ACTIVE_COLOR = "#93C5FD"
-const MUTED = "rgba(255,255,255,0.42)"
+const ACTIVE_BG = "rgba(15,110,86,0.28)"
+const ACTIVE_COLOR = "#6ABFA2"
+const MUTED = "rgba(255,255,255,0.45)"
 
 // ── Desktop sidebar nav ──────────────────────────────────────────────────────
 
@@ -90,8 +90,8 @@ export default function ProtectedLayout() {
 
   if (loading) {
     return (
-      <Flex minH="100vh" align="center" justify="center" bg="#EFF1F6">
-        <Spinner size="lg" color="blue.500" borderWidth="3px" />
+      <Flex minH="100vh" align="center" justify="center" bg="#F7F8FA">
+        <Spinner size="lg" color="green.500" borderWidth="3px" />
       </Flex>
     )
   }
@@ -234,7 +234,7 @@ export default function ProtectedLayout() {
         as="main"
         flex="1"
         ml={{ base: 0, lg: "220px" }}
-        bg="#EFF1F6"
+        bg="#F7F8FA"
         minH="100vh"
       >
         <Outlet />
@@ -283,23 +283,37 @@ function SidebarItem({ item }: { item: NavItem }) {
       {({ isActive }: { isActive: boolean }) => (
         <Box
           as="span"
+          position="relative"
           display="flex"
           alignItems="center"
           gap={2.5}
           px={3}
-          py="0.45rem"
-          borderRadius="7px"
-          fontSize="0.8375rem"
+          py="0.5rem"
+          borderRadius="8px"
+          fontSize="0.825rem"
           fontWeight={isActive ? "600" : "500"}
+          letterSpacing="-0.005em"
           color={isActive ? ACTIVE_COLOR : MUTED}
           bg={isActive ? ACTIVE_BG : "transparent"}
-          mb="1px"
+          mb="2px"
           cursor="pointer"
-          transition="all 0.12s"
-          _hover={{ bg: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.85)", textDecoration: "none" }}
+          transition="background 0.14s, color 0.14s"
+          _hover={{ bg: isActive ? ACTIVE_BG : "rgba(255,255,255,0.05)", color: isActive ? ACTIVE_COLOR : "rgba(255,255,255,0.88)", textDecoration: "none" }}
         >
-          <Box as="span" display="flex" alignItems="center" opacity={isActive ? 1 : 0.7}>
-            <Icon size={14} />
+          {isActive && (
+            <Box
+              position="absolute"
+              left="-12px"
+              top="50%"
+              transform="translateY(-50%)"
+              w="3px"
+              h="16px"
+              borderRadius="0 3px 3px 0"
+              bg="#0F6E56"
+            />
+          )}
+          <Box as="span" display="flex" alignItems="center" opacity={isActive ? 1 : 0.72} flexShrink={0}>
+            <Icon size={15} strokeWidth={2} />
           </Box>
           {item.label}
         </Box>

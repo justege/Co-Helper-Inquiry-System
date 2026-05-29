@@ -369,7 +369,7 @@ function DocumentsSection() {
 
         {loading ? (
           <Box display="flex" alignItems="center" gap={2}>
-            <Spinner size="sm" color="blue.500" />
+            <Spinner size="sm" color="green.500" />
             <Text fontSize="0.875rem" color="#64748B">Loading…</Text>
           </Box>
         ) : docs.length === 0 ? (
@@ -539,7 +539,7 @@ export default function PartnerServicesPage() {
           {/* Loading */}
           {loading && (
             <Box display="flex" alignItems="center" gap={2} py={6}>
-              <Spinner size="sm" color="blue.500" />
+              <Spinner size="sm" color="green.500" />
               <Text fontSize="sm" color="#64748B">Loading your services…</Text>
             </Box>
           )}

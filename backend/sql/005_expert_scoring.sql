@@ -16,3 +16,5 @@ ALTER TABLE expert_profiles
 -- Add updated_at tracking
 ALTER TABLE expert_profiles
   ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- Add created_at tracking

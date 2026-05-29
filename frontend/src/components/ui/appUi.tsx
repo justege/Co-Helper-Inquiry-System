@@ -9,7 +9,7 @@ export const APP_MUTED = "#6B7280"
 export const APP_LABEL = "#8A96A8"
 export const APP_BORDER = "#E5E7EB"
 export const APP_SURFACE = "#FFFFFF"
-export const APP_BG_SUBTLE = "#F5F7FA"
+export const APP_BG_SUBTLE = "#F7F8FA"
 export const APP_ACCENT = "#0F6E56"       // Trust Green
 export const APP_AMBER = "#D8FF86"        // Action Lime — CTA accents
 
@@ -40,16 +40,47 @@ export const APP_BTN_PRIMARY = {
   color: "white",
   fontWeight: "600" as const,
   fontSize: "0.875rem",
-  borderRadius: "8px",
-  _hover: { bg: "#0a5240" },
+  letterSpacing: "-0.005em",
+  borderRadius: "9px",
+  boxShadow: "0 1px 2px rgba(14,27,23,0.12), inset 0 1px 0 rgba(255,255,255,0.08)",
+  transition: "background 0.14s, box-shadow 0.14s, transform 0.06s",
+  _hover: { bg: "#0a5240", boxShadow: "0 2px 8px rgba(15,110,86,0.28)" },
+  _active: { bg: "#083F30", transform: "translateY(0.5px)" },
+}
+
+export const APP_BTN_SECONDARY = {
+  bg: APP_SURFACE,
+  color: APP_INK,
+  fontWeight: "600" as const,
+  fontSize: "0.875rem",
+  letterSpacing: "-0.005em",
+  borderRadius: "9px",
+  border: `1px solid ${APP_BORDER}`,
+  boxShadow: "0 1px 2px rgba(14,27,23,0.04)",
+  transition: "all 0.14s",
+  _hover: { borderColor: "#C4C9D0", bg: "#FBFCFE" },
+  _active: { transform: "translateY(0.5px)" },
 }
 
 export const APP_BTN_GHOST = {
   variant: "ghost" as const,
   fontWeight: "500" as const,
   fontSize: "0.875rem",
-  borderRadius: "8px",
+  borderRadius: "9px",
   color: APP_MUTED,
+  _hover: { bg: APP_BG_SUBTLE, color: APP_INK },
+}
+
+/** Ghost button for the dark island header — white semi-transparent */
+export const APP_BTN_GHOST_ISLAND = {
+  bg: "rgba(255,255,255,0.08)" as const,
+  color: "rgba(255,255,255,0.72)" as const,
+  fontWeight: "500" as const,
+  fontSize: "0.8125rem",
+  borderRadius: "8px",
+  border: "1px solid rgba(255,255,255,0.14)",
+  transition: "all 0.14s",
+  _hover: { bg: "rgba(255,255,255,0.16)", color: "white", borderColor: "rgba(255,255,255,0.28)" },
 }
 
 export function formatStatusLabel(status: string): string {

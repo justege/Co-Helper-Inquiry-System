@@ -18,6 +18,7 @@ import {
   LuUsers,
 } from "react-icons/lu"
 import { PageShell } from "@/components/ui/PageShell"
+import { AdminPartnersEmptyState } from "@/components/ui/FeatureEmptyState"
 import { api } from "@/lib/api"
 import {
   APP_ACCENT,
@@ -128,17 +129,14 @@ export default function AdminExpertsListPage() {
 
         {loading ? (
           <Box display="flex" alignItems="center" gap={2} py={8}>
-            <Spinner size="sm" color="gray.500" />
+            <Spinner size="sm" color="green.500" />
             <Text fontSize="sm" color={APP_MUTED}>Loading partners…</Text>
           </Box>
+        ) : filtered.length === 0 && experts.length === 0 ? (
+          <AdminPartnersEmptyState />
         ) : filtered.length === 0 ? (
-          <Box {...APP_CARD} px={5} py={12} textAlign="center">
-            <Box color={APP_BORDER} mb={3} display="flex" justifyContent="center">
-              <LuUsers size={32} />
-            </Box>
-            <Text fontSize="sm" color={APP_LABEL} fontWeight="500">
-              {search || availFilter !== "all" ? "No partners match your filters." : "No partner users yet. Assign the expert role in Control Panel → Users."}
-            </Text>
+          <Box {...APP_CARD} px={5} py={10} textAlign="center">
+            <Text fontSize="sm" color={APP_LABEL} fontWeight="500">No partners match your filters.</Text>
           </Box>
         ) : (
           <Grid templateColumns={{ base: "1fr", md: "1fr 1fr", xl: "1fr 1fr 1fr" }} gap={4}>

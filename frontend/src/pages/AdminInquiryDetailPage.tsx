@@ -281,7 +281,7 @@ export default function AdminInquiryDetailPage() {
     return (
       <PageShell eyebrow="Administration" title="Inquiry" backHref="/app/admin/inquiries" backLabel="Inquiries" wide>
         <Box display="flex" alignItems="center" gap={2} py={8}>
-          <Spinner size="sm" color="blue.500" />
+          <Spinner size="sm" color="green.500" />
           <Text fontSize="sm" color="#64748B">Loading…</Text>
         </Box>
       </PageShell>

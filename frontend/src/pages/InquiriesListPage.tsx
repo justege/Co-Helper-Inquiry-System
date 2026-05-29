@@ -9,6 +9,7 @@ import {
   type BusinessType,
 } from "../api/inquiries"
 import { PageShell } from "@/components/ui/PageShell"
+import { InquiriesEmptyState } from "@/components/ui/FeatureEmptyState"
 import {
   APP_BORDER,
   APP_BG_SUBTLE,
@@ -92,7 +93,7 @@ export default function InquiriesListPage() {
     >
       {loading && (
         <Box display="flex" alignItems="center" gap={2} py={8}>
-          <Spinner size="sm" color="gray.500" />
+          <Spinner size="sm" color="green.500" />
           <Text fontSize="sm" color={APP_MUTED}>Loading…</Text>
         </Box>
       )}
@@ -103,7 +104,11 @@ export default function InquiriesListPage() {
         </Box>
       )}
 
-      {!loading && !error && (
+      {!loading && !error && inquiries.length === 0 && (
+        <InquiriesEmptyState />
+      )}
+
+      {!loading && !error && inquiries.length > 0 && (
         <Box {...APP_CARD}>
           <Box px={5} py={3} borderBottom={`1px solid ${APP_BORDER}`} bg={APP_BG_SUBTLE}>
             <Box display="flex" alignItems="center" justifyContent="space-between" gap={3} mb={2} flexWrap="wrap">
@@ -163,20 +168,11 @@ export default function InquiriesListPage() {
             )}
           </Box>
 
-          {filtered.length === 0 ? (
-            <Box px={5} py={10} textAlign="center">
-              <Text color={APP_MUTED} mb={4} fontSize="0.875rem">
-                {inquiries.length === 0
-                  ? "You haven't posted any inquiries yet."
-                  : "No inquiries match the selected filters."}
-              </Text>
-              {inquiries.length === 0 && (
-                <Link to="/app/inquiries/new" style={{ textDecoration: "none" }}>
-                  <Button {...APP_BTN_PRIMARY} size="sm">Post your first inquiry</Button>
-                </Link>
-              )}
+          {filtered.length === 0 && inquiries.length > 0 ? (
+            <Box px={5} py={8} textAlign="center">
+              <Text color={APP_MUTED} fontSize="0.875rem">No inquiries match the selected filters.</Text>
             </Box>
-          ) : (
+          ) : filtered.length === 0 ? null : (
             filtered.map((inq, i) => (
               <AppListRow key={inq.id} href={`/app/inquiries/${inq.id}`} isLast={i === filtered.length - 1}>
                 <Box flex="1" minW={0}>
