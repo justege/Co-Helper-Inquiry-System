@@ -1,5 +1,5 @@
-# Monorepo production image: build Vite frontend + serve from Express API.
-# Railway → Settings → Source → Root Directory: leave EMPTY (repo root), NOT /backend.
+# Railway Root Directory MUST be empty (repo root), NOT /backend.
+# If Root Directory is /backend, Railway uses backend/Dockerfile instead.
 # Set VITE_* (and other build vars) on the Railway service — injected at build time.
 
 FROM node:20-alpine AS build

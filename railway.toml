@@ -1,5 +1,5 @@
-# Railway → Service → Settings → Source → Root Directory: leave EMPTY.
-# If set to /backend, Docker cannot see backend/ + frontend/ and the build fails.
+# Root Directory empty → repo /Dockerfile (monorepo).
+# Root Directory /backend → backend/Dockerfile (clones repo for frontend build).
 
 [build]
 builder = "DOCKERFILE"
