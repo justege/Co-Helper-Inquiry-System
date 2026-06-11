@@ -3,8 +3,6 @@ import { Box, Flex, Grid, Heading, Stack, Text } from "@chakra-ui/react"
 import { Link } from "react-router-dom"
 import { MarketingFooter, AnnounceBar } from "@/components/marketing/MarketingUI"
 import LandingInquiryForm from "@/components/landing/LandingInquiryForm"
-import MobileLandingChat from "@/components/landing/MobileLandingChat"
-import avatarSrc from "@/assets/avatar.png"
 import {
   CodeTypewriter,
   MatrixColHeader,
@@ -872,8 +870,6 @@ function ServiceCatalogSection() {
 // Page
 // ─────────────────────────────────────────────────────────────────────────────
 export default function LandingPage() {
-  const [mobileAiOpen, setMobileAiOpen] = useState(false)
-
   return (
     <Box minH="100vh" bg="white" color={INK} fontFamily="var(--font-body)">
 
@@ -1919,57 +1915,6 @@ export default function LandingPage() {
       </Box>
 
       <MarketingFooter />
-
-      {/* ══ Mobile AI chat overlay ══════════════════════════════════════════ */}
-      {/* Floating button — mobile only */}
-      <Box
-        display={{ base: "flex", lg: "none" }}
-        position="fixed" bottom={5} left={4} right={4}
-        zIndex={50}
-        pointerEvents="none"
-      >
-        <Box
-          as="button"
-          w="full"
-          onClick={() => setMobileAiOpen(true)}
-          pointerEvents="auto"
-          bg={INK}
-          color="white"
-          borderRadius="16px"
-          px={5} py={4}
-          display="flex"
-          alignItems="center"
-          gap={3}
-          boxShadow="0 8px 32px rgba(0,0,0,0.28)"
-          border="1px solid rgba(255,255,255,0.12)"
-          cursor="pointer"
-          style={{ fontFamily: "inherit" }}
-        >
-          <Box
-            w="40px" h="40px" borderRadius="full" flexShrink={0}
-            overflow="hidden" border="2px solid rgba(255,255,255,0.35)"
-            boxShadow="0 2px 8px rgba(0,0,0,0.25)"
-          >
-            <img src={avatarSrc} alt="AI Project Manager"
-              style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top" }} />
-          </Box>
-          <Box flex={1} textAlign="left">
-            <Text fontSize="0.875rem" fontWeight="700" color="white" lineHeight="1.2">
-              AI Co-Helper
-            </Text>
-            <Text fontSize="0.75rem" color="rgba(255,255,255,0.55)">
-              Chat to build your brief →
-            </Text>
-          </Box>
-          <Box
-            w="6px" h="6px" borderRadius="full" bg="#4ADE80" flexShrink={0}
-            style={{ animation: "pulse 2s infinite" }}
-          />
-        </Box>
-      </Box>
-
-      {/* Full-screen mobile chat overlay */}
-      <MobileLandingChat isOpen={mobileAiOpen} onClose={() => setMobileAiOpen(false)} />
     </Box>
   )
 }

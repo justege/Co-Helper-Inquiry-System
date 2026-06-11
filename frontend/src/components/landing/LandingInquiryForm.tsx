@@ -33,6 +33,9 @@ const G_BORDER = "#A7D7C5"
 const AI_DARK  = "#0E1B17"
 const AI_BLUE  = "#185FA5"
 
+/** Landing-page AI Co-Helper chat — off until Gemini/backend is stable in prod. */
+const LANDING_AI_CO_HELPER_ENABLED = false
+
 type FormMode = "standard" | "ai"
 
 type FormValues = CreateInquiryInput & {
@@ -312,7 +315,7 @@ export default function LandingInquiryForm() {
   const navigate = useNavigate()
   const { registerWithEmail } = useAuthContext()
 
-  const [mode, setMode] = useState<FormMode>("ai")
+  const [mode, setMode] = useState<FormMode>("standard")
   const [categories, setCategories] = useState<Category[]>([])
   const [catLoading, setCatLoading] = useState(true)
   const [step, setStep] = useState(1)
@@ -451,7 +454,7 @@ export default function LandingInquiryForm() {
   const meta = STEPS_META[step - 1]
 
   // ── AI mode — chat phase (step 1 & 2 replaced by chat)
-  if (mode === "ai" && step < 3) {
+  if (LANDING_AI_CO_HELPER_ENABLED && mode === "ai" && step < 3) {
     return (
       <Box w="full">
         {/* Dark header with toggle */}
@@ -470,7 +473,9 @@ export default function LandingInquiryForm() {
                 Co-Helper
               </Text>
             </Flex>
-            <ModeToggle mode={mode} onChange={handleModeChange} />
+            {LANDING_AI_CO_HELPER_ENABLED && (
+              <ModeToggle mode={mode} onChange={handleModeChange} />
+            )}
           </Flex>
         </Box>
 
@@ -480,7 +485,7 @@ export default function LandingInquiryForm() {
   }
 
   // ── AI mode — account creation step (step 3)
-  if (mode === "ai" && step === 3 && aiResult) {
+  if (LANDING_AI_CO_HELPER_ENABLED && mode === "ai" && step === 3 && aiResult) {
     return (
       <Box
         borderRadius="12px" overflow="hidden"
@@ -547,7 +552,9 @@ export default function LandingInquiryForm() {
             </Text>
           </Flex>
           <Flex align="center" gap={3}>
-            <ModeToggle mode={mode} onChange={handleModeChange} />
+            {LANDING_AI_CO_HELPER_ENABLED && (
+              <ModeToggle mode={mode} onChange={handleModeChange} />
+            )}
             <Text fontSize="0.6875rem" color="rgba(255,255,255,0.32)" fontWeight="500">
               Step {step} of {TOTAL_STEPS}
             </Text>
