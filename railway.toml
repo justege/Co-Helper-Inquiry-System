@@ -1,6 +1,5 @@
-# IMPORTANT: In Railway → Service → Settings, set Root Directory to empty (repo root).
-# If Root Directory is /backend, the build will fail with "Missing script: install:all"
-# because only backend/package.json is available — the monorepo scripts live at the root.
+# Railway → Service → Settings → Source → Root Directory: leave EMPTY.
+# If set to /backend, Docker cannot see backend/ + frontend/ and the build fails.
 
 [build]
 builder = "DOCKERFILE"
