@@ -2,12 +2,17 @@
 
 ## Root Directory setting (important)
 
-| Root Directory | Dockerfile used | Result |
-|---|---|---|
-| **empty** (recommended) | `/Dockerfile` | Monorepo build — frontend + backend in one image |
-| **`/backend`** | `/backend/Dockerfile` | Backend context — clones repo to build frontend |
+**Your Railway service uses Root Directory `/backend`.** The repo is configured for that:
 
-Both work. The build fails if Root Directory is `/backend` but Railway uses the **root** `/Dockerfile` (looks for `frontend/` in context and errors).
+- `railway.toml` → `dockerfilePath = "backend/Dockerfile"`
+- That Dockerfile clones the repo to build the Vite frontend, then runs Express.
+
+| Root Directory | `dockerfilePath` | Result |
+|---|---|---|
+| **`/backend`** (your setup) | `backend/Dockerfile` | Works |
+| **empty** | `Dockerfile` (change in `railway.toml`) | Monorepo build, no git clone |
+
+The build fails with `"/frontend": not found` when Root Directory is `/backend` but Railway still uses the **root** `/Dockerfile`.
 
 ## Required Railway variables
 

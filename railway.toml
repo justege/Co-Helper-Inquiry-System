@@ -1,9 +1,9 @@
-# Root Directory empty → repo /Dockerfile (monorepo).
-# Root Directory /backend → backend/Dockerfile (clones repo for frontend build).
+# Root Directory on Railway MUST be /backend for this config.
+# Uses backend/Dockerfile which clones the repo to build the frontend.
 
 [build]
 builder = "DOCKERFILE"
-dockerfilePath = "Dockerfile"
+dockerfilePath = "backend/Dockerfile"
 
 [deploy]
 healthcheckPath = "/health"
