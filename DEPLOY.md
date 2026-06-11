@@ -16,16 +16,15 @@ The build fails with `"/frontend": not found` when Root Directory is `/backend` 
 
 ## Required Railway variables
 
-Build-time (for Vite / AI chat):
-
-- `VITE_GEMINI_API_KEY`
-- `VITE_FIREBASE_*` (if used)
-- `VITE_API_URL` (production API URL)
-
 Runtime (backend):
 
-- `DATABASE_URL` or Supabase vars your backend expects
-- Firebase / JWT secrets as configured in `backend/.env.example`
+- `GEMINI_API_KEY` — **required** for AI Project Manager chat (server-side)
+- Supabase / Firebase vars as configured in `backend/.env.example`
+
+Build-time (frontend):
+
+- `VITE_FIREBASE_*` (if used)
+- `VITE_API_URL` (production API URL — optional when frontend and API share one Railway URL)
 
 ## Health check
 

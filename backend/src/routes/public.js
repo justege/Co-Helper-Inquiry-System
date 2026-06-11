@@ -4,6 +4,7 @@ import { requireAuth } from "../middleware/auth.js";
 import { validateInquiryInput, toInquiryResponse } from "../lib/inquiryValidation.js";
 import { ensureUserByFirebaseUid, isClientRole } from "../lib/userProfile.js";
 import { registerPartner } from "../lib/partnerRegistration.js";
+import { sendGeminiMessage } from "../lib/gemini.js";
 
 const router = Router();
 
@@ -80,6 +81,31 @@ router.post("/partner-registration", requireAuth, async (req, res) => {
   } catch (err) {
     console.error("[partner-registration]", err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/public/ai-chat — AI Project Manager (Gemini key stays server-side)
+router.post("/ai-chat", async (req, res) => {
+  const { history, message, categoriesHint } = req.body ?? {};
+
+  if (!message || typeof message !== "string" || !message.trim()) {
+    return res.status(400).json({ error: "message is required" });
+  }
+
+  if (!Array.isArray(history)) {
+    return res.status(400).json({ error: "history must be an array" });
+  }
+
+  try {
+    const result = await sendGeminiMessage(
+      history,
+      message.trim(),
+      typeof categoriesHint === "string" ? categoriesHint : "",
+    );
+    res.json(result);
+  } catch (err) {
+    console.error("[ai-chat]", err);
+    res.status(500).json({ error: err.message ?? "AI chat failed" });
   }
 });
 
