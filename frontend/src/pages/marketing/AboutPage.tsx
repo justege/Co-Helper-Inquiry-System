@@ -4,17 +4,17 @@ import { ContentSection, PageHero, ProseBlock } from "@/components/marketing/Mar
 import { INK, MUTED, RULE, SURFACE } from "@/components/marketing/tokens"
 
 const VALUES = [
-  { title: "Clarity", body: "Every project, milestone, and deliverable lives in one platform. Fixed quotes upfront — no hidden fees or opaque handoffs between developers." },
-  { title: "Verification", body: "Developers are reviewed on portfolio, test tasks, and references before they join the network. You work with vetted engineers, not open marketplace roulette." },
-  { title: "Planability", body: "Committed delivery dates and escrow-protected payments make every build predictable. Your PM owns the timeline so you can plan around shipping, not chasing." },
-  { title: "Accountability", body: "One named project manager per build — not a rotating account team. We build long-term delivery relationships, not one-off gig transactions." },
+  { title: "You own the relationship", body: "Companies come from you. We don’t match, staff, or insert a project manager between you and the people you already work with." },
+  { title: "One record of the job", body: "Brief, chat, files, to-dos, rates, hours, and payment logs live together — so nothing important is trapped in email." },
+  { title: "Clarity, not control", body: "Edit with AI rewrites your words using that job’s context. It does not invent scope or run the engagement for you." },
+  { title: "Track money, don’t process it", body: "Record what was agreed and what was paid. Invoicing and transfers stay how you already operate." },
 ]
 
 const STATS = [
-  { v: "50+",  l: "Software services in catalog" },
-  { v: "500+", l: "Verified specialists" },
-  { v: "40+",  l: "Countries covered" },
-  { v: "<24h", l: "Average quote turnaround" },
+  { v: "1", l: "Workspace per one-person business" },
+  { v: "Invite", l: "How companies join" },
+  { v: "0", l: "Marketplace commission" },
+  { v: "Logs", l: "Payments — not escrow" },
 ]
 
 export default function AboutPage() {
@@ -23,26 +23,26 @@ export default function AboutPage() {
       <PageHero
         label="Company"
         title="About Co-Helper"
-        subtitle="We connect businesses with vetted software developers — and assign one dedicated project manager to deliver every build on time."
+        subtitle="We build the shared workspace between a one-person business and the companies they work with — so the work, the rate, and the hours live in one place."
       />
 
       <ContentSection>
         <Grid templateColumns={{ base: "1fr", lg: "1fr 1fr" }} gap={12} mb={16}>
           <ProseBlock>
             <p>
-              Co-Helper was founded to solve a persistent problem in software outsourcing: finding skilled
-              developers is easy, but managing them across scopes, time zones, and deadlines remains
-              fragmented — especially when you have to coordinate every sprint yourself.
+              Co-Helper started from a simple observation: one-person businesses already have companies
+              they work with. What they lack is a calm, shared place to run the job — without posting a
+              project into a marketplace or handing the relationship to a platform PM.
             </p>
             <p>
-              Our platform brings the entire dev workflow into one place — from the first project brief
-              to production delivery. Clients get a dedicated project manager who scopes work, matches
-              vetted engineers, and owns quality. Developers receive qualified briefs without chasing clients.
+              The product is a workspace owned by a one-person business. You invite the companies you
+              already work with. Each job holds the brief, chat, documents, to-dos, an hourly or project
+              agreement, time entries, and a payment log. Optional Trello import turns boards you already
+              use into jobs.
             </p>
             <p>
-              Headquartered in Berlin with Europe-based PMs and a global specialist network, we serve
-              startups, product teams, and growing companies who need MVPs, full-stack apps, mobile builds,
-              automations, and e-commerce — delivered reliably, without the hiring overhead.
+              We are based in Berlin and remote-first. We are not a staffing network, escrow agent, or
+              hiring marketplace. If you need someone to find developers for you, Co-Helper is the wrong tool.
             </p>
           </ProseBlock>
           <Grid templateColumns="repeat(2,1fr)" gap={4}>

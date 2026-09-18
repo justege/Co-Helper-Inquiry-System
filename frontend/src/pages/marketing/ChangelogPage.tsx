@@ -5,13 +5,24 @@ import { INK, MUTED, RULE } from "@/components/marketing/tokens"
 
 const ENTRIES = [
   {
+    version: "2.0.0",
+    date: "September 2026",
+    title: "Workspace for one-person businesses",
+    items: [
+      "Each one-person business owns a private workspace and invites companies by link",
+      "Jobs include brief, chat, to-dos, price agreements, hours, and payment logs",
+      "Edit with AI on requirements, chat, and to-dos — Gemini key on the server",
+      "Trello: columns → projects, cards → jobs, checklists → to-dos, optional auto-sync",
+      "Marketplace matching and escrow are no longer the product",
+    ],
+  },
+  {
     version: "1.4.0",
     date: "May 2026",
-    title: "Partner services catalogue",
+    title: "Services catalogue (workspace-owned)",
     items: [
-      "Partners can publish service listings and price lists",
-      "Admin review workflow for partner service submissions",
-      "Improved inquiry-to-offer matching by category",
+      "One-person businesses can list services they offer their own companies",
+      "Documents and price ranges on the services page",
     ],
   },
   {
@@ -19,29 +30,17 @@ const ENTRIES = [
     date: "April 2026",
     title: "Document management",
     items: [
-      "Upload and attach PDFs to inquiries and offers",
-      "Document versioning on inquiry detail pages",
-      "Downloadable offer summaries",
+      "Upload and attach files to a job",
+      "Download from the job detail page",
     ],
   },
   {
     version: "1.2.0",
     date: "March 2026",
-    title: "Admin & expert management",
+    title: "Platform operations",
     items: [
-      "Super admin dashboard for platform oversight",
-      "Expert profile management and assignment",
-      "Bulk inquiry status updates",
-    ],
-  },
-  {
-    version: "1.1.0",
-    date: "February 2026",
-    title: "Offer comparison",
-    items: [
-      "Side-by-side bid comparison for buyers",
-      "Structured offer fields: price, lead time, terms",
-      "Accept/reject workflow with status tracking",
+      "Admin tools for platform operators (not part of the workspace between a one-person business and a company)",
+      "Role-based access for admin and superadmin",
     ],
   },
   {
@@ -49,10 +48,8 @@ const ENTRIES = [
     date: "January 2026",
     title: "Initial release",
     items: [
-      "Buyer inquiry creation and management",
-      "Partner registration and verification",
+      "Accounts, sign-in, and job records",
       "Email authentication and role-based access",
-      "Dashboard with inquiry pipeline overview",
     ],
   },
 ]
@@ -63,7 +60,7 @@ export default function ChangelogPage() {
       <PageHero
         label="Platform"
         title="Changelog"
-        subtitle="Product updates, new features, and improvements to the Co-Helper platform."
+        subtitle="What changed in the Co-Helper workspace — not a marketplace feed."
       />
 
       <ContentSection narrow>

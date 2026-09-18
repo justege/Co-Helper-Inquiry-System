@@ -48,6 +48,7 @@ const STATUS_LABELS: Record<string, string> = {
   offered: "Offered",
   accepted: "Accepted",
   in_progress: "In Production",
+  waiting: "Waiting",
   delivered: "Delivered",
   escalated: "Escalated",
   cancelled: "Cancelled",

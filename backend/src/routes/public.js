@@ -1,12 +1,11 @@
 import { Router } from "express";
-import supabase from "../db.js";
+import { query, queryOne } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { validateInquiryInput, toInquiryResponse } from "../lib/inquiryValidation.js";
 import { ensureUserByFirebaseUid, isClientRole } from "../lib/userProfile.js";
 import { registerPartner } from "../lib/partnerRegistration.js";
 
 const router = Router();
-
 const VALID_TYPES = ["service", "tool_sourcing"];
 
 function toCategoryService(row) {
@@ -21,45 +20,39 @@ function toCategoryService(row) {
   };
 }
 
-// GET /api/public/categories — no auth (landing page form)
 router.get("/categories", async (req, res) => {
   const { type } = req.query;
-
-  let query = supabase.from("categories").select("id, name, slug, type, description").order("name");
-  if (type && VALID_TYPES.includes(type)) query = query.eq("type", type);
-
-  const { data, error } = await query;
-  if (error) return res.status(500).json({ error: error.message });
-  res.json(data);
+  try {
+    const data = type && VALID_TYPES.includes(type)
+      ? await query("SELECT id, name, slug, type, description FROM categories WHERE type = $1 ORDER BY name", [type])
+      : await query("SELECT id, name, slug, type, description FROM categories ORDER BY name");
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// GET /api/public/category-services — catalog services per category (partner onboarding)
 router.get("/category-services", async (req, res) => {
   const { categoryId } = req.query;
-
-  let query = supabase
-    .from("category_services")
-    .select("id, category_id, name, slug, description, is_live, sort_order, categories(id, name, slug)")
-    .order("sort_order", { ascending: true });
-
-  if (categoryId) query = query.eq("category_id", categoryId);
-
-  const { data, error } = await query;
-  if (error) return res.status(500).json({ error: error.message });
-  res.json((data ?? []).map(toCategoryService));
+  try {
+    const data = categoryId
+      ? await query(
+          `SELECT id, category_id, name, slug, description, is_live, sort_order
+           FROM category_services WHERE category_id = $1 ORDER BY sort_order`,
+          [categoryId]
+        )
+      : await query(
+          `SELECT id, category_id, name, slug, description, is_live, sort_order
+           FROM category_services ORDER BY sort_order`
+        );
+    res.json(data.map(toCategoryService));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// POST /api/public/partner-registration — expert signup + profile bootstrap
 router.post("/partner-registration", requireAuth, async (req, res) => {
-  const {
-    username,
-    companyName,
-    bio,
-    locationCity,
-    categoryIds = [],
-    services = [],
-  } = req.body ?? {};
-
+  const { username, companyName, bio, locationCity, categoryIds = [], services = [] } = req.body ?? {};
   try {
     const result = await registerPartner({
       firebaseUid: req.uid,
@@ -71,11 +64,7 @@ router.post("/partner-registration", requireAuth, async (req, res) => {
       categoryIds,
       services,
     });
-
-    if (result.error) {
-      return res.status(result.status).json({ error: result.error });
-    }
-
+    if (result.error) return res.status(result.status).json({ error: result.error });
     res.status(201).json({ success: true });
   } catch (err) {
     console.error("[partner-registration]", err);
@@ -83,16 +72,13 @@ router.post("/partner-registration", requireAuth, async (req, res) => {
   }
 });
 
-// POST /api/public/inquiry-submission — signup + first inquiry (client registers via Firebase first)
 router.post("/inquiry-submission", requireAuth, async (req, res) => {
   const { username, ...inquiryBody } = req.body ?? {};
-
-  if (!username || typeof username !== "string" || username.trim().length < 2)
+  if (!username || typeof username !== "string" || username.trim().length < 2) {
     return res.status(400).json({ error: "username must be at least 2 characters" });
-
+  }
   const validation = validateInquiryInput(inquiryBody);
   if (validation.error) return res.status(400).json({ error: validation.error });
-
   const inquiry = validation.data;
 
   try {
@@ -102,42 +88,28 @@ router.post("/inquiry-submission", requireAuth, async (req, res) => {
       username: username.trim(),
       role: "client",
     });
-
     if (!isClientRole(profile.role)) {
-      return res.status(403).json({
-        error: "Only client accounts can submit project briefs from the landing page",
-      });
+      return res.status(403).json({ error: "Only client accounts can submit project briefs from the landing page" });
     }
 
-    const { data: category } = await supabase
-      .from("categories")
-      .select("id, type")
-      .eq("id", inquiry.categoryId)
-      .maybeSingle();
-
+    const category = await queryOne("SELECT id, type FROM categories WHERE id = $1", [inquiry.categoryId]);
     if (!category) return res.status(400).json({ error: "Category not found" });
-    if (category.type !== inquiry.type)
+    if (category.type !== inquiry.type) {
       return res.status(400).json({ error: "Category type does not match inquiry type" });
+    }
 
-    const { data: row, error: inqErr } = await supabase
-      .from("inquiries")
-      .insert({
-        client_id: profile.id,
-        category_id: inquiry.categoryId,
-        title: inquiry.title,
-        description: inquiry.description,
-        type: inquiry.type,
-        urgency: inquiry.urgency,
-        target_start_date: inquiry.targetStartDate,
-        target_end_date: inquiry.targetEndDate,
-        estimated_quantity: inquiry.estimatedQuantity,
-        status: "pending",
-      })
-      .select("*, categories(id, name, type)")
-      .single();
-
-    if (inqErr) throw inqErr;
-
+    const row = await queryOne(
+      `INSERT INTO inquiries (
+         client_id, category_id, title, description, type, urgency,
+         target_start_date, target_end_date, estimated_quantity, status
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending')
+       RETURNING *`,
+      [
+        profile.id, inquiry.categoryId, inquiry.title, inquiry.description, inquiry.type,
+        inquiry.urgency, inquiry.targetStartDate, inquiry.targetEndDate, inquiry.estimatedQuantity,
+      ]
+    );
+    row.categories = { id: category.id, name: null, type: category.type };
     res.status(201).json({ inquiry: toInquiryResponse(row) });
   } catch (err) {
     console.error("[inquiry-submission]", err);

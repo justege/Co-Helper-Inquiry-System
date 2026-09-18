@@ -8,25 +8,25 @@ const OPENINGS = [
     title: "Senior Backend Engineer",
     location: "Remote · Global",
     team: "Engineering",
-    description: "Build and scale the APIs that power project management, specialist matching, and delivery workflows.",
+    description: "Build the APIs behind workspaces, jobs, Trello import, and payment logs — Postgres, Express, and DigitalOcean.",
   },
   {
-    title: "Project Manager",
+    title: "Product Engineer (workspace)",
     location: "Remote · EU timezone",
-    team: "Operations",
-    description: "Coordinate vetted specialists, manage client projects, and ensure on-time delivery across digital service categories.",
+    team: "Engineering",
+    description: "Own the job surface for one-person businesses and invited companies: chat, to-dos, agreements, hours, and Edit with AI.",
   },
   {
     title: "Product Designer",
     location: "Remote · Global",
     team: "Product",
-    description: "Design client-facing project workflows and specialist tools for a global digital outsourcing platform.",
+    description: "Design calm tools for two people on a job — not a marketplace browse, not a staffing dashboard.",
   },
   {
-    title: "Enterprise Sales Representative",
+    title: "Customer success (one-person businesses)",
     location: "Remote · Americas",
-    team: "Sales",
-    description: "Work with mid-market and enterprise companies outsourcing software, marketing, and e-commerce services.",
+    team: "Support",
+    description: "Help one-person businesses invite companies, import Trello, and keep hours and payment logs honest.",
   },
 ]
 
@@ -44,7 +44,7 @@ export default function CareersPage() {
       <PageHero
         label="Company"
         title="Careers"
-        subtitle="Join us in building the trusted platform for outsourcing digital services worldwide."
+        subtitle="Help us build the shared workspace between a one-person business and the companies they work with — not a hiring marketplace."
       />
 
       <ContentSection>

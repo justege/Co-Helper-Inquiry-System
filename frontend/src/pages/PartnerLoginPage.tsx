@@ -26,7 +26,7 @@ export default function PartnerLoginPage() {
   async function onSubmit(data: LoginFields) {
     try {
       await loginWithEmail(data.email, data.password)
-      navigate("/app/partner-services", { replace: true })
+      navigate("/app/board", { replace: true })
     } catch (err: unknown) {
       setError("root", { message: err instanceof Error ? err.message : "Login failed" })
     }
@@ -35,7 +35,7 @@ export default function PartnerLoginPage() {
   async function handleGoogle() {
     try {
       await loginWithGoogle()
-      navigate("/app/partner-services", { replace: true })
+      navigate("/app/board", { replace: true })
     } catch (err: unknown) {
       setError("root", { message: err instanceof Error ? err.message : "Google login failed" })
     }
@@ -43,21 +43,21 @@ export default function PartnerLoginPage() {
 
   return (
     <AuthShell
-      title="Partner sign in"
-      subtitle="Access your specialist dashboard and manage your service offerings."
+      title="Workspace sign in"
+      subtitle="Access your workspace — jobs, clients, rates, hours, and payments."
       promo={{
-        tagline: "Deliver digital projects worldwide with Co-Helper backing every engagement.",
+        tagline: "Your workspace, your clients — every job, rate, and payment tracked in one place.",
         imageSrc: loginPng,
       }}
       footer={
         <>
-          New specialist?{" "}
+          New here?{" "}
           <Link to="/partner/register" style={{ color: "#0F6E56", fontWeight: "700" }}>
-            Apply to join
+            Start your workspace
           </Link>
           {" · "}
           <Link to="/login" style={{ color: "#64748B", fontWeight: "600" }}>
-            Client login
+            Invited as a client?
           </Link>
         </>
       }
@@ -92,7 +92,7 @@ export default function PartnerLoginPage() {
         </Field>
 
         <Button type="submit" loading={isSubmitting} {...authPrimaryButtonProps}>
-          Sign in as partner
+          Sign in
         </Button>
       </VStack>
 

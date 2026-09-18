@@ -1,12 +1,12 @@
-import supabase from "../db.js";
-import { ensureUserByFirebaseUid, isClientRole } from "./userProfile.js";
+import { query, queryOne, execute } from "../db.js";
+import { ensureUserByFirebaseUid, isClientRole, fetchUserWithCategories } from "./userProfile.js";
+import { ensureWorkspaceForOwner } from "./workspace.js";
 
 const MAX_SERVICES = 20;
 
 function normalizeService(raw) {
   const title = raw?.title?.trim();
   if (!title || title.length > 200) return null;
-
   return {
     categoryId: raw.categoryId ?? null,
     title,
@@ -48,13 +48,11 @@ export async function registerPartner({
     }
   }
 
-  const { data: categories, error: catErr } = await supabase
-    .from("categories")
-    .select("id")
-    .in("id", uniqueCategoryIds);
-
-  if (catErr) throw catErr;
-  if ((categories ?? []).length !== uniqueCategoryIds.length) {
+  const categories = await query(
+    `SELECT id FROM categories WHERE id = ANY($1::uuid[])`,
+    [uniqueCategoryIds]
+  );
+  if (categories.length !== uniqueCategoryIds.length) {
     return { error: "One or more categories are invalid", status: 400 };
   }
 
@@ -70,69 +68,48 @@ export async function registerPartner({
   }
 
   if (profile.role !== "expert") {
-    const { error: roleErr } = await supabase
-      .from("users")
-      .update({ role: "expert" })
-      .eq("id", profile.id);
-    if (roleErr) throw roleErr;
+    await execute("UPDATE users SET role = 'expert' WHERE id = $1", [profile.id]);
   }
 
-  const userUpdates = {};
-  if (companyName !== undefined) userUpdates.company_name = companyName?.trim() || null;
-
-  if (Object.keys(userUpdates).length > 0) {
-    const { error: userErr } = await supabase
-      .from("users")
-      .update(userUpdates)
-      .eq("id", profile.id);
-    if (userErr) throw userErr;
+  if (companyName !== undefined) {
+    await execute("UPDATE users SET company_name = $1 WHERE id = $2", [
+      companyName?.trim() || null,
+      profile.id,
+    ]);
   }
 
-  await supabase.from("user_categories").delete().eq("user_id", profile.id);
+  await execute("DELETE FROM user_categories WHERE user_id = $1", [profile.id]);
+  for (const categoryId of uniqueCategoryIds) {
+    await execute(
+      "INSERT INTO user_categories (user_id, category_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+      [profile.id, categoryId]
+    );
+  }
 
-  const { error: ucErr } = await supabase.from("user_categories").insert(
-    uniqueCategoryIds.map((categoryId) => ({
-      user_id: profile.id,
-      category_id: categoryId,
-    }))
+  await execute(
+    `INSERT INTO expert_profiles (user_id, bio, location_city, is_available, updated_at)
+     VALUES ($1, $2, $3, TRUE, NOW())
+     ON CONFLICT (user_id) DO UPDATE SET
+       bio = EXCLUDED.bio,
+       location_city = EXCLUDED.location_city,
+       is_available = TRUE,
+       updated_at = NOW()`,
+    [profile.id, bio?.trim() || null, locationCity?.trim() || "Remote"]
   );
-  if (ucErr) throw ucErr;
 
-  const { error: epErr } = await supabase.from("expert_profiles").upsert(
-    {
-      user_id: profile.id,
-      bio: bio?.trim() || null,
-      location_city: locationCity?.trim() || "Remote",
-      is_available: true,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "user_id" }
-  );
-  if (epErr) throw epErr;
+  await ensureWorkspaceForOwner(profile.id, companyName?.trim() || username.trim());
 
   if (normalizedServices.length > 0) {
-    const { error: svcErr } = await supabase.from("partner_services").insert(
-      normalizedServices.map((svc, index) => ({
-        partner_id: profile.id,
-        category_id: svc.categoryId,
-        title: svc.title,
-        description: svc.description,
-        price_from: svc.priceFrom,
-        price_to: svc.priceTo,
-        price_unit: svc.priceUnit,
-        currency: svc.currency,
-        sort_order: index,
-      }))
-    );
-    if (svcErr) throw svcErr;
+    for (const [index, svc] of normalizedServices.entries()) {
+      await execute(
+        `INSERT INTO partner_services
+           (partner_id, category_id, title, description, price_from, price_to, price_unit, currency, sort_order)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [profile.id, svc.categoryId, svc.title, svc.description, svc.priceFrom, svc.priceTo, svc.priceUnit, svc.currency, index]
+      );
+    }
   }
 
-  const { data: user, error: fetchErr } = await supabase
-    .from("users")
-    .select("*, user_categories(category_id, categories(*))")
-    .eq("id", profile.id)
-    .single();
-
-  if (fetchErr) throw fetchErr;
+  const user = await fetchUserWithCategories("u.id = $1", [profile.id]);
   return { user };
 }

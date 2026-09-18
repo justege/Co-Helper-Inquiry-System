@@ -1,4 +1,5 @@
-import { useNavigate, Link } from "react-router-dom"
+import { useEffect, useState } from "react"
+import { useNavigate, useSearchParams, Link } from "react-router-dom"
 import { Box, Button, Text, VStack } from "@chakra-ui/react"
 import { useForm } from "react-hook-form"
 import { Field } from "@/components/ui/field"
@@ -9,6 +10,7 @@ import { AuthDivider, SocialAuthButtons } from "@/components/auth/SocialAuthButt
 import { authFieldLabel, authInputProps, authPrimaryButtonProps } from "@/components/auth/authStyles"
 import { useAuthContext } from "../components/auth/AuthContext"
 import { updateMe } from "../api/users"
+import { acceptInvite, getInvitePreview } from "@/api/workspace"
 import loginPng from "@/assets/login.png"
 
 type RegisterFields = {
@@ -20,6 +22,20 @@ type RegisterFields = {
 export default function RegisterPage() {
   const { registerWithEmail, loginWithGoogle } = useAuthContext()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const invite = searchParams.get("invite")
+  const [freelancerLabel, setFreelancerLabel] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!invite) return
+    getInvitePreview(invite)
+      .then((p) => {
+        const f = p.freelancer
+        const name = f ? [f.firstName, f.lastName].filter(Boolean).join(" ") || f.companyName || f.username : null
+        setFreelancerLabel(name)
+      })
+      .catch(() => null)
+  }, [invite])
 
   const {
     register,
@@ -34,7 +50,10 @@ export default function RegisterPage() {
       if (data.username.trim()) {
         await updateMe({ username: data.username.trim() })
       }
-      navigate("/app/dashboard", { replace: true })
+      if (invite) {
+        try { await acceptInvite(invite) } catch { /* invite may already be accepted */ }
+      }
+      navigate("/app/board", { replace: true })
     } catch (err: unknown) {
       setError("root", {
         message: err instanceof Error ? err.message : "Registration failed",
@@ -45,7 +64,10 @@ export default function RegisterPage() {
   async function handleGoogle() {
     try {
       await loginWithGoogle()
-      navigate("/app/dashboard", { replace: true })
+      if (invite) {
+        try { await acceptInvite(invite) } catch { /* invite may already be accepted */ }
+      }
+      navigate("/app/board", { replace: true })
     } catch (err: unknown) {
       setError("root", {
         message: err instanceof Error ? err.message : "Google sign-up failed",
@@ -55,10 +77,10 @@ export default function RegisterPage() {
 
   return (
     <AuthShell
-      title="Create account"
-      subtitle="Join Co-Helper and start your first project today."
+      title="Create your account"
+      subtitle="You were invited to Co-Helper — set up your account to see the job."
       promo={{
-        tagline: "Digital services, managed for you — worldwide.",
+        tagline: "One shared workspace with the one-person business you work with — jobs, rates, and payments in one place.",
         imageSrc: loginPng,
       }}
       footer={
@@ -67,9 +89,22 @@ export default function RegisterPage() {
           <Box as={Link} to="/login" color="#0F6E56" fontWeight="700" _hover={{ textDecoration: "underline" }}>
             Sign In
           </Box>
+          {" · "}
+          <Box as={Link} to="/partner/register" color="#64748B" fontWeight="600" _hover={{ textDecoration: "underline" }}>
+            Run a one-person business?
+          </Box>
         </>
       }
     >
+      {invite && (
+        <Box bg="#F0FAF5" border="1px solid #A7D7C5" rounded="xl" px={4} py={3} mb={5}>
+          <Text fontSize="0.8125rem" color="#0F6E56" fontWeight="600">
+            {freelancerLabel ? `${freelancerLabel} invited you` : "You were invited"} — create your
+            account to see the job.
+          </Text>
+        </Box>
+      )}
+
       {errors.root && (
         <Box bg="red.50" border="1px solid" borderColor="red.200" rounded="xl" px={4} py={3} mb={5}>
           <Text fontSize="sm" color="red.600">{errors.root.message}</Text>

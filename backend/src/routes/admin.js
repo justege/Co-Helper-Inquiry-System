@@ -1,5 +1,5 @@
 import { Router } from "express";
-import supabase from "../db.js";
+import { query, queryOne, execute, buildSet } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { isAdminOrAbove, isSuperadmin } from "../middleware/requireRole.js";
 import { toExpertProfile } from "../lib/expertProfile.js";
@@ -10,24 +10,163 @@ const router = Router();
 // All admin routes require admin or above
 router.use(requireAuth, ...isAdminOrAbove);
 
+const CLIENT_JSON = `json_build_object(
+  'id', u.id, 'email', u.email, 'first_name', u.first_name,
+  'last_name', u.last_name, 'company_name', u.company_name
+)`;
+
+const CATEGORY_JSON = `CASE WHEN c.id IS NULL THEN NULL ELSE json_build_object(
+  'id', c.id, 'name', c.name, 'type', c.type
+) END`;
+
+const USER_CATEGORIES_JSON = `COALESCE((
+  SELECT json_agg(json_build_object(
+    'category_id', uc.category_id,
+    'categories', json_build_object(
+      'id', cat.id, 'name', cat.name, 'slug', cat.slug,
+      'type', cat.type, 'description', cat.description
+    )
+  ))
+  FROM user_categories uc
+  JOIN categories cat ON cat.id = uc.category_id
+  WHERE uc.user_id = u.id
+), '[]'::json)`;
+
+const PROJECT_OFFERS_NESTED = `COALESCE((
+  SELECT json_agg(po_obj ORDER BY po_created_at DESC)
+  FROM (
+    SELECT po.created_at AS po_created_at,
+      json_build_object(
+        'id', po.id,
+        'inquiry_id', po.inquiry_id,
+        'total_client_price', po.total_client_price,
+        'valid_until', po.valid_until,
+        'status', po.status,
+        'created_at', po.created_at,
+        'notes', po.notes,
+        'lead_time_days', po.lead_time_days,
+        'project_offer_items', COALESCE((
+          SELECT json_agg(json_build_object(
+            'id', poi.id,
+            'expert_offers', json_build_object(
+              'id', eo.id,
+              'expert_id', eo.expert_id,
+              'proposed_price', eo.proposed_price,
+              'estimated_lead_time_days', eo.estimated_lead_time_days,
+              'notes', eo.notes,
+              'users', json_build_object(
+                'id', eu.id, 'email', eu.email, 'first_name', eu.first_name,
+                'last_name', eu.last_name, 'company_name', eu.company_name
+              )
+            )
+          ))
+          FROM project_offer_items poi
+          JOIN expert_offers eo ON eo.id = poi.expert_offer_id
+          LEFT JOIN users eu ON eu.id = eo.expert_id
+          WHERE poi.project_offer_id = po.id
+        ), '[]'::json)
+      ) AS po_obj
+    FROM project_offers po
+    WHERE po.inquiry_id = i.id
+  ) nested
+), '[]'::json)`;
+
+async function fetchInquiryWithClient(id) {
+  return queryOne(
+    `SELECT i.*, ${CLIENT_JSON} AS users, ${CATEGORY_JSON} AS categories
+     FROM inquiries i
+     JOIN users u ON u.id = i.client_id
+     LEFT JOIN categories c ON c.id = i.category_id
+     WHERE i.id = $1`,
+    [id]
+  );
+}
+
+async function upsertExpertOffer({ inquiryId, expertId, proposedPrice, leadTimeDays, notes }) {
+  return queryOne(
+    `INSERT INTO expert_offers (
+       inquiry_id, expert_id, proposed_price, estimated_lead_time_days, notes, status
+     ) VALUES ($1, $2, $3, $4, $5, 'submitted')
+     ON CONFLICT (inquiry_id, expert_id) DO UPDATE SET
+       proposed_price = EXCLUDED.proposed_price,
+       estimated_lead_time_days = EXCLUDED.estimated_lead_time_days,
+       notes = EXCLUDED.notes,
+       status = EXCLUDED.status
+     RETURNING *`,
+    [inquiryId, expertId, proposedPrice, leadTimeDays, notes]
+  );
+}
+
+async function fetchProjectOfferForMapper(offerId) {
+  return queryOne(
+    `SELECT po.*,
+       COALESCE((
+         SELECT json_agg(json_build_object(
+           'id', poi.id,
+           'expert_offers', json_build_object(
+             'id', eo.id,
+             'expert_id', eo.expert_id,
+             'proposed_price', eo.proposed_price,
+             'estimated_lead_time_days', eo.estimated_lead_time_days,
+             'notes', eo.notes,
+             'users', CASE WHEN eu.id IS NULL THEN NULL ELSE json_build_object(
+               'id', eu.id, 'email', eu.email, 'first_name', eu.first_name,
+               'last_name', eu.last_name, 'company_name', eu.company_name
+             ) END
+           )
+         ))
+         FROM project_offer_items poi
+         JOIN expert_offers eo ON eo.id = poi.expert_offer_id
+         LEFT JOIN users eu ON eu.id = eo.expert_id
+         WHERE poi.project_offer_id = po.id
+       ), '[]'::json) AS project_offer_items
+     FROM project_offers po
+     WHERE po.id = $1`,
+    [offerId]
+  );
+}
+
+function mapNote(n) {
+  const author = n.author ?? n.users ?? {};
+  return {
+    id: n.id,
+    content: n.content,
+    createdAt: n.created_at,
+    author: {
+      id: author.id,
+      email: author.email,
+      firstName: author.first_name,
+      lastName: author.last_name,
+      role: author.role,
+    },
+  };
+}
+
 // ── GET /api/admin/inquiries ── list all inquiries with client + category info ──
 router.get("/inquiries", async (req, res) => {
   try {
     const { status, type } = req.query;
-    let query = supabase
-      .from("inquiries")
-      .select(`
-        *,
-        users!inquiries_client_id_fkey(id, email, first_name, last_name, company_name),
-        categories(id, name, type)
-      `)
-      .order("created_at", { ascending: false });
+    const params = [];
+    const where = [];
+    if (status) {
+      params.push(status);
+      where.push(`i.status = $${params.length}`);
+    }
+    if (type) {
+      params.push(type);
+      where.push(`i.type = $${params.length}`);
+    }
+    const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
-    if (status) query = query.eq("status", status);
-    if (type) query = query.eq("type", type);
-
-    const { data, error } = await query;
-    if (error) throw error;
+    const data = await query(
+      `SELECT i.*, ${CLIENT_JSON} AS users, ${CATEGORY_JSON} AS categories
+       FROM inquiries i
+       JOIN users u ON u.id = i.client_id
+       LEFT JOIN categories c ON c.id = i.category_id
+       ${whereSql}
+       ORDER BY i.created_at DESC`,
+      params
+    );
 
     res.json(data.map(toInquiry));
   } catch (err) {
@@ -39,26 +178,16 @@ router.get("/inquiries", async (req, res) => {
 // ── GET /api/admin/inquiries/:id ── get single inquiry ───────────────────────
 router.get("/inquiries/:id", async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from("inquiries")
-      .select(`
-        *,
-        users!inquiries_client_id_fkey(id, email, first_name, last_name, company_name),
-        categories(id, name, type),
-        project_offers(
-          id, inquiry_id, total_client_price, valid_until, status, created_at, notes, lead_time_days,
-          project_offer_items(
-            id,
-            expert_offers(
-              id, expert_id, proposed_price, estimated_lead_time_days, notes,
-              users!expert_offers_expert_id_fkey(id, email, first_name, last_name, company_name)
-            )
-          )
-        )
-      `)
-      .eq("id", req.params.id)
-      .single();
-    if (error) throw error;
+    const data = await queryOne(
+      `SELECT i.*, ${CLIENT_JSON} AS users, ${CATEGORY_JSON} AS categories,
+              ${PROJECT_OFFERS_NESTED} AS project_offers
+       FROM inquiries i
+       JOIN users u ON u.id = i.client_id
+       LEFT JOIN categories c ON c.id = i.category_id
+       WHERE i.id = $1`,
+      [req.params.id]
+    );
+    if (!data) throw new Error("Inquiry not found");
     res.json(toInquiry(data));
   } catch (err) {
     console.error(err);
@@ -71,23 +200,18 @@ router.get("/inquiries/:id", async (req, res) => {
 
 // ── PUT /api/admin/inquiries/:id/status ── update inquiry status ──────────────
 router.put("/inquiries/:id/status", async (req, res) => {
-  const VALID = ["pending", "matching", "offered", "accepted", "in_progress", "delivered", "escalated", "cancelled"];
+  const VALID = ["pending", "matching", "offered", "accepted", "in_progress", "waiting", "delivered", "escalated", "cancelled"];
   const { status } = req.body ?? {};
   if (!VALID.includes(status)) {
     return res.status(400).json({ error: `status must be one of: ${VALID.join(", ")}` });
   }
   try {
-    const { data, error } = await supabase
-      .from("inquiries")
-      .update({ status, updated_at: new Date().toISOString() })
-      .eq("id", req.params.id)
-      .select(`
-        *,
-        users!inquiries_client_id_fkey(id, email, first_name, last_name, company_name),
-        categories(id, name, type)
-      `)
-      .single();
-    if (error) throw error;
+    await execute(
+      `UPDATE inquiries SET status = $1, updated_at = NOW() WHERE id = $2`,
+      [status, req.params.id]
+    );
+    const data = await fetchInquiryWithClient(req.params.id);
+    if (!data) throw new Error("Inquiry not found");
     res.json(toInquiry(data));
   } catch (err) {
     console.error(err);
@@ -98,21 +222,20 @@ router.put("/inquiries/:id/status", async (req, res) => {
 // ── GET /api/admin/experts ── list all expert users with profiles ─────────────
 router.get("/experts", async (req, res) => {
   try {
-    const { data: users, error: uErr } = await supabase
-      .from("users")
-      .select("*, user_categories(category_id, categories(*))")
-      .eq("role", "expert")
-      .order("created_at", { ascending: false });
-    if (uErr) throw uErr;
+    const users = await query(
+      `SELECT u.*, ${USER_CATEGORIES_JSON} AS user_categories
+       FROM users u
+       WHERE u.role = 'expert'
+       ORDER BY u.created_at DESC`
+    );
 
     const expertIds = users.map((u) => u.id);
-    const { data: profiles, error: pErr } = expertIds.length
-      ? await supabase
-          .from("expert_profiles")
-          .select("*")
-          .in("user_id", expertIds)
-      : { data: [], error: null };
-    if (pErr) throw pErr;
+    const profiles = expertIds.length
+      ? await query(
+          `SELECT * FROM expert_profiles WHERE user_id = ANY($1::uuid[])`,
+          [expertIds]
+        )
+      : [];
 
     const profileMap = Object.fromEntries((profiles ?? []).map((p) => [p.user_id, p]));
 
@@ -143,20 +266,16 @@ router.put("/experts/:id/score", ...isSuperadmin, async (req, res) => {
   }
   const { scoreNotes } = req.body ?? {};
   try {
-    const { data, error } = await supabase
-      .from("expert_profiles")
-      .upsert(
-        {
-          user_id: req.params.id,
-          score,
-          score_notes: scoreNotes?.trim() || null,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id" }
-      )
-      .select()
-      .single();
-    if (error) throw error;
+    const data = await queryOne(
+      `INSERT INTO expert_profiles (user_id, score, score_notes, updated_at)
+       VALUES ($1, $2, $3, NOW())
+       ON CONFLICT (user_id) DO UPDATE SET
+         score = EXCLUDED.score,
+         score_notes = EXCLUDED.score_notes,
+         updated_at = EXCLUDED.updated_at
+       RETURNING *`,
+      [req.params.id, score, scoreNotes?.trim() || null]
+    );
     res.json(data);
   } catch (err) {
     console.error(err);
@@ -168,13 +287,19 @@ router.put("/experts/:id/score", ...isSuperadmin, async (req, res) => {
 router.get("/users", async (req, res) => {
   try {
     const { role } = req.query;
-    let query = supabase
-      .from("users")
-      .select("*, user_categories(category_id, categories(*))")
-      .order("created_at", { ascending: false });
-    if (role) query = query.eq("role", role);
-    const { data, error } = await query;
-    if (error) throw error;
+    const params = [];
+    let where = "";
+    if (role) {
+      params.push(role);
+      where = "WHERE u.role = $1";
+    }
+    const data = await query(
+      `SELECT u.*, ${USER_CATEGORIES_JSON} AS user_categories
+       FROM users u
+       ${where}
+       ORDER BY u.created_at DESC`,
+      params
+    );
     res.json(
       data.map((u) => ({
         id: u.id,
@@ -196,24 +321,18 @@ router.get("/users", async (req, res) => {
 // ── GET /api/admin/inquiries/:id/notes ── list team notes ────────────────────
 router.get("/inquiries/:id/notes", async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from("inquiry_notes")
-      .select("*, users!inquiry_notes_author_id_fkey(id, email, first_name, last_name, role)")
-      .eq("inquiry_id", req.params.id)
-      .order("created_at", { ascending: true });
-    if (error) throw error;
-    res.json((data ?? []).map((n) => ({
-      id: n.id,
-      content: n.content,
-      createdAt: n.created_at,
-      author: {
-        id: n.users.id,
-        email: n.users.email,
-        firstName: n.users.first_name,
-        lastName: n.users.last_name,
-        role: n.users.role,
-      },
-    })));
+    const data = await query(
+      `SELECT n.*, json_build_object(
+         'id', u.id, 'email', u.email, 'first_name', u.first_name,
+         'last_name', u.last_name, 'role', u.role
+       ) AS users
+       FROM inquiry_notes n
+       JOIN users u ON u.id = n.author_id
+       WHERE n.inquiry_id = $1
+       ORDER BY n.created_at ASC`,
+      [req.params.id]
+    );
+    res.json((data ?? []).map(mapNote));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -225,24 +344,17 @@ router.post("/inquiries/:id/notes", async (req, res) => {
   const { content } = req.body ?? {};
   if (!content?.trim()) return res.status(400).json({ error: "content is required" });
   try {
-    const { data, error } = await supabase
-      .from("inquiry_notes")
-      .insert({ inquiry_id: req.params.id, author_id: req.dbUser.id, content: content.trim() })
-      .select("*, users!inquiry_notes_author_id_fkey(id, email, first_name, last_name, role)")
-      .single();
-    if (error) throw error;
-    res.status(201).json({
-      id: data.id,
-      content: data.content,
-      createdAt: data.created_at,
-      author: {
-        id: data.users.id,
-        email: data.users.email,
-        firstName: data.users.first_name,
-        lastName: data.users.last_name,
-        role: data.users.role,
-      },
-    });
+    const data = await queryOne(
+      `INSERT INTO inquiry_notes (inquiry_id, author_id, content)
+       VALUES ($1, $2, $3)
+       RETURNING *`,
+      [req.params.id, req.dbUser.id, content.trim()]
+    );
+    const author = await queryOne(
+      `SELECT id, email, first_name, last_name, role FROM users WHERE id = $1`,
+      [req.dbUser.id]
+    );
+    res.status(201).json(mapNote({ ...data, users: author }));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -252,12 +364,10 @@ router.post("/inquiries/:id/notes", async (req, res) => {
 // ── DELETE /api/admin/inquiries/:id/notes/:noteId ── delete a note ────────────
 router.delete("/inquiries/:id/notes/:noteId", ...isSuperadmin.slice(1), async (req, res) => {
   try {
-    const { error } = await supabase
-      .from("inquiry_notes")
-      .delete()
-      .eq("id", req.params.noteId)
-      .eq("inquiry_id", req.params.id);
-    if (error) throw error;
+    await execute(
+      `DELETE FROM inquiry_notes WHERE id = $1 AND inquiry_id = $2`,
+      [req.params.noteId, req.params.id]
+    );
     res.status(204).send();
   } catch (err) {
     console.error(err);
@@ -269,18 +379,15 @@ router.delete("/inquiries/:id/notes/:noteId", ...isSuperadmin.slice(1), async (r
 router.put("/inquiries/:id/assign", async (req, res) => {
   const { expertId } = req.body ?? {};
   try {
-    const updates = {
+    const fields = {
       assigned_expert_id: expertId || null,
       updated_at: new Date().toISOString(),
     };
-    if (expertId) updates.status = "matching";
-    const { data, error } = await supabase
-      .from("inquiries")
-      .update(updates)
-      .eq("id", req.params.id)
-      .select(`*, users!inquiries_client_id_fkey(id, email, first_name, last_name, company_name), categories(id, name, type)`)
-      .single();
-    if (error) throw error;
+    if (expertId) fields.status = "matching";
+    const { set, values, next } = buildSet(fields);
+    await execute(`UPDATE inquiries SET ${set} WHERE id = $${next}`, [...values, req.params.id]);
+    const data = await fetchInquiryWithClient(req.params.id);
+    if (!data) throw new Error("Inquiry not found");
     res.json(toInquiry(data));
   } catch (err) {
     console.error(err);
@@ -296,48 +403,39 @@ router.post("/inquiries/:id/offer", async (req, res) => {
   if (!clientPrice || isNaN(Number(clientPrice))) return res.status(400).json({ error: "clientPrice is required" });
 
   try {
-    // 1. Create expert_offer
-    const { data: eo, error: eoErr } = await supabase
-      .from("expert_offers")
-      .upsert({
-        inquiry_id: req.params.id,
-        expert_id: expertId,
-        proposed_price: Number(proposedPrice),
-        estimated_lead_time_days: leadTimeDays ? Number(leadTimeDays) : null,
-        notes: notes?.trim() || null,
-        status: "submitted",
-      }, { onConflict: "inquiry_id,expert_id" })
-      .select()
-      .single();
-    if (eoErr) throw eoErr;
+    const eo = await upsertExpertOffer({
+      inquiryId: req.params.id,
+      expertId,
+      proposedPrice: Number(proposedPrice),
+      leadTimeDays: leadTimeDays ? Number(leadTimeDays) : null,
+      notes: notes?.trim() || null,
+    });
 
-    // 2. Create project_offer (draft until explicitly sent)
-    const { data: po, error: poErr } = await supabase
-      .from("project_offers")
-      .insert({
-        inquiry_id: req.params.id,
-        total_client_price: Number(clientPrice),
-        valid_until: validUntil || null,
-        notes: notes?.trim() || null,
-        lead_time_days: leadTimeDays ? Number(leadTimeDays) : null,
-        status: req.body?.send === true ? "sent" : "draft",
-      })
-      .select()
-      .single();
-    if (poErr) throw poErr;
+    const po = await queryOne(
+      `INSERT INTO project_offers (
+         inquiry_id, total_client_price, valid_until, notes, lead_time_days, status
+       ) VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING *`,
+      [
+        req.params.id,
+        Number(clientPrice),
+        validUntil || null,
+        notes?.trim() || null,
+        leadTimeDays ? Number(leadTimeDays) : null,
+        req.body?.send === true ? "sent" : "draft",
+      ]
+    );
 
-    // 3. Link them
-    const { error: piErr } = await supabase
-      .from("project_offer_items")
-      .insert({ project_offer_id: po.id, expert_offer_id: eo.id });
-    if (piErr) throw piErr;
+    await execute(
+      `INSERT INTO project_offer_items (project_offer_id, expert_offer_id) VALUES ($1, $2)`,
+      [po.id, eo.id]
+    );
 
-    // 4. Update inquiry status when sent
     if (po.status === "sent") {
-      await supabase
-        .from("inquiries")
-        .update({ status: "offered", updated_at: new Date().toISOString() })
-        .eq("id", req.params.id);
+      await execute(
+        `UPDATE inquiries SET status = 'offered', updated_at = NOW() WHERE id = $1`,
+        [req.params.id]
+      );
     }
 
     res.status(201).json(toProjectOffer({
@@ -355,19 +453,25 @@ router.put("/inquiries/:id/offers/:offerId", async (req, res) => {
   const { expertId, proposedPrice, clientPrice, leadTimeDays, notes, validUntil, send } = req.body ?? {};
 
   try {
-    const { data: offer, error: offerErr } = await supabase
-      .from("project_offers")
-      .select(`
-        *,
-        project_offer_items(
-          id, expert_offer_id,
-          expert_offers(id, expert_id, inquiry_id)
-        )
-      `)
-      .eq("id", req.params.offerId)
-      .eq("inquiry_id", req.params.id)
-      .single();
-    if (offerErr || !offer) return res.status(404).json({ error: "Offer not found" });
+    const offer = await queryOne(
+      `SELECT po.*,
+         COALESCE((
+           SELECT json_agg(json_build_object(
+             'id', poi.id,
+             'expert_offer_id', poi.expert_offer_id,
+             'expert_offers', json_build_object(
+               'id', eo.id, 'expert_id', eo.expert_id, 'inquiry_id', eo.inquiry_id
+             )
+           ))
+           FROM project_offer_items poi
+           LEFT JOIN expert_offers eo ON eo.id = poi.expert_offer_id
+           WHERE poi.project_offer_id = po.id
+         ), '[]'::json) AS project_offer_items
+       FROM project_offers po
+       WHERE po.id = $1 AND po.inquiry_id = $2`,
+      [req.params.offerId, req.params.id]
+    );
+    if (!offer) return res.status(404).json({ error: "Offer not found" });
     if (offer.status === "accepted") {
       return res.status(400).json({ error: "Accepted offers cannot be edited" });
     }
@@ -380,72 +484,49 @@ router.put("/inquiries/:id/offers/:offerId", async (req, res) => {
     if (send === true && ["draft", "declined"].includes(offer.status)) poUpdates.status = "sent";
 
     if (Object.keys(poUpdates).length > 0) {
-      const { error: poErr } = await supabase
-        .from("project_offers")
-        .update(poUpdates)
-        .eq("id", offer.id);
-      if (poErr) throw poErr;
+      const { set, values, next } = buildSet(poUpdates);
+      await execute(`UPDATE project_offers SET ${set} WHERE id = $${next}`, [...values, offer.id]);
     }
 
     const item = offer.project_offer_items?.[0];
     const linkedExpertOffer = item?.expert_offers;
 
     if (expertId && proposedPrice != null && !isNaN(Number(proposedPrice))) {
-      const { data: eo, error: eoErr } = await supabase
-        .from("expert_offers")
-        .upsert({
-          inquiry_id: req.params.id,
-          expert_id: expertId,
-          proposed_price: Number(proposedPrice),
-          estimated_lead_time_days: leadTimeDays ? Number(leadTimeDays) : null,
-          notes: notes?.trim() || null,
-          status: "submitted",
-        }, { onConflict: "inquiry_id,expert_id" })
-        .select()
-        .single();
-      if (eoErr) throw eoErr;
+      const eo = await upsertExpertOffer({
+        inquiryId: req.params.id,
+        expertId,
+        proposedPrice: Number(proposedPrice),
+        leadTimeDays: leadTimeDays ? Number(leadTimeDays) : null,
+        notes: notes?.trim() || null,
+      });
 
       if (item && item.expert_offer_id !== eo.id) {
-        await supabase
-          .from("project_offer_items")
-          .update({ expert_offer_id: eo.id })
-          .eq("id", item.id);
+        await execute(`UPDATE project_offer_items SET expert_offer_id = $1 WHERE id = $2`, [eo.id, item.id]);
       } else if (!item) {
-        await supabase
-          .from("project_offer_items")
-          .insert({ project_offer_id: offer.id, expert_offer_id: eo.id });
+        await execute(
+          `INSERT INTO project_offer_items (project_offer_id, expert_offer_id) VALUES ($1, $2)`,
+          [offer.id, eo.id]
+        );
       }
     } else if (linkedExpertOffer && (leadTimeDays !== undefined || notes !== undefined)) {
       const eoUpdates = {};
       if (leadTimeDays !== undefined) eoUpdates.estimated_lead_time_days = leadTimeDays ? Number(leadTimeDays) : null;
       if (notes !== undefined) eoUpdates.notes = notes?.trim() || null;
       if (Object.keys(eoUpdates).length > 0) {
-        await supabase.from("expert_offers").update(eoUpdates).eq("id", linkedExpertOffer.id);
+        const { set, values, next } = buildSet(eoUpdates);
+        await execute(`UPDATE expert_offers SET ${set} WHERE id = $${next}`, [...values, linkedExpertOffer.id]);
       }
     }
 
     if (send === true) {
-      await supabase
-        .from("inquiries")
-        .update({ status: "offered", updated_at: new Date().toISOString() })
-        .eq("id", req.params.id);
+      await execute(
+        `UPDATE inquiries SET status = 'offered', updated_at = NOW() WHERE id = $1`,
+        [req.params.id]
+      );
     }
 
-    const { data: refreshed, error: refErr } = await supabase
-      .from("project_offers")
-      .select(`
-        *,
-        project_offer_items(
-          id,
-          expert_offers(
-            id, expert_id, proposed_price, estimated_lead_time_days, notes,
-            users!expert_offers_expert_id_fkey(id, email, first_name, last_name, company_name)
-          )
-        )
-      `)
-      .eq("id", offer.id)
-      .single();
-    if (refErr) throw refErr;
+    const refreshed = await fetchProjectOfferForMapper(offer.id);
+    if (!refreshed) throw new Error("Offer not found");
 
     res.json(toProjectOffer(refreshed, { includePartners: true }));
   } catch (err) {
@@ -457,28 +538,21 @@ router.put("/inquiries/:id/offers/:offerId", async (req, res) => {
 // ── POST /api/admin/inquiries/:id/offers/:offerId/send ── publish draft offer ──
 router.post("/inquiries/:id/offers/:offerId/send", async (req, res) => {
   try {
-    const { data: offer, error: offerErr } = await supabase
-      .from("project_offers")
-      .select("id, status")
-      .eq("id", req.params.offerId)
-      .eq("inquiry_id", req.params.id)
-      .single();
-    if (offerErr || !offer) return res.status(404).json({ error: "Offer not found" });
+    const offer = await queryOne(
+      `SELECT id, status FROM project_offers WHERE id = $1 AND inquiry_id = $2`,
+      [req.params.offerId, req.params.id]
+    );
+    if (!offer) return res.status(404).json({ error: "Offer not found" });
     if (offer.status === "accepted") return res.status(400).json({ error: "Offer already accepted" });
     if (!["draft", "declined"].includes(offer.status)) {
       return res.status(400).json({ error: "Only draft or declined offers can be sent" });
     }
 
-    const { error: updErr } = await supabase
-      .from("project_offers")
-      .update({ status: "sent" })
-      .eq("id", offer.id);
-    if (updErr) throw updErr;
-
-    await supabase
-      .from("inquiries")
-      .update({ status: "offered", updated_at: new Date().toISOString() })
-      .eq("id", req.params.id);
+    await execute(`UPDATE project_offers SET status = 'sent' WHERE id = $1`, [offer.id]);
+    await execute(
+      `UPDATE inquiries SET status = 'offered', updated_at = NOW() WHERE id = $1`,
+      [req.params.id]
+    );
 
     res.json({ success: true });
   } catch (err) {
@@ -490,31 +564,44 @@ router.post("/inquiries/:id/offers/:offerId/send", async (req, res) => {
 // ── GET /api/admin/experts/:id ── get single expert detail ───────────────────
 router.get("/experts/:id", async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from("users")
-      .select(`
-        id, email, first_name, last_name, company_name, role, created_at, phone, contact_pref,
-        expert_profiles(bio, location_city, capacity_notes, is_available, score, score_notes, updated_at),
-        user_categories(categories(id, name, type))
-      `)
-      .eq("id", req.params.id)
-      .eq("role", "expert")
-      .single();
-    if (error) throw error;
+    const data = await queryOne(
+      `SELECT u.id, u.email, u.first_name, u.last_name, u.company_name, u.role,
+              u.created_at, u.phone, u.contact_pref,
+              (
+                SELECT json_build_object(
+                  'bio', ep.bio, 'location_city', ep.location_city,
+                  'capacity_notes', ep.capacity_notes, 'is_available', ep.is_available,
+                  'score', ep.score, 'score_notes', ep.score_notes, 'updated_at', ep.updated_at
+                )
+                FROM expert_profiles ep WHERE ep.user_id = u.id
+              ) AS expert_profiles,
+              COALESCE((
+                SELECT json_agg(json_build_object(
+                  'categories', json_build_object('id', cat.id, 'name', cat.name, 'type', cat.type)
+                ))
+                FROM user_categories uc
+                JOIN categories cat ON cat.id = uc.category_id
+                WHERE uc.user_id = u.id
+              ), '[]'::json) AS user_categories
+       FROM users u
+       WHERE u.id = $1 AND u.role = 'expert'`,
+      [req.params.id]
+    );
+    if (!data) throw new Error("Expert not found");
 
-    const [{ data: services }, { data: documents }] = await Promise.all([
-      supabase
-        .from("partner_services")
-        .select("*")
-        .eq("partner_id", req.params.id)
-        .order("sort_order", { ascending: true })
-        .order("created_at", { ascending: true }),
-      supabase
-        .from("partner_documents")
-        .select("*")
-        .eq("partner_id", req.params.id)
-        .eq("confirmed", true)
-        .order("created_at", { ascending: false }),
+    const [services, documents] = await Promise.all([
+      query(
+        `SELECT * FROM partner_services
+         WHERE partner_id = $1
+         ORDER BY sort_order ASC, created_at ASC`,
+        [req.params.id]
+      ),
+      query(
+        `SELECT * FROM partner_documents
+         WHERE partner_id = $1 AND confirmed = TRUE
+         ORDER BY created_at DESC`,
+        [req.params.id]
+      ),
     ]);
 
     res.json({

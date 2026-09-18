@@ -136,7 +136,7 @@ export default function SuperAdminPage() {
   }
 
   if (role !== "superadmin" && role !== "admin") {
-    return <Navigate to="/app/dashboard" replace />
+    return <Navigate to="/app/board" replace />
   }
 
   return (

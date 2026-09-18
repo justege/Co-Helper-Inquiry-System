@@ -5,16 +5,29 @@ import {
 } from "@chakra-ui/react"
 import {
   LuDownload, LuFileText, LuTrash2, LuUpload,
-  LuCheck,
+  LuCheck, LuSend, LuClock,
 } from "react-icons/lu"
 import {
   getInquiry, listDocuments, initUpload, confirmUpload,
   getDownloadUrl, deleteDocument,
+  listMessages, sendMessage,
+  listActivity, updateInquiry, updateInquiryStatus,
   type Inquiry, type InquiryStatus, type Urgency,
   type InquiryDocument, type ProjectOfferSummary,
+  type InquiryMessage, type ActivityEvent,
 } from "../api/inquiries"
+import { workspaceBoardStatus } from "@/lib/boardStatus"
 import { acceptOffer, declineOffer, escalateOffer } from "../api/projectOffers"
+import { getMe, type User } from "../api/users"
 import { PageShell } from "@/components/ui/PageShell"
+import EditWithAI from "@/components/ai/EditWithAI"
+import {
+  AgreementCard,
+  FinanceSnapshot,
+  HoursCard,
+  PaymentsCard,
+  TodosCard,
+} from "@/components/job/JobHub"
 import {
   APP_ACCENT as ACCENT,
   APP_BG_SUBTLE as BG_SUBTLE,
@@ -41,36 +54,66 @@ const STATUS_STEPS: { key: InquiryStatus; label: string }[] = [
   { key: "delivered",   label: "Delivered" },
 ]
 
+const WORKSPACE_STATUS_STEPS: { key: InquiryStatus; label: string }[] = [
+  { key: "pending",     label: "Requested" },
+  { key: "in_progress", label: "Doing" },
+  { key: "waiting",     label: "Waiting" },
+  { key: "delivered",   label: "Done" },
+]
+
 const URGENCY_LABEL: Record<Urgency, string> = {
   low: "Low", medium: "Medium", high: "High", critical: "Critical",
 }
 
 // ── Status timeline ───────────────────────────────────────────────────────────
 
-function StatusTimeline({ status }: { status: InquiryStatus }) {
+function StatusTimeline({
+  status,
+  workspace,
+  onSelect,
+  saving,
+}: {
+  status: InquiryStatus
+  workspace?: boolean
+  onSelect?: (status: InquiryStatus) => void
+  saving?: boolean
+}) {
   if (status === "cancelled") {
     return <StatusText label="Cancelled" />
   }
   if (status === "escalated") {
     return (
       <Box p={4} border={`1px solid ${BORDER}`} borderRadius="8px" bg={BG_SUBTLE}>
-        <Text fontSize="0.875rem" fontWeight="600" color={INK}>Escalated for review</Text>
-        <Text fontSize="0.8125rem" color={MUTED} mt={1}>Our team will contact you shortly.</Text>
+        <Text fontSize="0.875rem" fontWeight="600" color={INK}>Needs attention</Text>
+        <Text fontSize="0.8125rem" color={MUTED} mt={1}>Check the chat or activity log for the latest note.</Text>
       </Box>
     )
   }
 
-  const activeIdx = STATUS_STEPS.findIndex((s) => s.key === status)
+  const steps = workspace ? WORKSPACE_STATUS_STEPS : STATUS_STEPS
+  const displayStatus = workspace ? workspaceBoardStatus(status) : status
+  const activeIdx = steps.findIndex((s) => s.key === displayStatus)
+  const clickable = Boolean(workspace && onSelect)
 
   return (
     <>
       {/* Vertical — mobile */}
       <Stack gap={0} display={{ base: "flex", md: "none" }}>
-        {STATUS_STEPS.map((step, i) => {
+        {steps.map((step, i) => {
           const done = i < activeIdx
           const current = i === activeIdx
           return (
-            <Box key={step.key} display="flex" gap={3}>
+            <Box
+              key={step.key}
+              display="flex"
+              gap={3}
+              cursor={clickable ? "pointer" : "default"}
+              opacity={saving ? 0.6 : 1}
+              onClick={() => {
+                if (!clickable || current || saving) return
+                onSelect?.(step.key)
+              }}
+            >
               <Box display="flex" flexDir="column" alignItems="center" flexShrink={0}>
                 <Box
                   w="24px" h="24px" rounded="full"
@@ -82,11 +125,11 @@ function StatusTimeline({ status }: { status: InquiryStatus }) {
                 >
                   {done ? <LuCheck size={10} /> : i + 1}
                 </Box>
-                {i < STATUS_STEPS.length - 1 && (
+                {i < steps.length - 1 && (
                   <Box w="1px" flex={1} minH="16px" bg={done ? INK : BORDER} my={1} />
                 )}
               </Box>
-              <Box pb={i < STATUS_STEPS.length - 1 ? 3 : 0} pt={0.5}>
+              <Box pb={i < steps.length - 1 ? 3 : 0} pt={0.5}>
                 <Text
                   fontSize="0.8125rem"
                   fontWeight={current ? "600" : "500"}
@@ -103,11 +146,21 @@ function StatusTimeline({ status }: { status: InquiryStatus }) {
       {/* Horizontal — tablet+ */}
       <Box overflowX="auto" pb={1} display={{ base: "none", md: "block" }}>
         <Box display="flex" alignItems="flex-start" minW="max-content">
-          {STATUS_STEPS.map((step, i) => {
+          {steps.map((step, i) => {
             const done = i < activeIdx
             const current = i === activeIdx
             return (
-              <Box key={step.key} display="flex" alignItems="flex-start">
+              <Box
+                key={step.key}
+                display="flex"
+                alignItems="flex-start"
+                cursor={clickable ? "pointer" : "default"}
+                opacity={saving ? 0.6 : 1}
+                onClick={() => {
+                  if (!clickable || current || saving) return
+                  onSelect?.(step.key)
+                }}
+              >
                 <Box display="flex" flexDir="column" alignItems="center" gap={2} minW="72px">
                   <Box
                     w="28px" h="28px" rounded="full"
@@ -130,7 +183,7 @@ function StatusTimeline({ status }: { status: InquiryStatus }) {
                     {step.label}
                   </Text>
                 </Box>
-                {i < STATUS_STEPS.length - 1 && (
+                {i < steps.length - 1 && (
                   <Box w={{ md: "24px", lg: "32px" }} h="1px" mt="14px" mx={1}
                     bg={done ? INK : BORDER} flexShrink={0} />
                 )}
@@ -139,6 +192,11 @@ function StatusTimeline({ status }: { status: InquiryStatus }) {
           })}
         </Box>
       </Box>
+      {clickable && (
+        <Text fontSize="0.75rem" color={MUTED} mt={3}>
+          Tap a step to move this work on the shared board.
+        </Text>
+      )}
     </>
   )
 }
@@ -512,6 +570,314 @@ function DocumentsSection({ inquiryId }: { inquiryId: string }) {
   )
 }
 
+// ── Requirements (editable brief + Edit with AI) ────────────────────────────
+
+function RequirementsCard({ inquiry, onUpdated }: { inquiry: Inquiry; onUpdated: (i: Inquiry) => void }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(inquiry.description)
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  useEffect(() => { setDraft(inquiry.description) }, [inquiry.description])
+
+  async function handleSave() {
+    setSaving(true); setErr(null)
+    try {
+      const updated = await updateInquiry(inquiry.id, { description: draft.trim() })
+      onUpdated(updated)
+      setEditing(false)
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : "Could not save")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Card
+      label="Description"
+      action={
+        editing ? (
+          <EditWithAI
+            inquiryId={inquiry.id}
+            target="requirement"
+            getText={() => draft}
+            onApply={setDraft}
+          />
+        ) : (
+          <Box
+            as="button" onClick={() => setEditing(true)}
+            fontSize="0.75rem" fontWeight="600" color={ACCENT} cursor="pointer"
+          >
+            Edit
+          </Box>
+        )
+      }
+    >
+      {editing ? (
+        <Stack gap={3}>
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            rows={6}
+            style={{
+              width: "100%", padding: "10px 12px", fontSize: "0.875rem",
+              border: `1px solid ${BORDER}`, borderRadius: "8px",
+              fontFamily: "inherit", resize: "vertical", outline: "none",
+              background: SURFACE, color: INK, lineHeight: 1.6,
+            }}
+          />
+          {err && (
+            <Box p={2.5} border={`1px solid ${BORDER}`} borderRadius="8px" bg={BG_SUBTLE}>
+              <Text fontSize="0.8125rem" color={INK}>{err}</Text>
+            </Box>
+          )}
+          <Box display="flex" gap={2}>
+            <Button
+              size="sm" h="34px" px={4} borderRadius="8px" fontWeight="600"
+              bg={ACCENT} color="white" _hover={{ bg: "#0a5240" }}
+              loading={saving}
+              onClick={handleSave}
+            >
+              Save
+            </Button>
+            <Button
+              size="sm" h="34px" px={4} borderRadius="8px" fontWeight="500"
+              variant="outline" borderColor={BORDER} color={MUTED}
+              onClick={() => { setEditing(false); setDraft(inquiry.description); setErr(null) }}
+            >
+              Cancel
+            </Button>
+          </Box>
+        </Stack>
+      ) : (
+        <Text fontSize="0.875rem" color={MUTED} lineHeight="1.75" whiteSpace="pre-wrap">
+          {inquiry.description}
+        </Text>
+      )}
+    </Card>
+  )
+}
+
+// ── Chat ─────────────────────────────────────────────────────────────────────
+
+function personName(p: { firstName: string | null; lastName: string | null; companyName: string | null; email: string } | null) {
+  if (!p) return "Someone"
+  return [p.firstName, p.lastName].filter(Boolean).join(" ") || p.companyName || p.email
+}
+
+const DATETIME_FMT = (d: string) => new Date(d).toLocaleString("tr-TR", {
+  day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
+})
+
+function ChatSection({ inquiryId, currentUserId }: { inquiryId: string; currentUserId: string | null }) {
+  const [messages, setMessages] = useState<InquiryMessage[]>([])
+  const [loading, setLoading] = useState(true)
+  const [draft, setDraft] = useState("")
+  const [sending, setSending] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  const bottomRef = useRef<HTMLDivElement>(null)
+
+  const load = useCallback((silent = false) => {
+    listMessages(inquiryId)
+      .then(setMessages)
+      .catch(() => {/* chat may not be available yet (legacy inquiry) */})
+      .finally(() => { if (!silent) setLoading(false) })
+  }, [inquiryId])
+
+  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    const onFocus = () => load(true)
+    window.addEventListener("focus", onFocus)
+    const timer = window.setInterval(() => load(true), 12000)
+    return () => {
+      window.removeEventListener("focus", onFocus)
+      window.clearInterval(timer)
+    }
+  }, [load])
+  useEffect(() => { bottomRef.current?.scrollIntoView({ block: "nearest" }) }, [messages.length])
+
+  async function handleSend() {
+    const body = draft.trim()
+    if (!body) return
+    setSending(true); setErr(null)
+    try {
+      const msg = await sendMessage(inquiryId, body)
+      setMessages((prev) => [...prev, msg])
+      setDraft("")
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : "Could not send message")
+    } finally {
+      setSending(false)
+    }
+  }
+
+  return (
+    <Card label="Chat">
+      {loading ? (
+        <Box display="flex" alignItems="center" gap={2}>
+          <Spinner size="sm" color="gray.500" />
+          <Text fontSize="0.875rem" color={MUTED}>Loading…</Text>
+        </Box>
+      ) : (
+        <Stack gap={0}>
+          <Box maxH="360px" overflowY="auto" mb={3} pr={1}>
+            {messages.length === 0 ? (
+              <Text fontSize="0.875rem" color={MUTED} py={2}>
+                No messages yet. Say hello to get the job moving.
+              </Text>
+            ) : (
+              <Stack gap={3} py={1}>
+                {messages.map((m) => {
+                  const mine = m.authorId === currentUserId
+                  return (
+                    <Box key={m.id} display="flex" flexDir="column" alignItems={mine ? "flex-end" : "flex-start"}>
+                      <Box
+                        maxW="80%"
+                        bg={mine ? ACCENT : BG_SUBTLE}
+                        color={mine ? "white" : INK}
+                        borderRadius="12px"
+                        px={3.5} py={2.5}
+                      >
+                        <Text fontSize="0.875rem" lineHeight="1.5" whiteSpace="pre-wrap">{m.body}</Text>
+                      </Box>
+                      <Text fontSize="0.6875rem" color={LABEL} mt={1}>
+                        {personName(m.author)} · {DATETIME_FMT(m.createdAt)}
+                      </Text>
+                    </Box>
+                  )
+                })}
+                <div ref={bottomRef} />
+              </Stack>
+            )}
+          </Box>
+
+          {err && (
+            <Box mb={2} p={2.5} border={`1px solid ${BORDER}`} borderRadius="8px" bg={BG_SUBTLE}>
+              <Text fontSize="0.8125rem" color={INK}>{err}</Text>
+            </Box>
+          )}
+
+          {draft.trim() && (
+            <Box mb={2} display="flex" justifyContent="flex-end">
+              <EditWithAI
+                inquiryId={inquiryId}
+                target="message"
+                getText={() => draft}
+                onApply={setDraft}
+                label="Clarify with AI"
+              />
+            </Box>
+          )}
+
+          <Box display="flex" gap={2}>
+            <textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault()
+                  handleSend()
+                }
+              }}
+              placeholder="Write a message…"
+              rows={2}
+              style={{
+                flex: 1, padding: "10px 12px", fontSize: "0.875rem",
+                border: `1px solid ${BORDER}`, borderRadius: "8px",
+                fontFamily: "inherit", resize: "vertical", outline: "none",
+                background: SURFACE, color: INK,
+              }}
+            />
+            <Button
+              alignSelf="flex-end" h="38px" px={4} borderRadius="8px" fontWeight="600"
+              bg={ACCENT} color="white" _hover={{ bg: "#0a5240" }}
+              loading={sending}
+              onClick={handleSend}
+              disabled={!draft.trim()}
+            >
+              <LuSend size={14} />
+            </Button>
+          </Box>
+        </Stack>
+      )}
+    </Card>
+  )
+}
+
+// ── Activity log ─────────────────────────────────────────────────────────────
+
+const ACTIVITY_LABEL: Record<string, (payload: Record<string, unknown>) => string> = {
+  "inquiry.created": () => "Job created",
+  "message.sent": () => "sent a message",
+  "invitation.sent": (p) => `invited ${p.email ?? "a client"}`,
+  "invitation.accepted": () => "joined the workspace",
+  "status.changed": (p) => {
+    const labels: Record<string, string> = {
+      pending: "Requested",
+      in_progress: "Doing",
+      waiting: "Waiting",
+      delivered: "Done",
+    }
+    const to = typeof p.to === "string" ? labels[p.to] ?? p.to : "a new step"
+    return `moved this to ${to}`
+  },
+  "ai.rewrite": (p) => `used AI to clarify a ${p.target ?? "text"}`,
+  "trello.imported": (p) => `imported from Trello${p.list ? ` (${p.list})` : ""}`,
+  "todo.created": (p) => `added a to-do${p.title ? `: ${p.title}` : ""}`,
+  "todo.completed": (p) => `completed a to-do${p.title ? `: ${p.title}` : ""}`,
+  "agreement.proposed": () => "proposed a price agreement",
+  "agreement.agreed": () => "agreed on price",
+  "agreement.declined": () => "declined a price agreement",
+  "hours.logged": (p) => `logged ${p.hours ?? ""} hours${p.title ? ` on ${p.title}` : ""}`,
+  "payment.recorded": () => "recorded a payment",
+  "payment.updated": () => "updated a payment",
+}
+
+function ActivitySection({ inquiryId }: { inquiryId: string }) {
+  const [events, setEvents] = useState<ActivityEvent[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    listActivity(inquiryId)
+      .then((data) => { if (!cancelled) setEvents(data) })
+      .catch(() => { if (!cancelled) setEvents([]) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [inquiryId])
+
+  return (
+    <Card label="Activity">
+      {loading ? (
+        <Box display="flex" alignItems="center" gap={2}>
+          <Spinner size="sm" color="gray.500" />
+          <Text fontSize="0.875rem" color={MUTED}>Loading…</Text>
+        </Box>
+      ) : events.length === 0 ? (
+        <Text fontSize="0.875rem" color={MUTED}>No activity recorded yet.</Text>
+      ) : (
+        <Stack gap={0}>
+          {events.map((e, i) => (
+            <Box key={e.id} display="flex" gap={2.5} py={2.5}
+              borderBottom={i < events.length - 1 ? `1px solid ${BORDER}` : "none"}>
+              <Box color={LABEL} flexShrink={0} mt="2px"><LuClock size={13} /></Box>
+              <Box minW={0}>
+                <Text fontSize="0.8125rem" color={INK}>
+                  <Text as="span" fontWeight="600">{personName(e.actor)}</Text>{" "}
+                  {(ACTIVITY_LABEL[e.type] ?? (() => e.type))(e.payload)}
+                </Text>
+                <Text fontSize="0.6875rem" color={LABEL} mt={0.5}>{DATETIME_FMT(e.createdAt)}</Text>
+              </Box>
+            </Box>
+          ))}
+        </Stack>
+      )}
+    </Card>
+  )
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function InquiryDetailPage() {
@@ -519,6 +885,11 @@ export default function InquiryDetailPage() {
   const [inquiry, setInquiry] = useState<Inquiry | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [me, setMe] = useState<User | null>(null)
+  const [statusSaving, setStatusSaving] = useState(false)
+  const [statusError, setStatusError] = useState<string | null>(null)
+  const [detailTab, setDetailTab] = useState<"work" | "activity">("work")
+  const [hoursTick, setHoursTick] = useState(0)
 
   const load = useCallback(() => {
     if (!id) return
@@ -530,10 +901,11 @@ export default function InquiryDetailPage() {
   }, [id])
 
   useEffect(() => { load() }, [load])
+  useEffect(() => { getMe().then(setMe).catch(() => null) }, [])
 
   if (loading) {
     return (
-      <PageShell title="Loading…" backHref="/app/inquiries" backLabel="My inquiries">
+      <PageShell title="Loading…" backHref="/app/board" backLabel="Board">
         <Box display="flex" alignItems="center" gap={2} py={6}>
           <Spinner size="sm" color="green.600" />
           <Text fontSize="sm" color="#64748B">Loading inquiry…</Text>
@@ -544,7 +916,7 @@ export default function InquiryDetailPage() {
 
   if (error || !inquiry) {
     return (
-      <PageShell title="Not found" backHref="/app/inquiries" backLabel="My inquiries">
+      <PageShell title="Not found" backHref="/app/board" backLabel="Board">
         <Box bg="#FEF2F2" border="1px solid #FECACA" borderRadius="16px" p={5}>
           <Text fontSize="sm" color="#991B1B">{error ?? "Inquiry not found"}</Text>
         </Box>
@@ -561,14 +933,32 @@ export default function InquiryDetailPage() {
 
   const pastOffers = allOffers.filter((o) => o.status !== "sent" && o.id !== activeOffer?.id)
 
+  const isFreelancer = me?.role === "expert"
+  const isWorkspaceJob = Boolean(inquiry.workspaceId)
+  const currentStatus = inquiry.status
+
+  async function handleBoardStatus(next: InquiryStatus) {
+    if (!id || statusSaving || currentStatus === next) return
+    setStatusSaving(true)
+    setStatusError(null)
+    try {
+      const updated = await updateInquiryStatus(id, next)
+      setInquiry(updated)
+    } catch (err) {
+      setStatusError(err instanceof Error ? err.message : "Could not update status")
+    } finally {
+      setStatusSaving(false)
+    }
+  }
+
   return (
     <PageShell
       wide
-      eyebrow="Inquiry"
+      eyebrow="Work"
       title={inquiry.title}
       subtitle={`Ref #${inquiry.id.slice(0, 8).toUpperCase()} · ${DATE_FMT(inquiry.createdAt)}`}
-      backHref="/app/inquiries"
-      backLabel="My inquiries"
+      backHref={isWorkspaceJob ? "/app/board" : "/app/inquiries"}
+      backLabel={isWorkspaceJob ? "Board" : "My jobs"}
     >
       {/* Summary bar */}
       <Box
@@ -579,12 +969,38 @@ export default function InquiryDetailPage() {
           <MetaItem label="Category" value={inquiry.category?.name ?? "—"} />
           <MetaItem label="Type" value={inquiry.type === "tool_sourcing" ? "Fixed Project" : "Ongoing Service"} />
           <MetaItem label="Urgency" value={URGENCY_LABEL[inquiry.urgency]} />
-          <MetaItem label="Offers" value={String(allOffers.length)} />
+          <MetaItem label={isWorkspaceJob ? "Project" : "Offers"} value={isWorkspaceJob ? (inquiry.project?.name ?? "—") : String(allOffers.length)} />
           <MetaItem label="Submitted" value={DATE_FMT(inquiry.createdAt)} />
           <MetaItem label="Updated" value={DATE_FMT(inquiry.updatedAt)} />
         </Grid>
       </Box>
 
+      <Box display="flex" gap={1} mb={4} p="3px" bg={BG_SUBTLE} border={`1px solid ${BORDER}`} borderRadius="10px" w="fit-content">
+        {([
+          { id: "work" as const, label: "Work" },
+          { id: "activity" as const, label: "Activity" },
+        ]).map((tab) => (
+          <Box
+            key={tab.id}
+            as="button"
+            px={4}
+            py={1.5}
+            borderRadius="8px"
+            fontSize="0.8125rem"
+            fontWeight="600"
+            color={detailTab === tab.id ? "white" : LABEL}
+            bg={detailTab === tab.id ? ACCENT : "transparent"}
+            cursor="pointer"
+            onClick={() => setDetailTab(tab.id)}
+          >
+            {tab.label}
+          </Box>
+        ))}
+      </Box>
+
+      {detailTab === "activity" ? (
+        id ? <ActivitySection inquiryId={id} /> : null
+      ) : (
       <Grid
         templateColumns={{ base: "1fr", xl: "minmax(0, 1fr) 340px" }}
         gap={{ base: 4, md: 5 }}
@@ -596,11 +1012,19 @@ export default function InquiryDetailPage() {
 
           {/* Status timeline */}
           <Card label="Status">
-            <StatusTimeline status={inquiry.status} />
+            <StatusTimeline
+              status={inquiry.status}
+              workspace={isWorkspaceJob}
+              onSelect={isWorkspaceJob ? handleBoardStatus : undefined}
+              saving={statusSaving}
+            />
+            {statusError && (
+              <Text fontSize="0.8125rem" color="#B91C1C" mt={3}>{statusError}</Text>
+            )}
           </Card>
 
-          {/* Active offer — always near the top */}
-          {sentOffer && (
+          {/* Active offer — marketplace inquiries only */}
+          {!isWorkspaceJob && sentOffer && (
             <Box>
               <Text fontSize="0.8125rem" fontWeight="600" color={INK} mb={3}>
                 Offer awaiting your response
@@ -621,6 +1045,7 @@ export default function InquiryDetailPage() {
                 <Row label="Category" value={inquiry.category?.name ?? "—"} />
                 <Row label="Type" value={inquiry.type === "tool_sourcing" ? "Fixed Project" : "Ongoing Service"} />
                 <Row label="Urgency" value={URGENCY_LABEL[inquiry.urgency]} />
+                {inquiry.project?.name && <Row label="Project" value={inquiry.project.name} />}
                 {inquiry.targetStartDate && <Row label="Start date" value={DATE_FMT(inquiry.targetStartDate)} />}
                 {inquiry.targetEndDate && <Row label="End date" value={DATE_FMT(inquiry.targetEndDate)} />}
                 {inquiry.estimatedQuantity && (
@@ -629,49 +1054,57 @@ export default function InquiryDetailPage() {
               </Stack>
             </Card>
 
-            <Card label="Description">
-              <Text fontSize="0.875rem" color={MUTED} lineHeight="1.75" whiteSpace="pre-wrap">
-                {inquiry.description}
-              </Text>
-            </Card>
+            <RequirementsCard inquiry={inquiry} onUpdated={setInquiry} />
           </Grid>
+
+          {id && <TodosCard inquiryId={id} canLog={Boolean(isFreelancer)} refreshKey={hoursTick} onHoursLogged={() => setHoursTick((n) => n + 1)} />}
 
           {/* Documents */}
           {id && <DocumentsSection inquiryId={id} />}
+
+          {/* Chat */}
+          {id && <ChatSection inquiryId={id} currentUserId={me?.id ?? null} />}
         </Stack>
 
         {/* ── Sidebar ─────────────────────────────────────────── */}
         <Stack gap={{ base: 4, md: 5 }} minW={0}>
-          <Card label={`Offers (${allOffers.length})`}>
-            {allOffers.length === 0 ? (
-              <Text fontSize="0.875rem" color={MUTED} lineHeight="1.6">
-                No offers yet. Our team is reviewing your inquiry.
-              </Text>
-            ) : sentOffer && pastOffers.length === 0 ? (
-              <Text fontSize="0.875rem" color={MUTED} lineHeight="1.6">
-                The active offer is shown in the main section.
-              </Text>
-            ) : activeOffer && !sentOffer ? (
-              <OfferCard
-                offer={activeOffer}
-                inquiryId={inquiry.id}
-                onAccepted={load}
-                onDeclinedOrEscalated={load}
-              />
-            ) : (
-              <Stack gap={3}>
-                {pastOffers.map((offer) => (
-                  <OfferCard
-                    key={offer.id}
-                    offer={offer}
-                    inquiryId={inquiry.id}
-                    onAccepted={load}
-                    onDeclinedOrEscalated={load}
-                  />
-                ))}
-              </Stack>
-            )}
-          </Card>
+          {id && <FinanceSnapshot inquiryId={id} refreshKey={hoursTick} />}
+          {id && <AgreementCard inquiryId={id} currentUserId={me?.id ?? null} />}
+          {id && <HoursCard inquiryId={id} canLog={Boolean(isFreelancer)} refreshKey={hoursTick} onHoursLogged={() => setHoursTick((n) => n + 1)} />}
+          {id && <PaymentsCard inquiryId={id} canRecord={Boolean(isFreelancer)} />}
+
+          {!isWorkspaceJob && (
+            <Card label={`Offers (${allOffers.length})`}>
+              {allOffers.length === 0 ? (
+                <Text fontSize="0.875rem" color={MUTED} lineHeight="1.6">
+                  No offers yet.
+                </Text>
+              ) : sentOffer && pastOffers.length === 0 ? (
+                <Text fontSize="0.875rem" color={MUTED} lineHeight="1.6">
+                  The active offer is shown in the main section.
+                </Text>
+              ) : activeOffer && !sentOffer ? (
+                <OfferCard
+                  offer={activeOffer}
+                  inquiryId={inquiry.id}
+                  onAccepted={load}
+                  onDeclinedOrEscalated={load}
+                />
+              ) : (
+                <Stack gap={3}>
+                  {pastOffers.map((offer) => (
+                    <OfferCard
+                      key={offer.id}
+                      offer={offer}
+                      inquiryId={inquiry.id}
+                      onAccepted={load}
+                      onDeclinedOrEscalated={load}
+                    />
+                  ))}
+                </Stack>
+              )}
+            </Card>
+          )}
 
           <Card label="Reference">
             <Stack gap={0}>
@@ -681,12 +1114,10 @@ export default function InquiryDetailPage() {
               {inquiry.targetStartDate && <Row label="Start" value={DATE_FMT(inquiry.targetStartDate)} />}
               {inquiry.targetEndDate && <Row label="End" value={DATE_FMT(inquiry.targetEndDate)} />}
             </Stack>
-            <Text fontSize="0.75rem" color={LABEL} lineHeight="1.6" mt={4} pt={4} borderTop={`1px solid ${BORDER}`}>
-              Contact our team with the reference ID above for any questions.
-            </Text>
           </Card>
         </Stack>
       </Grid>
+      )}
     </PageShell>
   )
 }

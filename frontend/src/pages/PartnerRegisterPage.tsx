@@ -46,9 +46,9 @@ const UNITS = ["project", "hour", "day", "piece"]
 const TOTAL_STEPS = 3
 
 const STEPS_META = [
-  { n: 1, title: "Create your account", sub: "Set up credentials for your partner profile." },
-  { n: 2, title: "About your practice", sub: "Share a bit about your team and where you work." },
-  { n: 3, title: "Your expertise", sub: "Pick categories and services you deliver." },
+  { n: 1, title: "Create your account", sub: "Set up credentials for your one-person business workspace." },
+  { n: 2, title: "About your practice", sub: "Share a bit about your work and where you're based." },
+  { n: 3, title: "Your services", sub: "Pick the categories and services you offer clients." },
 ]
 
 function StepIndicator({ step }: { step: number }) {
@@ -298,7 +298,7 @@ export default function PartnerRegisterPage() {
       token
     )
 
-    navigate("/app/partner-services", { replace: true })
+    navigate("/app/board", { replace: true })
   }
 
   async function onSubmit(data: RegisterFields) {
@@ -336,21 +336,21 @@ export default function PartnerRegisterPage() {
     <AuthShell
       layout="centered"
       wide
-      title="Join as a specialist"
-      subtitle="Create your partner account, pick your categories, and list the services you deliver."
+      title="Start your workspace"
+      subtitle="Create your account, pick the services you offer, then invite the companies you already work with."
       promo={{
-        tagline: "Get matched to scoped digital projects with a Co-Helper PM on every engagement.",
+        tagline: "Your own workspace — invite clients, agree rates, and track hours and payments.",
         imageSrc: loginPng,
       }}
       footer={
         <>
-          Already verified?{" "}
+          Already have a workspace?{" "}
           <Link to="/partner/login" style={{ color: "#0F6E56", fontWeight: "700" }}>
-            Partner sign in
+            Sign in
           </Link>
           {" · "}
           <Link to="/register" style={{ color: "#64748B", fontWeight: "600" }}>
-            Client signup
+            Invited as a client?
           </Link>
         </>
       }
@@ -383,7 +383,7 @@ export default function PartnerRegisterPage() {
             <Field label={authFieldLabel("Username", true)} errorText={errors.username?.message} invalid={!!errors.username}>
               <FormInput
                 type="text"
-                placeholder="Your public name"
+                placeholder="Your name, as clients will see it"
                 autoComplete="username"
                 {...authInputProps}
                 {...formInvalidBorder(!!errors.username)}
@@ -441,7 +441,7 @@ export default function PartnerRegisterPage() {
             </Field>
 
             <Field label={authFieldLabel("About your practice")}>
-              <FormTextarea rows={4} placeholder="Brief overview of your team, experience, and delivery style…" {...register("bio")} />
+              <FormTextarea rows={4} placeholder="Brief overview of what you do and how you work with clients…" {...register("bio")} />
             </Field>
           </Stack>
         )}
@@ -451,7 +451,7 @@ export default function PartnerRegisterPage() {
             <Box>
               <Field
                 label={authFieldLabel("Service categories", true)}
-                helperText="Select every area you can deliver."
+                helperText="Select every area you offer to clients."
                 errorText={expertiseError ?? undefined}
                 invalid={!!expertiseError}
               >
@@ -561,7 +561,7 @@ export default function PartnerRegisterPage() {
             })}
 
             <Button type="submit" loading={isSubmitting} {...authPrimaryButtonProps}>
-              Create partner account
+              Create my workspace
             </Button>
           </Stack>
         )}

@@ -214,7 +214,7 @@ export function AuthShell({
               <Box display="flex" alignItems="center" gap={2} mt={4}>
                 <Box w="20px" h="1px" bg="rgba(255,255,255,0.4)" />
                 <Text fontSize="0.75rem" color="rgba(255,255,255,0.4)" fontWeight="500" letterSpacing="0.04em">
-                  Co-Helper · Digital Services · Worldwide
+                  Co-Helper · One-person business workspace
                 </Text>
               </Box>
             </Box>

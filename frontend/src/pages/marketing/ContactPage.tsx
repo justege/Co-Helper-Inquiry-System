@@ -25,7 +25,7 @@ export default function ContactPage() {
       <PageHero
         label="Support"
         title="Contact"
-        subtitle="Reach our team for project scoping, sales callbacks, support, or developer network applications."
+        subtitle="Questions about your workspace, an invite, Trello, or Edit with AI — we’ll help you get set up."
       />
 
       <ContentSection>
@@ -46,7 +46,7 @@ export default function ContactPage() {
               </Box>
               <Box>
                 <Text fontSize="0.8125rem" fontWeight="600" color={INK} mb={1.5}>Subject</Text>
-                <FormInput placeholder="Sales, support, partnership, press..." {...register("subject")} />
+                <FormInput placeholder="Workspace, invite, Trello, billing, press…" {...register("subject")} />
               </Box>
               <Box>
                 <Text fontSize="0.8125rem" fontWeight="600" color={INK} mb={1.5}>Message</Text>
@@ -72,12 +72,12 @@ export default function ContactPage() {
 
           <Stack gap={6}>
             <Box p={7} bg={INK} borderRadius="8px" color="white">
-              <Heading fontSize="1rem" fontWeight="600" mb={3}>Prefer a callback?</Heading>
+              <Heading fontSize="1rem" fontWeight="600" mb={3}>Need a walkthrough?</Heading>
               <Text fontSize="0.875rem" color="rgba(255,255,255,0.72)" lineHeight="1.75" mb={4}>
-                Tell us about your project and we&rsquo;ll schedule a short call with our team —
-                no sales deck, just scoping help.
+                Tell us whether you’re a one-person business setting up a workspace or a company with an invite —
+                we’ll reply with the shortest path, not a sales deck.
               </Text>
-              <Text fontSize="0.875rem" fontWeight="600">Use the form and select &ldquo;Sales&rdquo; as your subject.</Text>
+              <Text fontSize="0.875rem" fontWeight="600">Use the form and mention “workspace” or “invite” in the subject.</Text>
             </Box>
 
             <Box p={7} bg={SURFACE} borderRadius="8px" border={`1px solid ${RULE}`}>
@@ -96,7 +96,7 @@ export default function ContactPage() {
                   <Text fontSize="0.875rem" color={INK} mt={1}>support@co-helper.com</Text>
                 </Box>
                 <Box>
-                  <Text fontSize="0.75rem" fontWeight="600" color={MUTED} letterSpacing="0.06em" textTransform="uppercase">Partnerships</Text>
+                  <Text fontSize="0.75rem" fontWeight="600" color={MUTED} letterSpacing="0.06em" textTransform="uppercase">One-person businesses</Text>
                   <Text fontSize="0.875rem" color={INK} mt={1}>partners@co-helper.com</Text>
                 </Box>
               </Stack>

@@ -1,10 +1,6 @@
-import { useMemo, useState } from "react"
 import { Box, Flex, Grid, Heading, Stack, Text } from "@chakra-ui/react"
 import { Link } from "react-router-dom"
 import { MarketingFooter, AnnounceBar } from "@/components/marketing/MarketingUI"
-import LandingInquiryForm from "@/components/landing/LandingInquiryForm"
-import MobileLandingChat from "@/components/landing/MobileLandingChat"
-import avatarSrc from "@/assets/avatar.png"
 import {
   CodeTypewriter,
   MatrixColHeader,
@@ -23,11 +19,10 @@ const G_ON_DARK = "#86efac"   // mint — legible on INK
 
 // ─── Nav ─────────────────────────────────────────────────────────────────────
 const NAV_LINKS = [
-  { label: "Services",     to: "/how-it-works" },
-  { label: "Platform",     to: "/how-it-works" },
-  { label: "Pricing",      to: "/pricing" },
-  { label: "About",        to: "/about" },
-  { label: "For specialists", to: "/partners" },
+  { label: "How it works",  to: "/how-it-works" },
+  { label: "Pricing",       to: "/pricing" },
+  { label: "About",         to: "/about" },
+  { label: "For one-person businesses", to: "/partners" },
 ]
 
 function LogoMark({ light = false }: { light?: boolean }) {
@@ -86,18 +81,90 @@ function NavBar({ light = false }: { light?: boolean }) {
             Sign in
           </Box>
         </Link>
-        <Link to="/register" style={{ textDecoration: "none" }}>
+        <Link to="/partner/register" style={{ textDecoration: "none" }}>
           <Box
             px={4} py="8px" borderRadius="6px" fontSize="0.875rem" fontWeight="700"
             bg={AMBER} color={INK} border={`1px solid ${AMBER}`}
             transition="all 0.15s"
             _hover={{ bg: AMBER_HOVER, textDecoration: "none" }}
           >
-            Post a project
+            Start your workspace
           </Box>
         </Link>
       </Flex>
     </Flex>
+  )
+}
+
+// ─── Get-started card (hero) ─────────────────────────────────────────────────
+// Replaces the old marketplace brief-intake form: no browsing, no matching —
+// just two clear paths into a shared workspace.
+
+function GetStartedCard() {
+  return (
+    <Box
+      borderRadius="16px"
+      border="1px solid rgba(255,255,255,0.1)"
+      bg="rgba(255,255,255,0.04)"
+      backdropFilter="blur(6px)"
+      p={{ base: 6, md: 7 }}
+      boxShadow="0 30px 80px rgba(0,0,0,0.35)"
+    >
+      <Text fontSize="0.6875rem" fontWeight="700" color="rgba(255,255,255,0.5)"
+        letterSpacing="0.12em" textTransform="uppercase" mb={2}>
+        Get started in minutes
+      </Text>
+      <Heading fontSize={{ base: "1.375rem", md: "1.5rem" }} fontWeight="700" color="white"
+        letterSpacing="-0.02em" mb={2} fontFamily="var(--font-heading)">
+        Set up your workspace
+      </Heading>
+      <Text fontSize="0.875rem" color="rgba(255,255,255,0.55)" lineHeight="1.65" mb={6}>
+        No project posting, no matching. Co-Helper is where you and the companies you already
+        work with keep every job, rate, and payment in one place.
+      </Text>
+
+      <Stack gap={3}>
+        <Link to="/partner/register" style={{ textDecoration: "none" }}>
+          <Flex
+            align="center" justify="space-between" gap={3}
+            p={4} borderRadius="12px"
+            bg={AMBER} border={`1px solid ${AMBER}`}
+            transition="all 0.15s"
+            _hover={{ bg: AMBER_HOVER }}
+          >
+            <Box>
+              <Text fontSize="0.9375rem" fontWeight="700" color={INK}>I run a one-person business</Text>
+              <Text fontSize="0.75rem" color="rgba(14,27,23,0.7)" mt="2px">
+                Create your workspace and invite the companies you work with
+              </Text>
+            </Box>
+            <Text fontSize="1.125rem" color={INK}>→</Text>
+          </Flex>
+        </Link>
+
+        <Link to="/login" style={{ textDecoration: "none" }}>
+          <Flex
+            align="center" justify="space-between" gap={3}
+            p={4} borderRadius="12px"
+            bg="rgba(255,255,255,0.06)" border="1px solid rgba(255,255,255,0.14)"
+            transition="all 0.15s"
+            _hover={{ bg: "rgba(255,255,255,0.1)" }}
+          >
+            <Box>
+              <Text fontSize="0.9375rem" fontWeight="700" color="white">I was invited by a one-person business</Text>
+              <Text fontSize="0.75rem" color="rgba(255,255,255,0.5)" mt="2px">
+                Sign in to see your jobs, rates, and payments
+              </Text>
+            </Box>
+            <Text fontSize="1.125rem" color="white">→</Text>
+          </Flex>
+        </Link>
+      </Stack>
+
+      <Text fontSize="0.75rem" color="rgba(255,255,255,0.35)" mt={5} lineHeight="1.6">
+        Every workspace is private between a one-person business and the companies they invite — nobody else sees it.
+      </Text>
+    </Box>
   )
 }
 
@@ -131,41 +198,36 @@ function ClientStrip() {
 
 // ─── Stats ────────────────────────────────────────────────────────────────────
 const STATS = [
-  { value: "50+",   unit: "",        label: "Software & dev services in the catalog" },
-  { value: "< 24h", unit: "",        label: "Fixed quote and PM assigned after briefing" },
-  { value: "500+",  unit: "",        label: "Vetted developers and specialists" },
-  { value: "1",     unit: "platform", label: "for briefs, milestones, and delivery" },
+  { value: "1",      unit: "workspace", label: "Shared between you and every client you invite" },
+  { value: "AI",     unit: "",          label: "Rewrites requirements, chat, and to-dos for clarity" },
+  { value: "Hourly", unit: "or fixed",  label: "Agree the pricing model that fits each job" },
+  { value: "100%",   unit: "",          label: "Of hours and payments logged in one place" },
 ]
 
 // ─── Comparison matrix ────────────────────────────────────────────────────────
-const MATRIX_COLS = ["Cost", "Availability", "Speed", "Quality", "Coordination", "Scalability", "Risk", "Planability"]
+const MATRIX_COLS = ["Setup time", "Client visibility", "AI clarity", "Hours tracking", "Payment tracking", "Cost", "Ownership", "Your branding"]
 
 const MATRIX_ROWS = [
   {
     name: "Co-Helper",
-    desc: "Managed software delivery — one PM, fixed quotes, vetted dev team, one platform.",
+    desc: "Your own workspace — invite clients, agree rates, track hours and payments, clarify everything with AI.",
     highlight: true,
     scores: [true, true, true, true, true, true, true, true],
   },
   {
-    name: "In-house team",
-    desc: "Strong product knowledge, but fixed overhead, capacity limits, and hiring risk.",
-    scores: [false, false, false, true, true, false, false, false],
+    name: "Email + spreadsheets",
+    desc: "Familiar, but scattered across inboxes and files. No shared view, no AI help, and totals are manual.",
+    scores: [true, false, false, false, false, true, true, true],
   },
   {
-    name: "Traditional agency",
-    desc: "Structured delivery, but slow scoping, high cost, and project-based handoffs.",
-    scores: [false, false, false, true, false, false, false, false],
+    name: "Generic task tools",
+    desc: "Fine for your own to-do list, but clients rarely log in — and there's no rate or payment tracking built in.",
+    scores: [false, false, false, false, false, false, true, true],
   },
   {
-    name: "Upwork / Fiverr",
-    desc: "Marketplace access — all vetting, coordination, and quality risk stays with you.",
-    scores: [false, false, false, false, false, true, false, false],
-  },
-  {
-    name: "Freelancers",
-    desc: "Flexible and cheap, but unreliable availability, variable quality, and no backup.",
-    scores: [true, false, false, false, false, false, false, false],
+    name: "Marketplace platforms",
+    desc: "You get discovery, but the platform owns the relationship, takes a cut, and buries your history in its inbox.",
+    scores: [true, true, false, true, false, false, false, false],
   },
 ]
 
@@ -189,39 +251,39 @@ function CheckIcon({ pass }: { pass: boolean }) {
 // ─── Testimonials ─────────────────────────────────────────────────────────────
 const TESTIMONIALS = [
   {
-    quote: "We launched our entire Shopify store in 12 days. I never once spoke to a developer. The PM kept me updated every 48 hours, and the site was exactly what we briefed. This is how it should work.",
+    quote: "I used to keep client requirements spread across three Slack channels and a Google Doc. Now every job has one thread, and Edit with AI turns my rushed notes into something my client actually understands.",
     name: "Sarah K.",
-    role: "Founder, DTC home goods brand",
+    role: "Independent web developer",
     initials: "SK",
   },
   {
-    quote: "I submitted the brief on a Monday afternoon. By Tuesday morning I had a fixed quote, a committed delivery date, and the name of my project manager. That speed alone justified the switch from Upwork.",
+    quote: "My developer invited me straight into Co-Helper. I can see exactly what's agreed, how many hours have been logged, and what I've paid — no more digging through email threads.",
     name: "Marcus T.",
-    role: "Head of Growth, SaaS startup",
+    role: "Head of operations, DTC brand",
     initials: "MT",
   },
   {
-    quote: "We'd spent months on freelance platforms — vetting, briefing, chasing. One project with Co-Helper and we understood what we'd been missing: a single accountable person. The escrow model is the trust layer we always needed.",
+    quote: "Switching between hourly and fixed-fee clients used to mean three different spreadsheets. Now every job has its own rate agreement and a running total that's always accurate.",
     name: "Elena V.",
-    role: "Marketing Director, mid-market retailer",
+    role: "Independent marketing consultant",
     initials: "EV",
   },
   {
-    quote: "The PM pushed back on part of my brief because it would have cost us more without adding value. A freelancer would have just built what I asked. That professional judgment is what sets Co-Helper apart.",
+    quote: "AI cleaned up my messy brief into something our partner could actually scope. We agreed a fixed price the same afternoon, in writing, inside the job.",
     name: "Tom R.",
-    role: "Co-founder, B2B software company",
+    role: "Product lead, small SaaS team",
     initials: "TR",
   },
   {
-    quote: "Our SEO audit came back in 4 days with a 47-page report and a prioritised action plan. Exactly on the committed date. We've since run three more projects and the on-time rate is 100%.",
+    quote: "The to-do list per job keeps me and my client aligned on what's next — and the activity log means neither of us has to ask 'wait, did we agree to that?'",
     name: "Priya S.",
-    role: "CMO, e-learning platform",
+    role: "Independent product designer",
     initials: "PS",
   },
   {
-    quote: "I'm not technical. I've always needed someone to translate between what I want and what a developer builds. Co-Helper's PM is exactly that — without me having to hire a full-time product manager.",
+    quote: "I can see my total spend with our one-person partner at a glance — paid, unpaid, and what's still in progress. That transparency alone was worth switching.",
     name: "Daniel M.",
-    role: "Non-technical founder, fintech startup",
+    role: "Founder, early-stage company",
     initials: "DM",
   },
 ]
@@ -237,9 +299,9 @@ const PILLARS = [
         <rect x="14" y="14" width="7" height="7" rx="1.5" stroke={INK} strokeWidth="1.5" />
       </svg>
     ),
-    tag: "Breadth",
-    title: "50+ dev services on demand",
-    body: "Full-stack apps, MVPs, mobile, APIs, automations, and e-commerce builds — scoped and delivered through one managed workflow.",
+    tag: "Your workspace",
+    title: "Invite clients directly",
+    body: "No browsing, no matching. Create a workspace and invite the clients you already work with — each one sees only their own jobs.",
   },
   {
     icon: (
@@ -247,9 +309,9 @@ const PILLARS = [
         <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke={INK} strokeWidth="1.5" strokeLinecap="round" />
       </svg>
     ),
-    tag: "Predictable",
-    title: "Fixed quote per project",
-    body: "Clear scope, clear cost, clear delivery date — before work starts. No open-ended agency retainers or surprise change orders.",
+    tag: "AI-assisted",
+    title: "Edit with AI, everywhere",
+    body: "Turn a rushed note into a clear requirement, tidy up a chat message, or sharpen a to-do — using the full context of that job.",
   },
   {
     icon: (
@@ -258,9 +320,9 @@ const PILLARS = [
         <path d="M12 7v5l3.5 2" stroke={INK} strokeWidth="1.5" strokeLinecap="round" />
       </svg>
     ),
-    tag: "Fast",
-    title: "Quote within 24 hours",
-    body: "Submit your brief on the platform. Your PM reviews it, sources the right developers, and returns a fixed quote — often the next business day.",
+    tag: "Flexible pricing",
+    title: "Hourly or fixed, per job",
+    body: "Propose a rate, the other side agrees, and it's on record. Change it later and the history stays intact.",
   },
   {
     icon: (
@@ -269,9 +331,9 @@ const PILLARS = [
         <path d="M8 10h8M8 14h5" stroke={INK} strokeWidth="1.5" strokeLinecap="round" />
       </svg>
     ),
-    tag: "Platform",
-    title: "Everything in one place",
-    body: "Briefs, milestones, PM updates, and file delivery live in one workspace. No scattered Slack threads, Jira tickets, or email chains.",
+    tag: "Always tracked",
+    title: "Hours logged, not guessed",
+    body: "Log time against a job as you work. Billable hours roll up automatically against the agreed rate.",
   },
   {
     icon: (
@@ -280,9 +342,9 @@ const PILLARS = [
         <path d="M5 20c0-3.866 3.134-7 7-7s7 3.134 7 7" stroke={INK} strokeWidth="1.5" strokeLinecap="round" />
       </svg>
     ),
-    tag: "Accountable",
-    title: "One PM, always",
-    body: "A named project manager owns your build from brief to delivery — timeline, quality, and communication. Not a ticket queue or rotating account manager.",
+    tag: "Full visibility",
+    title: "Payments and income at a glance",
+    body: "Mark payments as paid, partial, or outstanding — and see totals per job, per client, and across your whole workspace.",
   },
   {
     icon: (
@@ -291,589 +353,16 @@ const PILLARS = [
         <path d="M9 12l2 2 4-4" stroke={INK} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     ),
-    tag: "Custom",
-    title: "Built for your product",
-    body: "No template shops or copy-paste codebases. Every build is scoped to your stack, users, and roadmap — with escrow protecting payment until you approve.",
+    tag: "One record",
+    title: "An activity log for everything",
+    body: "Every agreement, logged hour, payment, and AI edit is timestamped — so nobody has to ask what was decided.",
   },
 ]
-
-// ─── Dashboard mockup replaced by inline bento card ──────────────────────────
-/* eslint-disable @typescript-eslint/no-unused-vars */
-// @ts-ignore — dead code kept to preserve history, removed from render
-function _Dashboard_DEAD() {
-  const milestones: { label: string; done: boolean; active?: boolean }[] = [
-    { label: "Brief & scoping", done: true },
-    { label: "Design phase", done: true },
-    { label: "Development", done: false, active: true },
-    { label: "QA & review", done: false },
-    { label: "Client approval", done: false },
-  ]
-  return (
-    <Box
-      borderRadius="14px"
-      border="1px solid rgba(255,255,255,0.07)"
-      bg="#111B17" overflow="hidden"
-      boxShadow="0 40px 100px rgba(0,0,0,0.55), 0 10px 30px rgba(0,0,0,0.3)"
-    >
-      {/* Traffic lights */}
-      <Flex h="38px" px={4} align="center" gap={1.5} bg="#0A120E"
-        borderBottom="1px solid rgba(255,255,255,0.05)">
-        <Box w="10px" h="10px" borderRadius="50%" bg="#FF5F57" />
-        <Box w="10px" h="10px" borderRadius="50%" bg="#FEBC2E" />
-        <Box w="10px" h="10px" borderRadius="50%" bg="#28C840" />
-        <Box flex={1} mx={4}>
-          <Box h="20px" w="140px" mx="auto" borderRadius="4px" bg="rgba(255,255,255,0.04)" />
-        </Box>
-      </Flex>
-
-      <Flex>
-        {/* Sidebar */}
-        <Box w="160px" flexShrink={0} bg="#0D1510"
-          borderRight="1px solid rgba(255,255,255,0.04)" p={3}>
-          <Text fontSize="0.55rem" fontWeight="700" color="rgba(255,255,255,0.22)"
-            letterSpacing="0.12em" textTransform="uppercase" mb={3} px={2}>
-            Co-Helper
-          </Text>
-          {[["Dashboard", false], ["Projects", true], ["Messages", false], ["Billing", false]].map(([item, active]) => (
-            <Box key={item as string}
-              px={2} py={1.5} borderRadius="6px" mb={0.5}
-              bg={active ? `${GREEN}15` : "transparent"}>
-              <Text fontSize="0.75rem" fontWeight={active ? "600" : "400"}
-                color={active ? G_ON_DARK : "rgba(255,255,255,0.35)"}>
-                {item as string}
-              </Text>
-            </Box>
-          ))}
-          <Box mt={4} mb={1.5} px={2}>
-            <Text fontSize="0.55rem" fontWeight="700" color="rgba(255,255,255,0.18)"
-              letterSpacing="0.1em" textTransform="uppercase">Active</Text>
-          </Box>
-          {[["Shopify Launch", GREEN], ["SEO Audit", BLUE]].map(([p, c]) => (
-            <Box key={p as string} px={2} py={1.5} borderRadius="6px" mb={0.5}>
-              <Flex align="center" gap={1.5}>
-                <Box w="5px" h="5px" borderRadius="50%" bg={c as string} />
-                <Text fontSize="0.7rem" color="rgba(255,255,255,0.42)">{p as string}</Text>
-              </Flex>
-            </Box>
-          ))}
-        </Box>
-
-        {/* Main */}
-        <Box flex={1} p={5} bg="#111B17">
-          <Flex justify="space-between" align="flex-start" mb={4}>
-            <Box>
-              <Text fontSize="0.95rem" fontWeight="700" color="white" mb={0.5}>
-                Shopify Store Launch
-              </Text>
-              <Flex align="center" gap={2}>
-                <Box w="16px" h="16px" borderRadius="50%" bg={`${GREEN}28`}
-                  display="flex" alignItems="center" justifyContent="center">
-                  <Text fontSize="0.5rem" fontWeight="700" color={G_ON_DARK}>S</Text>
-                </Box>
-                <Text fontSize="0.7rem" color="rgba(255,255,255,0.38)">
-                  PM: Sarah M. · Due in 6 days
-                </Text>
-              </Flex>
-            </Box>
-            <Box px={2.5} py="3px" borderRadius="99px"
-              bg={`${GREEN}18`} border={`1px solid ${GREEN}40`}>
-              <Text fontSize="0.65rem" fontWeight="700" color={G_ON_DARK}>On Track</Text>
-            </Box>
-          </Flex>
-
-          {/* Progress */}
-          <Box mb={4}>
-            <Flex justify="space-between" mb={1}>
-              <Text fontSize="0.65rem" color="rgba(255,255,255,0.28)">Progress</Text>
-              <Text fontSize="0.65rem" fontWeight="600" color="rgba(255,255,255,0.5)">60%</Text>
-            </Flex>
-            <Box h="3px" borderRadius="99px" bg="rgba(255,255,255,0.06)" overflow="hidden">
-              <Box h="full" w="60%" bg={GREEN} borderRadius="99px" />
-            </Box>
-          </Box>
-
-          {/* Milestones */}
-          <Text fontSize="0.6rem" fontWeight="600" color="rgba(255,255,255,0.25)"
-            letterSpacing="0.08em" textTransform="uppercase" mb={2}>
-            Milestones
-          </Text>
-          {milestones.map((m, i) => (
-            <Flex key={i} align="center" gap={2.5} mb={i < milestones.length - 1 ? 1.5 : 0}>
-              <Box w="16px" h="16px" borderRadius="50%" flexShrink={0}
-                bg={m.done ? GREEN : m.active ? "rgba(255,255,255,0.04)" : "transparent"}
-                border={m.active ? `1.5px solid ${BLUE}` : m.done ? "none" : "1px solid rgba(255,255,255,0.08)"}
-                display="flex" alignItems="center" justifyContent="center">
-                {m.done && (
-                  <svg width="7" height="5" viewBox="0 0 10 8" fill="none">
-                    <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                )}
-                {m.active && <Box w="5px" h="5px" borderRadius="50%" bg={BLUE} />}
-              </Box>
-              <Text fontSize="0.75rem" flex={1}
-                color={m.done ? "rgba(255,255,255,0.28)" : m.active ? "white" : "rgba(255,255,255,0.2)"}
-                fontWeight={m.active ? "600" : "400"}
-                textDecoration={m.done ? "line-through" : "none"}>
-                {m.label}
-              </Text>
-              {m.active && (
-                <Box px={1.5} py="1px" borderRadius="4px" bg={`${BLUE}20`} border={`1px solid ${BLUE}30`}>
-                  <Text fontSize="0.6rem" fontWeight="700" color={BLUE}>Active</Text>
-                </Box>
-              )}
-            </Flex>
-          ))}
-
-          {/* PM message */}
-          <Box mt={4} p={3} borderRadius="8px"
-            bg="rgba(255,255,255,0.03)" border="1px solid rgba(255,255,255,0.05)">
-            <Flex align="center" gap={2} mb={1.5}>
-              <Box w="20px" h="20px" borderRadius="50%" bg={`${GREEN}22`}
-                display="flex" alignItems="center" justifyContent="center">
-                <Text fontSize="0.55rem" fontWeight="700" color={G_ON_DARK}>S</Text>
-              </Box>
-              <Box>
-                <Text fontSize="0.7rem" fontWeight="600" color="rgba(255,255,255,0.7)">Sarah M. — PM</Text>
-                <Text fontSize="0.6rem" color="rgba(255,255,255,0.25)">2h ago</Text>
-              </Box>
-            </Flex>
-            <Text fontSize="0.7rem" color="rgba(255,255,255,0.45)" lineHeight="1.6">
-              Dev is on track. Product pages done today — QA starts Monday. No action needed from you. ✓
-            </Text>
-          </Box>
-        </Box>
-      </Flex>
-
-      {/* Status bar */}
-      <Flex h="28px" px={5} align="center" gap={4}
-        bg="#0A120E" borderTop="1px solid rgba(255,255,255,0.03)">
-        <Flex align="center" gap={1.5}>
-          <Box w="5px" h="5px" borderRadius="50%" bg="#22c55e" />
-          <Text fontSize="0.6rem" color="rgba(255,255,255,0.25)">All systems operational</Text>
-        </Flex>
-        <Box flex={1} />
-        <Text fontSize="0.6rem" color="rgba(255,255,255,0.18)">You never spoke to the developer.</Text>
-      </Flex>
-    </Box>
-  )
-}
-/* eslint-enable @typescript-eslint/no-unused-vars */
-
-// ─── Service catalog (interactive stack builder) ─────────────────────────────
-const SERVICE_CATALOG = [
-  {
-    id: "fullstack",
-    cat: "Full Stack Development",
-    items: [
-      { id: "saas-platform", label: "SaaS Platform Build" },
-      { id: "rest-graphql", label: "REST & GraphQL APIs" },
-      { id: "admin-tools", label: "Admin Dashboard & Tools" },
-    ],
-    live: true,
-  },
-  {
-    id: "mvp",
-    cat: "MVP & Product Builds",
-    items: [
-      { id: "saas-mvp", label: "SaaS MVP Build" },
-      { id: "startup-prototype", label: "Startup Prototype" },
-      { id: "marketplace-mvp", label: "Marketplace MVP" },
-    ],
-    live: true,
-  },
-  {
-    id: "mobile",
-    cat: "Mobile Apps",
-    items: [
-      { id: "react-native", label: "React Native App" },
-      { id: "native-ios", label: "Native iOS" },
-      { id: "native-android", label: "Native Android" },
-    ],
-    live: true,
-  },
-  {
-    id: "automation",
-    cat: "Automation & Integrations",
-    items: [
-      { id: "n8n", label: "n8n Workflows" },
-      { id: "crm", label: "CRM Integrations" },
-      { id: "webhooks", label: "Webhook & API Pipelines" },
-    ],
-    live: true,
-  },
-  {
-    id: "ecommerce",
-    cat: "E-commerce",
-    items: [
-      { id: "shopify-setup", label: "Shopify Store Setup" },
-      { id: "headless", label: "Headless Commerce" },
-      { id: "ecom-migration", label: "E-commerce Migration" },
-    ],
-    live: true,
-  },
-  {
-    id: "seo",
-    cat: "SEO & Marketing",
-    items: [
-      { id: "tech-seo", label: "Technical SEO Audit" },
-      { id: "ga4-gtm", label: "GA4 & GTM Setup" },
-      { id: "google-ads", label: "Google Ads Setup" },
-    ],
-    live: true,
-  },
-] as const
-
-const STACK_PRESETS = [
-  {
-    label: "SaaS MVP",
-    desc: "Ship a product fast",
-    ids: ["saas-mvp", "rest-graphql", "admin-tools"],
-  },
-  {
-    label: "Shopify launch",
-    desc: "Store + tracking",
-    ids: ["shopify-setup", "tech-seo", "ga4-gtm"],
-  },
-  {
-    label: "Mobile + API",
-    desc: "App with backend",
-    ids: ["react-native", "rest-graphql", "webhooks"],
-  },
-] as const
-
-const TOTAL_SERVICES = SERVICE_CATALOG.reduce((sum, cat) => sum + cat.items.length, 0)
-
-function stackLevel(count: number) {
-  if (count === 0) {
-    return { label: "Scout the catalog", pct: 0, hint: "Click services below or load a preset stack to start." }
-  }
-  if (count <= 2) {
-    return { label: "Starter stack", pct: 28, hint: "Nice — add integrations or launch services to round it out." }
-  }
-  if (count <= 5) {
-    return { label: "Build mode", pct: 55, hint: "You're shaping a real project scope. Keep going or post now." }
-  }
-  if (count <= 8) {
-    return { label: "Production ready", pct: 78, hint: "Solid breadth — one PM can quote this as a single brief." }
-  }
-  return { label: "Full delivery suite", pct: 100, hint: "Comprehensive scope — post this brief for a fixed quote." }
-}
-
-function ServiceCheckIcon({ active }: { active: boolean }) {
-  return (
-    <Box
-      w="16px" h="16px" borderRadius="4px" flexShrink={0}
-      border="1.5px solid"
-      borderColor={active ? GREEN : RULE}
-      bg={active ? GREEN : "white"}
-      display="flex" alignItems="center" justifyContent="center"
-      transition="all 0.18s cubic-bezier(0.22, 1, 0.36, 1)"
-      transform={active ? "scale(1.05)" : "scale(1)"}
-    >
-      {active && (
-        <svg width="8" height="6" viewBox="0 0 10 8" fill="none" aria-hidden>
-          <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      )}
-    </Box>
-  )
-}
-
-function ServiceCatalogSection() {
-  const [selected, setSelected] = useState<Set<string>>(() => new Set())
-  const [activePreset, setActivePreset] = useState<string | null>(null)
-
-  const selectedList = useMemo(
-    () =>
-      SERVICE_CATALOG.flatMap((cat) =>
-        cat.items.filter((item) => selected.has(item.id)).map((item) => ({ ...item, category: cat.cat })),
-      ),
-    [selected],
-  )
-
-  const categoriesUnlocked = useMemo(
-    () => SERVICE_CATALOG.filter((cat) => cat.items.some((item) => selected.has(item.id))).length,
-    [selected],
-  )
-
-  const level = stackLevel(selected.size)
-  const progressPct = Math.round((selected.size / TOTAL_SERVICES) * 100)
-
-  function toggle(id: string) {
-    setActivePreset(null)
-    setSelected((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
-
-  function applyPreset(preset: (typeof STACK_PRESETS)[number]) {
-    setSelected(new Set(preset.ids))
-    setActivePreset(preset.label)
-  }
-
-  function clearStack() {
-    setSelected(new Set())
-    setActivePreset(null)
-  }
-
-  return (
-    <Box py={{ base: 20, md: 28 }} bg="white" borderBottom={`1px solid ${RULE}`}>
-      <Box maxW="1200px" mx="auto" px={{ base: 5, md: 8 }}>
-        <Text fontSize="0.7rem" fontWeight="700" color={GREEN}
-          letterSpacing="0.12em" textTransform="uppercase" mb={4}
-          fontFamily="var(--font-heading)">
-          Our services
-        </Text>
-        <Flex justify="space-between" align="flex-end" mb={8} flexWrap="wrap" gap={6}>
-          <Box maxW="560px">
-            <Heading
-              fontSize={{ base: "1.875rem", md: "2.5rem" }}
-              fontWeight="700" letterSpacing="-0.034em"
-              fontFamily="var(--font-heading)" mb={3}
-            >
-              More than outsourcing — a full software delivery catalog.
-            </Heading>
-            <Text fontSize="0.9375rem" color={MUTED} lineHeight="1.7">
-              Build your project stack — click services to add them to a brief. One PM, one fixed quote.
-            </Text>
-          </Box>
-          <Link to="/register" style={{ textDecoration: "none" }}>
-            <Box px={5} py="10px" borderRadius="6px" fontWeight="600" fontSize="0.875rem"
-              bg="transparent" color={MUTED} border={`1px solid ${RULE}`}
-              _hover={{ borderColor: "#9CA3AF" }} transition="all 0.15s">
-              Post a project →
-            </Box>
-          </Link>
-        </Flex>
-
-        {/* Progress HUD */}
-        <Box
-          mb={6} p={{ base: 4, md: 5 }} borderRadius="14px"
-          bg={LIGHT} border={`1px solid ${RULE}`}
-        >
-          <Flex justify="space-between" align="flex-start" gap={4} flexWrap="wrap" mb={4}>
-            <Box>
-              <Flex align="center" gap={2} mb={1.5} flexWrap="wrap">
-                <Text fontSize="0.65rem" fontWeight="700" color={GREEN}
-                  letterSpacing="0.1em" textTransform="uppercase">
-                  Your stack
-                </Text>
-                <Box px={2} py="2px" borderRadius="99px" bg={`${GREEN}14`} border={`1px solid ${GREEN}30`}>
-                  <Text fontSize="0.6rem" fontWeight="700" color={GREEN}>{level.label}</Text>
-                </Box>
-              </Flex>
-              <Text fontSize={{ base: "1.125rem", md: "1.25rem" }} fontWeight="700" color={INK}
-                fontFamily="var(--font-heading)" letterSpacing="-0.02em">
-                {selected.size} of {TOTAL_SERVICES} services selected
-              </Text>
-              <Text fontSize="0.8125rem" color={MUTED} mt={1} maxW="480px" lineHeight="1.6">
-                {level.hint}
-              </Text>
-            </Box>
-            <Flex gap={2} align="center" flexWrap="wrap">
-              <Box px={3} py="6px" borderRadius="8px" bg="white" border={`1px solid ${RULE}`}>
-                <Text fontSize="0.6875rem" color={MUTED}>
-                  <Box as="span" fontWeight="700" color={INK}>{categoriesUnlocked}</Box>
-                  /{SERVICE_CATALOG.length} categories
-                </Text>
-              </Box>
-              {selected.size > 0 && (
-                <Box
-                  as="button" type="button" onClick={clearStack}
-                  px={3} py="6px" borderRadius="8px"
-                  bg="white" border={`1px solid ${RULE}`}
-                  fontSize="0.6875rem" fontWeight="600" color={MUTED}
-                  cursor="pointer" transition="all 0.15s"
-                  _hover={{ borderColor: "#9CA3AF", color: INK }}
-                >
-                  Clear stack
-                </Box>
-              )}
-            </Flex>
-          </Flex>
-
-          <Box h="8px" borderRadius="99px" bg="white" border={`1px solid ${RULE}`} overflow="hidden" mb={4}>
-            <Box
-              h="full" borderRadius="99px"
-              bg={`linear-gradient(90deg, ${GREEN} 0%, #34d399 100%)`}
-              transition="width 0.45s cubic-bezier(0.22, 1, 0.36, 1)"
-              style={{ width: `${Math.max(progressPct, selected.size > 0 ? 6 : 0)}%` }}
-            />
-          </Box>
-
-          <Flex gap={2} flexWrap="wrap" align="center">
-            <Text fontSize="0.6875rem" fontWeight="600" color={MUTED} mr={1}>Loadouts:</Text>
-            {STACK_PRESETS.map((preset) => {
-              const active = activePreset === preset.label
-              return (
-                <Box
-                  key={preset.label}
-                  as="button" type="button"
-                  onClick={() => applyPreset(preset)}
-                  px={3} py="7px" borderRadius="8px"
-                  border="1.5px solid"
-                  borderColor={active ? GREEN : RULE}
-                  bg={active ? `${GREEN}10` : "white"}
-                  cursor="pointer" transition="all 0.15s"
-                  _hover={{ borderColor: active ? GREEN : "#9CA3AF", transform: "translateY(-1px)" }}
-                >
-                  <Text fontSize="0.75rem" fontWeight="700" color={active ? GREEN : INK}>{preset.label}</Text>
-                  <Text fontSize="0.625rem" color={MUTED}>{preset.desc}</Text>
-                </Box>
-              )
-            })}
-          </Flex>
-        </Box>
-
-        {/* Category grid */}
-        <Grid templateColumns={{ base: "1fr", sm: "repeat(2,1fr)", md: "repeat(3,1fr)" }} gap={4}>
-          {SERVICE_CATALOG.map((s) => {
-            const pickedInCat = s.items.filter((item) => selected.has(item.id)).length
-            const catComplete = pickedInCat === s.items.length
-
-            return (
-              <Box
-                key={s.id} p={6} bg={LIGHT} borderRadius="12px"
-                border={pickedInCat > 0 ? `1.5px solid ${GREEN}55` : s.live ? `1px solid ${GREEN}30` : `1px solid ${RULE}`}
-                boxShadow={pickedInCat > 0 ? "0 6px 20px rgba(16,185,129,0.08)" : undefined}
-                transition="all 0.22s cubic-bezier(0.22, 1, 0.36, 1)"
-              >
-                <Flex justify="space-between" align="flex-start" mb={4}>
-                  <Box>
-                    <Text fontSize="0.9375rem" fontWeight="700" color={INK}
-                      fontFamily="var(--font-heading)">{s.cat}</Text>
-                    {pickedInCat > 0 && (
-                      <Text fontSize="0.6875rem" color={GREEN} fontWeight="600" mt={1}>
-                        {pickedInCat}/{s.items.length} in stack
-                      </Text>
-                    )}
-                  </Box>
-                  <Flex gap={1.5} align="center">
-                    {catComplete && (
-                      <Box px={2} py="2px" borderRadius="99px" bg={`${AMBER}18`} border={`1px solid ${AMBER}40`}>
-                        <Text fontSize="0.55rem" fontWeight="700" color="#92400e">Complete</Text>
-                      </Box>
-                    )}
-                    {s.live && (
-                      <Box px={2} py="2px" borderRadius="99px" bg={`${GREEN}14`} border={`1px solid ${GREEN}30`}>
-                        <Text fontSize="0.6rem" fontWeight="700" color={GREEN}>Live</Text>
-                      </Box>
-                    )}
-                  </Flex>
-                </Flex>
-                <Stack gap={2}>
-                  {s.items.map((item) => {
-                    const active = selected.has(item.id)
-                    return (
-                      <Box
-                        key={item.id}
-                        as="button" type="button"
-                        onClick={() => toggle(item.id)}
-                        w="full" textAlign="left"
-                        px={3} py={2.5} borderRadius="8px"
-                        bg={active ? "white" : "transparent"}
-                        border="1px solid"
-                        borderColor={active ? `${GREEN}50` : "transparent"}
-                        cursor="pointer"
-                        transition="all 0.16s ease"
-                        _hover={{
-                          bg: "white",
-                          borderColor: active ? `${GREEN}60` : RULE,
-                          transform: "translateX(2px)",
-                        }}
-                        aria-pressed={active}
-                      >
-                        <Flex align="center" gap={2.5}>
-                          <ServiceCheckIcon active={active} />
-                          <Text
-                            fontSize="0.8125rem"
-                            color={active ? INK : MUTED}
-                            fontWeight={active ? 600 : 400}
-                            transition="color 0.15s"
-                          >
-                            {item.label}
-                          </Text>
-                        </Flex>
-                      </Box>
-                    )
-                  })}
-                </Stack>
-              </Box>
-            )
-          })}
-        </Grid>
-
-        {/* Brief preview */}
-        <Box
-          mt={6} p={{ base: 5, md: 6 }} borderRadius="14px"
-          bg={selected.size > 0 ? INK : LIGHT}
-          border={`1px solid ${selected.size > 0 ? INK : RULE}`}
-          transition="all 0.35s cubic-bezier(0.22, 1, 0.36, 1)"
-        >
-          <Flex justify="space-between" align="flex-start" gap={4} flexWrap="wrap">
-            <Box flex={1} minW="240px">
-              <Text
-                fontSize="0.65rem" fontWeight="700"
-                color={selected.size > 0 ? G_ON_DARK : GREEN}
-                letterSpacing="0.1em" textTransform="uppercase" mb={2}
-              >
-                {selected.size > 0 ? "Brief preview" : "Your brief preview"}
-              </Text>
-              {selected.size === 0 ? (
-                <Text fontSize="0.875rem" color={MUTED} lineHeight="1.7">
-                  Selected services appear here — like equipping a loadout before you post.
-                </Text>
-              ) : (
-                <Flex gap={2} flexWrap="wrap">
-                  {selectedList.map((item) => (
-                    <Box
-                      key={item.id}
-                      px={3} py="6px" borderRadius="99px"
-                      bg="rgba(255,255,255,0.08)" border="1px solid rgba(255,255,255,0.12)"
-                    >
-                      <Text fontSize="0.75rem" fontWeight="600" color="white">{item.label}</Text>
-                    </Box>
-                  ))}
-                </Flex>
-              )}
-            </Box>
-            <Link to="/register" style={{ textDecoration: "none" }}>
-              <Box
-                px={5} py="11px" borderRadius="8px" fontWeight="700" fontSize="0.875rem"
-                bg={selected.size > 0 ? AMBER : "white"}
-                color={INK}
-                border={selected.size > 0 ? `1px solid ${AMBER}` : `1px solid ${RULE}`}
-                opacity={selected.size > 0 ? 1 : 0.72}
-                transition="all 0.2s"
-                _hover={{ bg: selected.size > 0 ? AMBER_HOVER : "white", transform: "translateY(-1px)" }}
-                whiteSpace="nowrap"
-              >
-                {selected.size > 0 ? `Post ${selected.size}-service brief →` : "Post a project →"}
-              </Box>
-            </Link>
-          </Flex>
-        </Box>
-
-        <Text fontSize="0.875rem" color={MUTED} mt={8} maxW="640px" lineHeight="1.7">
-          From MVPs and full-stack SaaS to mobile apps, automations, and e-commerce — 50+ scoped services, one PM, one fixed quote per project.{" "}
-          <Link to="/how-it-works" style={{ color: INK, fontWeight: 600, textDecoration: "underline", textUnderlineOffset: "2px" }}>
-            Explore all services →
-          </Link>
-        </Text>
-      </Box>
-    </Box>
-  )
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Page
 // ─────────────────────────────────────────────────────────────────────────────
 export default function LandingPage() {
-  const [mobileAiOpen, setMobileAiOpen] = useState(false)
-
   return (
     <Box minH="100vh" bg="white" color={INK} fontFamily="var(--font-body)">
 
@@ -927,7 +416,7 @@ export default function LandingPage() {
         <Box maxW="1280px" mx="auto" px={{ base: 5, md: 8 }}
           pt={{ base: 10, md: 12 }} pb={{ base: 12, md: 14 }}>
           <Grid
-            templateColumns={{ base: "1fr", lg: "minmax(0, 1fr) 580px" }}
+            templateColumns={{ base: "1fr", lg: "minmax(0, 1fr) 460px" }}
             gap={{ base: 10, lg: 14 }}
             alignItems="center"
           >
@@ -940,7 +429,7 @@ export default function LandingPage() {
                 textTransform="uppercase" mb={4}
                 fontFamily="var(--font-heading)"
               >
-                Managed software delivery
+                The one-person business workspace
               </Text>
 
               {/* Headline */}
@@ -950,9 +439,9 @@ export default function LandingPage() {
                 fontWeight="700" lineHeight="1.12" letterSpacing="-0.03em"
                 mb={4} fontFamily="var(--font-heading)"
               >
-                <Box as="span" color="white" display="block">Tell us what you need.</Box>
+                <Box as="span" color="white" display="block">Run every job</Box>
                 <Box as="span" color={G_ON_DARK} display="block" mt={1}>
-                  We get it built — no freelancer hunt.
+                  in one shared workspace.
                 </Box>
               </Heading>
 
@@ -961,16 +450,16 @@ export default function LandingPage() {
                 color="rgba(255,255,255,0.58)"
                 lineHeight="1.65" maxW="420px" mb={6}
               >
-                A dedicated PM, vetted developers, and a fixed quote within 24 hours —
-                on one platform.
+                Invite the companies you work with, agree how you're paid, and let AI keep requirements,
+                chat, and to-dos clear for both sides — with hours and payments tracked automatically.
               </Text>
 
               <Flex gap={2.5} flexWrap="wrap" mb={8}>
-                <Link to="/register" style={{ textDecoration: "none" }}>
+                <Link to="/partner/register" style={{ textDecoration: "none" }}>
                   <Box px={4} py="9px" borderRadius="6px" fontWeight="700" fontSize="0.875rem"
                     bg={AMBER} color={INK} border={`1px solid ${AMBER}`}
                     _hover={{ bg: AMBER_HOVER }} transition="all 0.15s">
-                    Post a project →
+                    Start your workspace →
                   </Box>
                 </Link>
                 <Link to="/how-it-works" style={{ textDecoration: "none" }}>
@@ -991,9 +480,9 @@ export default function LandingPage() {
                 pt={5}
               >
                 {[
-                  { v: "1 PM",  l: "Per project"    },
-                  { v: "< 24h", l: "Fixed quote"    },
-                  { v: "50+",   l: "Dev services"   },
+                  { v: "1 workspace", l: "Per company you work with" },
+                  { v: "AI",          l: "Edit with AI, everywhere" },
+                  { v: "Hourly/fixed", l: "Rates, tracked either way" },
                 ].map((s, i) => (
                   <Flex
                     key={s.l} align="center"
@@ -1013,9 +502,9 @@ export default function LandingPage() {
               </Flex>
             </Box>
 
-            {/* Right: form */}
+            {/* Right: get-started card */}
             <Box w="full" minW={0}>
-              <LandingInquiryForm />
+              <GetStartedCard />
             </Box>
           </Grid>
         </Box>
@@ -1031,36 +520,36 @@ export default function LandingPage() {
           <Text fontSize="0.7rem" fontWeight="700" color={GREEN}
             letterSpacing="0.12em" textTransform="uppercase" mb={4}
             fontFamily="var(--font-heading)">
-            The problem in everyday business
+            The problem with client work today
           </Text>
           <Heading
             fontSize={{ base: "1.875rem", md: "2.5rem" }}
             fontWeight="700" letterSpacing="-0.034em" mb={4}
             maxW="640px" fontFamily="var(--font-heading)"
           >
-            The dev process slows your team.
+            Client work slows down without a shared system.
           </Heading>
           <Text fontSize="0.9375rem" color={MUTED} lineHeight="1.8" mb={14} maxW="560px">
-            Many companies struggle with expensive agencies, overloaded in-house engineers,
-            and unreliable freelancers — while product deadlines keep moving.
+            One-person businesses juggle chat apps, spreadsheets, and invoices across every company —
+            while the actual work waits on a clear answer.
           </Text>
 
           <Grid templateColumns={{ base: "1fr", md: "repeat(3,1fr)" }} gap={5}>
             {[
               {
                 tag: "Clarity",
-                title: "One provider. One platform.",
-                body: "All software projects through a central workspace — no scattered agencies, contractors, or Slack threads. Feedback is bundled, approvals move faster, and you always know where things stand.",
+                title: "One shared job, not five threads",
+                body: "Requirements, chat, and files live with the job — not scattered across email, WhatsApp, and messages neither of you can find again.",
               },
               {
-                tag: "Reliability",
-                title: "Quality and availability you can count on.",
-                body: "Vetted developers matched to your stack, overseen by a dedicated PM who delivers on committed dates. Your team can rely on consistent output — not hero engineers or last-minute rescues.",
+                tag: "Understanding",
+                title: "AI keeps everyone on the same page",
+                body: "A rushed voice note or a vague client message becomes something both of you can act on — without a slow back-and-forth.",
               },
               {
-                tag: "Planability",
-                title: "Budget and timing under control.",
-                body: "Fixed quotes and defined delivery windows make every sprint planable. You know what ships when — before work starts — without surprise scope creep or open-ended retainers.",
+                tag: "Money",
+                title: "Rates, hours, and payments — tracked",
+                body: "Agree how you're paid, log hours as you go, and record every payment. No more guessing what's owed or rebuilding invoices from memory.",
               },
             ].map((item, i) => (
               <ScrollReveal key={item.tag} delay={i * 100}>
@@ -1082,7 +571,7 @@ export default function LandingPage() {
         </Box>
       </Box>
 
-      {/* ══ § THE FUTURE OF DELIVERY ════════════════════════════════════════ */}
+      {/* ══ § BEYOND SCATTERED TOOLS ══════════════════════════════════════════ */}
       <Box py={{ base: 20, md: 28 }} bg="white">
         <Box maxW="1200px" mx="auto" px={{ base: 5, md: 8 }}>
           <Grid templateColumns={{ base: "1fr", lg: "1fr 1fr" }} gap={{ base: 12, lg: 20 }} alignItems="center">
@@ -1091,7 +580,7 @@ export default function LandingPage() {
                 <Text fontSize="0.7rem" fontWeight="700" color={GREEN}
                   letterSpacing="0.12em" textTransform="uppercase" mb={4}
                   fontFamily="var(--font-heading)">
-                  The future of delivery
+                  A better way to work with clients
                 </Text>
               </ScrollReveal>
               <ScrollReveal delay={80}>
@@ -1100,15 +589,15 @@ export default function LandingPage() {
                   fontWeight="700" letterSpacing="-0.035em" lineHeight="1.1" mb={2}
                   fontFamily="var(--font-heading)"
                 >
-                  Beyond hiring devs.
+                  Beyond scattered tools.
                 </Heading>
               </ScrollReveal>
               <ScrollReveal delay={160}>
                 <TypewriterSubline
                   phrases={[
-                    "Managed software delivery, without the coordination tax.",
-                    "One PM. Fixed quotes. Vetted dev team.",
-                    "Ship product — not meetings.",
+                    "One workspace instead of five tools.",
+                    "AI clarity on every requirement.",
+                    "Every hour and payment, logged.",
                   ]}
                   fontSize={{ base: "1.125rem", md: "1.375rem", lg: "1.5rem" }}
                 />
@@ -1116,25 +605,24 @@ export default function LandingPage() {
               <CodeTypewriter />
               <ScrollReveal delay={240}>
                 <Text fontSize={{ base: "0.9375rem", md: "1rem" }} color={MUTED} lineHeight="1.8" mb={6} mt={6}>
-                  Marketplaces sell access to freelancers and hand you all the risk: vetting,
-                  stand-ups, time-zone juggling, code review. Co-Helper sells the opposite —
-                  a finished build and a named PM accountable for it.
+                  One-person businesses juggle company email, a spreadsheet for hours, an invoicing tool,
+                  and requirements buried in chat threads. Co-Helper puts all of it — chat,
+                  rates, hours, payments — inside a single shared job.
                 </Text>
               </ScrollReveal>
               <ScrollReveal delay={320}>
                 <Text fontSize={{ base: "0.9375rem", md: "1rem" }} color={MUTED} lineHeight="1.8" mb={8}>
-                  By building the entire model around a dedicated PM who absorbs the coordination
-                  layer, your team gets fewer touchpoints, shorter feedback loops, and deliverables
-                  that actually match the brief.
+                  Because every client is invited into their own workspace, nothing gets lost
+                  in a shared inbox — and AI can rewrite anything using the full context of that job.
                 </Text>
               </ScrollReveal>
               <ScrollReveal delay={400}>
-                <Link to="/register" style={{ textDecoration: "none" }}>
+                <Link to="/partner/register" style={{ textDecoration: "none" }}>
                   <Box display="inline-flex" alignItems="center"
                     px={5} py="11px" borderRadius="6px" fontWeight="700" fontSize="0.875rem"
                     bg={INK} color="white" border={`1px solid ${INK}`}
                     _hover={{ bg: "#1a2e26" }} transition="all 0.15s">
-                    Post a project →
+                    Start your workspace →
                   </Box>
                 </Link>
               </ScrollReveal>
@@ -1145,23 +633,23 @@ export default function LandingPage() {
               {[
                 {
                   icon: "01",
-                  title: "Brief written once",
-                  body: "You describe what you need in a form or a message. No calls, no slides, no back-and-forth before work starts.",
+                  title: "Invite your client",
+                  body: "Add them by email. They see only the jobs you share with them — nothing else.",
                 },
                 {
                   icon: "02",
-                  title: "PM assigned within hours",
-                  body: "A named project manager reviews your brief, sources the right specialists, and returns a fixed quote and a committed date.",
+                  title: "Scope the job together",
+                  body: "Write requirements in plain language. Edit with AI turns them into something both sides understand.",
                 },
                 {
                   icon: "03",
-                  title: "Specialists sourced invisibly",
-                  body: "Your PM manages the global talent network. You never interview, vet, or coordinate anyone. The expertise is invisible — the result is not.",
+                  title: "Agree a rate",
+                  body: "Hourly or fixed — propose it, they agree, and it's on record from day one.",
                 },
                 {
                   icon: "04",
-                  title: "Approved, then paid",
-                  body: "Deliverables arrive in your portal. Your PM handles all revisions. You approve — escrow releases. That's the entire loop.",
+                  title: "Track hours and payments",
+                  body: "Log time as you work and record payments as they land. Every job shows exactly where it stands.",
                 },
               ].map((item, i) => (
                 <ScrollReveal key={item.icon} delay={i * 90}>
@@ -1186,7 +674,7 @@ export default function LandingPage() {
         </Box>
       </Box>
 
-      {/* ══ § EASY & HASSLE-FREE ════════════════════════════════════════════ */}
+      {/* ══ § EVERYTHING IN ONE WORKSPACE ═══════════════════════════════════ */}
       <Box py={{ base: 20, md: 28 }} bg={LIGHT} borderTop={`1px solid ${RULE}`} borderBottom={`1px solid ${RULE}`}>
         <Box maxW="1200px" mx="auto" px={{ base: 5, md: 8 }}>
           <Text fontSize="0.7rem" fontWeight="700" color={GREEN}
@@ -1199,32 +687,33 @@ export default function LandingPage() {
             fontWeight="700" letterSpacing="-0.034em" mb={3}
             maxW="640px" fontFamily="var(--font-heading)"
           >
-            World-class developers. Managed delivery.
+            Everything in one shared workspace.
             {" "}
             <ScrollColorText as="span" from={MUTED} to={GREEN} fontWeight="600">
-              Built to ship product, not meetings.
+              Built for you and your clients.
             </ScrollColorText>
           </Heading>
           <Text fontSize="0.9375rem" color={MUTED} mb={14} maxW="520px" lineHeight="1.75">
-            Whether you need an MVP, a Shopify build, API integrations, or a mobile app — one platform, one PM, one predictable process.
+            Whether you bill hourly or per project, manage one client or twenty — one
+            workspace, one process, per relationship.
           </Text>
 
           <Grid templateColumns={{ base: "1fr", md: "repeat(3,1fr)" }} gap={5}>
             {[
               {
-                tag: "One PM, always",
-                title: "Flexible, multi-discipline delivery",
-                body: "A single project manager works across any service category. Pivot from a website build to a social campaign without re-onboarding anyone.",
+                tag: "Your workspace",
+                title: "You invite, you decide",
+                body: "There's no browsing or matching. You invite the clients you already work with — each one sees only their own jobs.",
               },
               {
-                tag: "Vetted talent",
-                title: "Top global specialists",
-                body: "We're not restricted by borders. Our specialists are vetted on technical skill, communication, and reliability before they touch a client project.",
+                tag: "AI-assisted",
+                title: "Clarity without extra effort",
+                body: "Edit with AI turns a messy note into a clear requirement or a clean chat message — using the context of that job.",
               },
               {
-                tag: "Escrow-protected",
-                title: "Structured, trusted delivery",
-                body: "Milestone tracking, documented deliverables, and proactive PM updates — so you always know where your project stands without chasing anyone.",
+                tag: "Fully tracked",
+                title: "Rates, hours, and payments in one place",
+                body: "Propose hourly or fixed pricing, log time as you work, and record payments — so both sides always know where a job stands.",
               },
             ].map((c, i) => (
               <ScrollReveal key={c.tag} delay={i * 100}>
@@ -1246,20 +735,20 @@ export default function LandingPage() {
         </Box>
       </Box>
 
-      {/* ══ § SUCCESS IN NUMBERS ════════════════════════════════════════════ */}
+      {/* ══ § BUILT FOR REAL CLIENT WORK ════════════════════════════════════ */}
       <Box py={{ base: 20, md: 28 }} bg={INK}>
         <Box maxW="1200px" mx="auto" px={{ base: 5, md: 8 }}>
           <Text fontSize="0.7rem" fontWeight="700" color={G_ON_DARK}
             letterSpacing="0.12em" textTransform="uppercase" mb={4}
             fontFamily="var(--font-heading)">
-            Success in numbers
+            Built for real client work
           </Text>
           <Heading
             fontSize={{ base: "1.875rem", md: "2.5rem" }}
             fontWeight="700" color="white" letterSpacing="-0.034em" mb={14}
             maxW="560px" fontFamily="var(--font-heading)"
           >
-            The managed dev platform that ships on schedule.
+            Everything a one-person business needs to run client work well.
           </Heading>
 
           <Grid templateColumns={{ base: "repeat(2,1fr)", md: "repeat(4,1fr)" }} gap={5} mb={16}>
@@ -1267,7 +756,7 @@ export default function LandingPage() {
               <Box key={s.label} p={6} borderRadius="12px"
                 bg="rgba(255,255,255,0.04)" border="1px solid rgba(255,255,255,0.07)">
                 <Flex align="baseline" gap={1} mb={2}>
-                  <Text fontSize={{ base: "2.5rem", md: "3rem" }} fontWeight="800"
+                  <Text fontSize={{ base: "2rem", md: "2.5rem" }} fontWeight="800"
                     color="white" letterSpacing="-0.05em" lineHeight="1"
                     fontFamily="var(--font-heading)">{s.value}</Text>
                   {s.unit && (
@@ -1283,14 +772,14 @@ export default function LandingPage() {
           <Grid templateColumns={{ base: "1fr", md: "repeat(2,1fr)" }} gap={5}>
             {[
               {
-                label: "Client story",
-                headline: `"SaaS MVP shipped in 6 weeks. I never once spoke to a developer."`,
-                sub: "Non-technical founder, full-stack MVP with auth and billing",
+                label: "Operator story",
+                headline: `"I invited my three biggest companies in one afternoon. Now every job has its own thread instead of scattered emails."`,
+                sub: "Independent web developer",
               },
               {
                 label: "Client story",
-                headline: `"Brief on Monday. Fixed quote and PM name by Tuesday morning."`,
-                sub: "Head of Product at a growth-stage startup, API integration project",
+                headline: `"I can finally see what I've paid and what's still owed — without asking our partner to explain a spreadsheet."`,
+                sub: "Small business owner, tracking payments in Co-Helper",
               },
             ].map((s) => (
               <Box key={s.headline} p={7} borderRadius="12px"
@@ -1308,16 +797,13 @@ export default function LandingPage() {
         </Box>
       </Box>
 
-      {/* ══ § OUR SERVICES ══════════════════════════════════════════════════ */}
-      <ServiceCatalogSection />
-
       {/* ══ § COMPARISON MATRIX ═════════════════════════════════════════════ */}
       <Box py={{ base: 20, md: 28 }} bg={INK}>
         <Box maxW="1200px" mx="auto" px={{ base: 5, md: 8 }}>
           <Text fontSize="0.7rem" fontWeight="700" color={G_ON_DARK}
             letterSpacing="0.12em" textTransform="uppercase" mb={4}
             fontFamily="var(--font-heading)">
-            Co-Helper vs. classic dev solutions
+            Co-Helper vs. how you work today
           </Text>
           <Flex justify="space-between" align="flex-end" mb={14} flexWrap="wrap" gap={6}>
             <ScrollReveal>
@@ -1326,10 +812,10 @@ export default function LandingPage() {
                 fontWeight="700" color="white" letterSpacing="-0.034em"
                 maxW="540px" fontFamily="var(--font-heading)"
               >
-                Agency, freelancer, in-house?{" "}
+                Email, spreadsheets, generic tools?{" "}
                 <Box as="span" display="inline">
                   <ScrollColorText as="span" from="rgba(255,255,255,0.45)" to="#86efac">
-                    Neither.
+                    None of them fit.
                   </ScrollColorText>
                 </Box>
               </Heading>
@@ -1337,7 +823,7 @@ export default function LandingPage() {
             <ScrollReveal delay={120}>
               <Text fontSize="0.9375rem" maxW="300px" lineHeight="1.75">
                 <ScrollColorText as="span" from="rgba(255,255,255,0.35)" to="rgba(255,255,255,0.72)">
-                  Managed software delivery with a dedicated PM, fixed quotes, and one platform for every build.
+                  A workspace built specifically for one-person businesses and the companies they work with — not a general-purpose tool.
                 </ScrollColorText>
               </Text>
             </ScrollReveal>
@@ -1393,7 +879,7 @@ export default function LandingPage() {
             fontWeight="700" letterSpacing="-0.034em"
             maxW="520px" fontFamily="var(--font-heading)"
           >
-            Delivery wins, told by our clients.
+            Told by one-person businesses and the companies they work with.
           </Heading>
         </Box>
 
@@ -1456,13 +942,14 @@ export default function LandingPage() {
               >
                 One intelligent system,{" "}
                 <Box as="em" fontStyle="italic" fontWeight="600" color="#3D6B5A">
-                  built for better delivery
+                  built for real client work
                 </Box>
               </Heading>
             </Box>
             <Box>
               <Text fontSize="0.9375rem" color={MUTED} lineHeight="1.8" mb={6}>
-                No matter the service, submitting a brief and receiving a finished deliverable is effortless. One platform. One PM. Total clarity.
+                Every job — requirements, chat, rates, hours, payments — lives in one connected
+                workspace. One platform, total clarity, for you and your client.
               </Text>
               <Flex gap={3} flexWrap="wrap">
                 <Link to="/how-it-works" style={{ textDecoration: "none" }}>
@@ -1471,11 +958,11 @@ export default function LandingPage() {
                     Learn more
                   </Box>
                 </Link>
-                <Link to="/register" style={{ textDecoration: "none" }}>
+                <Link to="/partner/register" style={{ textDecoration: "none" }}>
                   <Box px={5} py="10px" borderRadius="6px" fontWeight="600" fontSize="0.875rem"
                     bg="transparent" color={MUTED} border={`1px solid ${RULE}`}
                     _hover={{ borderColor: "#9CA3AF", color: INK }} transition="all 0.15s">
-                    Post a project
+                    Start your workspace
                   </Box>
                 </Link>
               </Flex>
@@ -1488,7 +975,7 @@ export default function LandingPage() {
             templateRows={{ lg: "auto auto" }}
             gap={3}
           >
-            {/* Card 1: tall left — dashboard command centre */}
+            {/* Card 1: tall left — job command centre */}
             <Box
               gridRow={{ lg: "1 / 3" }} gridColumn={{ lg: "1" }}
               bg={INK} borderRadius="16px" overflow="hidden"
@@ -1499,14 +986,15 @@ export default function LandingPage() {
                 <Text fontSize="1.0625rem" fontWeight="700" color="white"
                   letterSpacing="-0.015em" mb={1.5}
                   fontFamily="var(--font-heading)">
-                  Your delivery command center
+                  Your job command center
                 </Text>
                 <Text fontSize="0.8125rem" color="rgba(255,255,255,0.45)" lineHeight="1.65" mb={6}>
-                  Run every project in one connected workspace. Brief submissions, PM updates, milestones, and file delivery — all in one place.
+                  Run every job in one connected workspace. Requirements, chat, to-dos,
+                  and file sharing — all in one place.
                 </Text>
               </Box>
 
-              {/* Mini dashboard embed */}
+              {/* Mini job embed */}
               <Box flex={1} mx={4} mb={4} borderRadius="10px" overflow="hidden"
                 border="1px solid rgba(255,255,255,0.07)" bg="#0D1510">
                 {/* Traffic lights */}
@@ -1518,25 +1006,25 @@ export default function LandingPage() {
                 </Flex>
                 <Box p={4}>
                   <Flex justify="space-between" align="center" mb={3}>
-                    <Text fontSize="0.75rem" fontWeight="700" color="white">SaaS MVP Build</Text>
+                    <Text fontSize="0.75rem" fontWeight="700" color="white">Shopify Refresh</Text>
                     <Box px={2} py="2px" borderRadius="99px" bg={`${GREEN}18`} border={`1px solid ${GREEN}35`}>
-                      <Text fontSize="0.55rem" fontWeight="700" color={G_ON_DARK}>On Track</Text>
+                      <Text fontSize="0.55rem" fontWeight="700" color={G_ON_DARK}>In progress</Text>
                     </Box>
                   </Flex>
                   <Box mb={3}>
                     <Flex justify="space-between" mb={1}>
-                      <Text fontSize="0.6rem" color="rgba(255,255,255,0.3)">Progress</Text>
-                      <Text fontSize="0.6rem" color="rgba(255,255,255,0.5)">60%</Text>
+                      <Text fontSize="0.6rem" color="rgba(255,255,255,0.3)">Rate</Text>
+                      <Text fontSize="0.6rem" color="rgba(255,255,255,0.5)">€65/hr · 12.5h logged</Text>
                     </Flex>
                     <Box h="2px" borderRadius="99px" bg="rgba(255,255,255,0.06)">
                       <Box h="full" w="60%" bg={GREEN} borderRadius="99px" />
                     </Box>
                   </Box>
                   {[
-                    { l: "Brief & scoping",  d: true  },
-                    { l: "Design phase",     d: true  },
-                    { l: "Development",      d: false, a: true },
-                    { l: "QA & review",      d: false },
+                    { l: "Requirements agreed", d: true  },
+                    { l: "Rate agreed",         d: true  },
+                    { l: "Build in progress",   d: false, a: true },
+                    { l: "Client review",       d: false },
                   ].map((m) => (
                     <Flex key={m.l} align="center" gap={2} mb={1.5}>
                       <Box w="12px" h="12px" borderRadius="50%" flexShrink={0}
@@ -1556,19 +1044,19 @@ export default function LandingPage() {
                     <Flex align="center" gap={1.5} mb={1}>
                       <Box w="14px" h="14px" borderRadius="50%" bg={`${GREEN}25`}
                         display="flex" alignItems="center" justifyContent="center">
-                        <Text fontSize="0.45rem" fontWeight="700" color={G_ON_DARK}>S</Text>
+                        <Text fontSize="0.45rem" fontWeight="700" color={G_ON_DARK}>AI</Text>
                       </Box>
-                      <Text fontSize="0.6rem" fontWeight="600" color="rgba(255,255,255,0.6)">Sarah M. — PM</Text>
+                      <Text fontSize="0.6rem" fontWeight="600" color="rgba(255,255,255,0.6)">Edit with AI</Text>
                     </Flex>
                     <Text fontSize="0.62rem" color="rgba(255,255,255,0.38)">
-                      Dev on track. QA starts Monday. No action needed from you. ✓
+                      Rewrote client's message into a clear scope change. ✓
                     </Text>
                   </Box>
                 </Box>
               </Box>
             </Box>
 
-            {/* Card 2: PM workflow diagram — light green, top right */}
+            {/* Card 2: job workflow diagram — light green, top right */}
             <Box
               gridRow={{ lg: "1" }} gridColumn={{ lg: "2 / 4" }}
               bg="#D6EFE4" borderRadius="16px" p={7}
@@ -1583,21 +1071,22 @@ export default function LandingPage() {
 
               <Text fontSize="1.0625rem" fontWeight="700" color={INK}
                 letterSpacing="-0.015em" mb={1.5} fontFamily="var(--font-heading)">
-                PM workflow that runs itself
+                A workflow that keeps both sides aligned
               </Text>
               <Text fontSize="0.8125rem" color="#3D6B5A" lineHeight="1.65" mb={7} maxW="360px">
-                From brief submission to delivery approval, your PM manages the entire process. You watch the milestones tick. That's it.
+                From requirements to a signed-off rate to hours and payments — every job moves
+                through the same clear stages, visible to you and your client.
               </Text>
 
               {/* Flow diagram */}
               <Box overflowX="auto">
                 <Flex gap={2} align="center" minW="max-content">
                   {[
-                    { label: "Brief submitted", done: true  },
-                    { label: "PM reviews",      done: true  },
-                    { label: "Quote returned",  done: true  },
+                    { label: "Job created",     done: true  },
+                    { label: "Rate proposed",   done: true  },
+                    { label: "Rate agreed",     done: true  },
                     { label: "Work in progress", done: false, active: true },
-                    { label: "You approve",     done: false },
+                    { label: "Hours & payments logged", done: false },
                   ].map((step, i) => (
                     <Flex key={step.label} align="center" gap={2}>
                       <Flex
@@ -1637,7 +1126,7 @@ export default function LandingPage() {
               </Box>
             </Box>
 
-            {/* Card 3: built-in project intelligence — light blue */}
+            {/* Card 3: AI clarity on every job — light blue */}
             <Box
               gridRow={{ lg: "2" }} gridColumn={{ lg: "2" }}
               bg="#D9E8F5" borderRadius="16px" p={7}
@@ -1649,14 +1138,15 @@ export default function LandingPage() {
               </svg>
               <Text fontSize="1.0625rem" fontWeight="700" color={INK}
                 letterSpacing="-0.015em" mb={1.5} fontFamily="var(--font-heading)">
-                Built-in project intelligence
+                AI clarity on every job
               </Text>
               <Text fontSize="0.8125rem" color="#2A4D70" lineHeight="1.65" mb={6}>
-                Your brief history, PM notes, and past feedback build a growing context — every new project is scoped faster and more accurately.
+                Edit with AI rewrites requirements, chat messages, and to-dos using that job's
+                context — so nothing gets lost in translation between you and your client.
               </Text>
-              {/* Visual: stacked brief cards */}
+              {/* Visual: stacked AI rewrite examples */}
               <Flex gap={2} flexWrap="wrap">
-                {["Brief #1 — SaaS MVP", "Brief #4 — API integration", "Brief #7 — Mobile app"].map((b, i) => (
+                {["Requirement clarified", "Chat message tidied", "To-do simplified"].map((b, i) => (
                   <Box key={b} px={2.5} py={1.5} borderRadius="6px"
                     bg="white" boxShadow="0 1px 6px rgba(0,0,0,0.07)"
                     opacity={1 - i * 0.18}>
@@ -1666,7 +1156,7 @@ export default function LandingPage() {
               </Flex>
             </Box>
 
-            {/* Card 4: European PM team — light gray with photo backdrop */}
+            {/* Card 4: you keep the relationship — light gray with photo backdrop */}
             <Box
               gridRow={{ lg: "2" }} gridColumn={{ lg: "3" }}
               borderRadius="16px"
@@ -1687,14 +1177,15 @@ export default function LandingPage() {
               <Box position="relative" zIndex={1} p={7} display="flex" flexDirection="column" h="full">
                 <Text fontSize="1.0625rem" fontWeight="700" color={INK}
                   letterSpacing="-0.015em" mb={1.5} fontFamily="var(--font-heading)">
-                  European project management
+                  You keep the relationship
                 </Text>
                 <Text fontSize="0.8125rem" color={MUTED} lineHeight="1.65" mb={5} maxW="280px">
-                  Every Co-Helper project manager is based in Europe — with our team headquartered in Berlin. Same-timezone coordination and hands-on oversight on every delivery.
+                  No middleman, no platform cut, no borrowed client list. Co-Helper is a tool
+                  you use with the clients you already have — under your own brand.
                 </Text>
 
                 <Flex gap={2} mt="auto" flexWrap="wrap">
-                  {["Berlin HQ", "Europe-based PMs", "CET / CEST"].map((tag) => (
+                  {["Your clients", "Your rates", "Your brand"].map((tag) => (
                     <Box
                       key={tag}
                       px={2.5}
@@ -1727,7 +1218,7 @@ export default function LandingPage() {
             fontWeight="700" letterSpacing="-0.034em" mb={14}
             maxW="560px" fontFamily="var(--font-heading)"
           >
-            What sets Co-Helper apart from other dev options.
+            What sets Co-Helper apart from a pile of generic tools.
           </Heading>
 
           <Grid templateColumns={{ base: "1fr", sm: "repeat(2,1fr)", lg: "repeat(3,1fr)" }} gap={5}>
@@ -1751,7 +1242,7 @@ export default function LandingPage() {
         </Box>
       </Box>
 
-      {/* ══ § WORLD-CLASS TALENT ════════════════════════════════════════════ */}
+      {/* ══ § BUILT FOR ANY FREELANCE BUSINESS ══════════════════════════════ */}
       <Box py={{ base: 20, md: 28 }} bg={LIGHT} borderBottom={`1px solid ${RULE}`}>
         <Box maxW="1200px" mx="auto" px={{ base: 5, md: 8 }}>
           <Grid templateColumns={{ base: "1fr", lg: "1fr 1fr" }} gap={{ base: 12, lg: 20 }} alignItems="center">
@@ -1759,41 +1250,40 @@ export default function LandingPage() {
               <Text fontSize="0.7rem" fontWeight="700" color={GREEN}
                 letterSpacing="0.12em" textTransform="uppercase" mb={4}
                 fontFamily="var(--font-heading)">
-                Work with the best
+                Works for any discipline
               </Text>
               <Heading
                 fontSize={{ base: "1.875rem", md: "2.5rem" }}
                 fontWeight="700" letterSpacing="-0.034em" mb={5}
                 fontFamily="var(--font-heading)"
               >
-                Vetted developers setting a higher bar.
+                Built for how one-person businesses actually work.
               </Heading>
               <Text fontSize="0.9375rem" color={MUTED} lineHeight="1.8" mb={4}>
-                Work with screened full-stack engineers, mobile developers, automation specialists,
-                and e-commerce builders across four global regions.
+                Whether you bill by the hour or by the project, work with two clients or
+                twenty, Co-Helper adapts to your business — not the other way around.
               </Text>
               <Text fontSize="0.9375rem" color={MUTED} lineHeight="1.8" mb={8}>
-                Recruited through a structured screen — portfolio, test task, and reference review —
-                before they touch a client project. Every specialist is managed by a Co-Helper PM
-                who ensures quality, timelines, and communication on your behalf.
+                Set up your workspace once, invite companies as you take them on, and let AI and
+                built-in tracking handle the busywork around every job.
               </Text>
-              <Link to="/register" style={{ textDecoration: "none" }}>
+              <Link to="/partner/register" style={{ textDecoration: "none" }}>
                 <Box display="inline-flex" alignItems="center"
                   px={5} py="11px" borderRadius="6px" fontWeight="700" fontSize="0.875rem"
                   bg={AMBER} color={INK} border={`1px solid ${AMBER}`}
                   _hover={{ bg: AMBER_HOVER }} transition="all 0.15s">
-                  Post a project →
+                  Start your workspace →
                 </Box>
               </Link>
             </Box>
 
-            {/* Right: region grid */}
+            {/* Right: discipline grid */}
             <Grid templateColumns="repeat(2,1fr)" gap={4}>
               {[
-                { region: "Americas",     detail: "US & LATAM — same-day overlap",    note: "Shopify, dev, design" },
-                { region: "Europe",       detail: "EU & UK — full timezone coverage", note: "SEO, content, dev" },
-                { region: "Middle East",  detail: "Arabic & English specialists",      note: "Localisation, social" },
-                { region: "Asia-Pacific", detail: "24/7 development cycles",           note: "Dev, QA, automation" },
+                { region: "Web & software",      detail: "Dev, QA, and product work", note: "Hourly or fixed" },
+                { region: "Design & branding",    detail: "Identity, product, and UX", note: "Fixed-price projects" },
+                { region: "Marketing & growth",   detail: "SEO, ads, and content",     note: "Retainers or hourly" },
+                { region: "Consulting & coaching", detail: "Advisory and strategy",     note: "Hourly billing" },
               ].map((r) => (
                 <Box key={r.region} p={6} bg="white" borderRadius="12px"
                   border={`1px solid ${RULE}`}
@@ -1818,27 +1308,26 @@ export default function LandingPage() {
               <Text fontSize="0.7rem" fontWeight="700" color={G_ON_DARK}
                 letterSpacing="0.12em" textTransform="uppercase" mb={4}
                 fontFamily="var(--font-heading)">
-                Speed and scale on speed dial
+                Run your business, not your inbox
               </Text>
               <Heading
                 fontSize={{ base: "2rem", md: "2.75rem" }}
                 fontWeight="700" color="white" letterSpacing="-0.035em"
                 lineHeight="1.1" mb={5} fontFamily="var(--font-heading)"
               >
-                Your product deserves better than dev chaos.
+                Your client work deserves better than email and spreadsheets.
               </Heading>
               <Text fontSize="0.9375rem" color="rgba(255,255,255,0.5)"
                 lineHeight="1.8" mb={8} maxW="420px">
-                Founders, product teams, and growing companies use Co-Helper to ship software
-                without hiring overhead or freelancer roulette.
-                There&rsquo;s a better way — and it&rsquo;s not another agency or more contractors.
+                One-person businesses use Co-Helper to invite companies into a shared workspace — one
+                place for requirements, chat, rates, hours, and payments.
               </Text>
               <Flex gap={3} flexWrap="wrap">
-                <Link to="/register" style={{ textDecoration: "none" }}>
+                <Link to="/partner/register" style={{ textDecoration: "none" }}>
                   <Box px={5} py="11px" borderRadius="6px" fontWeight="700" fontSize="0.875rem"
                     bg={AMBER} color={INK} border={`1px solid ${AMBER}`}
                     _hover={{ bg: AMBER_HOVER }} transition="all 0.15s">
-                    Post a project →
+                    Start your workspace →
                   </Box>
                 </Link>
                 <Link to="/contact" style={{ textDecoration: "none" }}>
@@ -1847,13 +1336,13 @@ export default function LandingPage() {
                     border="1px solid rgba(255,255,255,0.22)"
                     _hover={{ bg: "rgba(255,255,255,0.06)", color: "white" }}
                     transition="all 0.15s">
-                    Book a callback
+                    Talk to us
                   </Box>
                 </Link>
               </Flex>
             </Box>
 
-            {/* Specialists card — light photo backdrop */}
+            {/* One-person business card — light photo backdrop */}
             <Box
               borderRadius="14px"
               position="relative"
@@ -1872,23 +1361,23 @@ export default function LandingPage() {
                 <Text fontSize="0.65rem" fontWeight="700" color={GREEN}
                   letterSpacing="0.12em" textTransform="uppercase" mb={4}
                   fontFamily="var(--font-heading)">
-                  For specialists
+                  For one-person businesses
                 </Text>
                 <Heading fontSize={{ base: "1.375rem", md: "1.5rem" }} fontWeight="700" color={INK}
                   letterSpacing="-0.025em" mb={4} fontFamily="var(--font-heading)" maxW="340px">
-                  Qualified briefs. Zero client chasing.
+                  Run your one-person business like a professional practice.
                 </Heading>
                 <Text fontSize="0.9375rem" color={MUTED}
                   lineHeight="1.78" mb={6} maxW="360px">
-                  Co-Helper PMs source and brief you directly. You focus entirely on delivery.
-                  We handle client communication, revisions, milestone tracking, and payment release.
+                  Invite the companies you work with, agree how you're paid, and let AI keep requirements,
+                  chat, and to-dos clear for both sides.
                 </Text>
                 <Stack gap={2.5} mb={7}>
                   {[
-                    "Pre-scoped briefs in your discipline",
-                    "PM manages all client communication",
-                    "Verified specialist profile and rating",
-                    "On-time payment — escrow-released",
+                    "Invite companies in seconds — no approval queue",
+                    "Edit with AI on every requirement, message, and to-do",
+                    "Hourly or fixed rate, agreed and on record",
+                    "Every hour and payment logged automatically",
                   ].map((item) => (
                     <Flex key={item} gap={2.5} align="flex-start">
                       <Box w="14px" h="14px" borderRadius="50%" flexShrink={0} mt="2px"
@@ -1909,7 +1398,7 @@ export default function LandingPage() {
                     bg={GREEN} color="white"
                     _hover={{ bg: "#0a5240" }}
                     transition="all 0.15s">
-                    Apply as a specialist →
+                    Start your workspace →
                   </Box>
                 </Link>
               </Box>
@@ -1919,57 +1408,6 @@ export default function LandingPage() {
       </Box>
 
       <MarketingFooter />
-
-      {/* ══ Mobile AI chat overlay ══════════════════════════════════════════ */}
-      {/* Floating button — mobile only */}
-      <Box
-        display={{ base: "flex", lg: "none" }}
-        position="fixed" bottom={5} left={4} right={4}
-        zIndex={50}
-        pointerEvents="none"
-      >
-        <Box
-          as="button"
-          w="full"
-          onClick={() => setMobileAiOpen(true)}
-          pointerEvents="auto"
-          bg={INK}
-          color="white"
-          borderRadius="16px"
-          px={5} py={4}
-          display="flex"
-          alignItems="center"
-          gap={3}
-          boxShadow="0 8px 32px rgba(0,0,0,0.28)"
-          border="1px solid rgba(255,255,255,0.12)"
-          cursor="pointer"
-          style={{ fontFamily: "inherit" }}
-        >
-          <Box
-            w="40px" h="40px" borderRadius="full" flexShrink={0}
-            overflow="hidden" border="2px solid rgba(255,255,255,0.35)"
-            boxShadow="0 2px 8px rgba(0,0,0,0.25)"
-          >
-            <img src={avatarSrc} alt="AI Project Manager"
-              style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top" }} />
-          </Box>
-          <Box flex={1} textAlign="left">
-            <Text fontSize="0.875rem" fontWeight="700" color="white" lineHeight="1.2">
-              AI Co-Helper
-            </Text>
-            <Text fontSize="0.75rem" color="rgba(255,255,255,0.55)">
-              Chat to build your brief →
-            </Text>
-          </Box>
-          <Box
-            w="6px" h="6px" borderRadius="full" bg="#4ADE80" flexShrink={0}
-            style={{ animation: "pulse 2s infinite" }}
-          />
-        </Box>
-      </Box>
-
-      {/* Full-screen mobile chat overlay */}
-      <MobileLandingChat isOpen={mobileAiOpen} onClose={() => setMobileAiOpen(false)} />
     </Box>
   )
 }

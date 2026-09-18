@@ -8,8 +8,11 @@ import {
   type InquiryStatus,
   type BusinessType,
 } from "../api/inquiries"
+import { getMe } from "../api/users"
+import { getMyWorkspace } from "../api/workspace"
 import { PageShell } from "@/components/ui/PageShell"
-import { InquiriesEmptyState } from "@/components/ui/FeatureEmptyState"
+import { ClientJobsEmptyState, FeatureEmptyState, InquiryMockup, StartWorkspaceEmptyState } from "@/components/ui/FeatureEmptyState"
+import { LuPlus } from "react-icons/lu"
 import {
   APP_BORDER,
   APP_BG_SUBTLE,
@@ -25,17 +28,18 @@ import {
 } from "@/components/ui/appUi"
 
 const STATUS_LABELS: Record<InquiryStatus, string> = {
-  pending: "Submitted",
-  matching: "Matching",
-  offered: "Offer received",
-  accepted: "Accepted",
-  in_progress: "In production",
-  delivered: "Delivered",
+  pending: "Requested",
+  matching: "Requested",
+  offered: "Requested",
+  accepted: "Doing",
+  in_progress: "Doing",
+  waiting: "Waiting",
+  delivered: "Done",
   escalated: "Escalated",
   cancelled: "Cancelled",
 }
 
-const ALL_STATUSES: InquiryStatus[] = ["pending", "matching", "offered", "accepted", "in_progress", "delivered", "escalated", "cancelled"]
+const ALL_STATUSES: InquiryStatus[] = ["pending", "matching", "offered", "accepted", "in_progress", "waiting", "delivered", "escalated", "cancelled"]
 
 export default function InquiriesListPage() {
   const [inquiries, setInquiries] = useState<Inquiry[]>([])
@@ -43,8 +47,24 @@ export default function InquiriesListPage() {
   const [error, setError] = useState<string | null>(null)
   const [filterStatus, setFilterStatus] = useState<InquiryStatus | "all">("all")
   const [filterType, setFilterType] = useState<BusinessType | "all">("all")
+  const [isFreelancer, setIsFreelancer] = useState(false)
+  const [invitedToWorkspace, setInvitedToWorkspace] = useState(false)
 
   const location = useLocation()
+
+  useEffect(() => {
+    getMe()
+      .then((me) => {
+        const freelancer = me.role === "expert"
+        setIsFreelancer(freelancer)
+        if (freelancer) return null
+        return getMyWorkspace()
+      })
+      .then((ws) => {
+        if (ws?.role === "client") setInvitedToWorkspace(ws.workspaces.length > 0)
+      })
+      .catch(() => null)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -75,8 +95,8 @@ export default function InquiriesListPage() {
 
   return (
     <PageShell
-      eyebrow="Marketplace"
-      title="My inquiries"
+      eyebrow="Jobs"
+      title="My jobs"
       subtitle={loading ? undefined : `${inquiries.length} total`}
       action={
         <Link to="/app/inquiries/new" style={{ textDecoration: "none" }}>
@@ -86,7 +106,7 @@ export default function InquiriesListPage() {
             borderRadius="8px" border="1px solid rgba(255,255,255,0.25)"
             _hover={{ bg: "rgba(255,255,255,0.2)" }}
           >
-            New inquiry
+            New job
           </Button>
         </Link>
       }
@@ -105,7 +125,35 @@ export default function InquiriesListPage() {
       )}
 
       {!loading && !error && inquiries.length === 0 && (
-        <InquiriesEmptyState />
+        isFreelancer ? (
+          <FeatureEmptyState
+            title="Import a Trello board or open a job"
+            bullets={[
+              "Connect Trello and turn each column into a project",
+              "Cards become jobs; checklists and comments become to-dos",
+              "Invite a company so they can follow the work",
+            ]}
+            cta={
+              <Box display="flex" gap={2} flexWrap="wrap">
+                <Link to="/app/trello" style={{ textDecoration: "none" }}>
+                  <Button {...APP_BTN_PRIMARY} size="md" h="42px" px={6} fontSize="0.9375rem">
+                    Connect Trello
+                  </Button>
+                </Link>
+                <Link to="/app/inquiries/new" style={{ textDecoration: "none" }}>
+                  <Button variant="outline" size="md" h="42px" px={6} borderColor={APP_BORDER}>
+                    <LuPlus size={16} /> New job
+                  </Button>
+                </Link>
+              </Box>
+            }
+            mockup={<InquiryMockup />}
+          />
+        ) : invitedToWorkspace ? (
+          <ClientJobsEmptyState />
+        ) : (
+          <StartWorkspaceEmptyState />
+        )
       )}
 
       {!loading && !error && inquiries.length > 0 && (
@@ -180,7 +228,7 @@ export default function InquiriesListPage() {
                     {inq.title}
                   </Text>
                   <Box display="flex" alignItems="center" gap={2} mt={1} flexWrap="wrap">
-                    <Text fontSize="0.75rem" color={APP_LABEL}>{inq.category?.name ?? "—"}</Text>
+                    <Text fontSize="0.75rem" color={APP_LABEL}>{inq.project?.name ?? inq.category?.name ?? "—"}</Text>
                     <Text fontSize="0.75rem" color={APP_LABEL}>·</Text>
                     <Text fontSize="0.75rem" color={APP_LABEL}>
                       {new Date(inq.createdAt).toLocaleDateString("tr-TR")}

@@ -3,16 +3,19 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node --watch src/index.js",
-    "start": "node src/index.js"
+    "dev": "/bin/sh src/scripts/run-node.sh --watch src/index.js",
+    "start": "/bin/sh src/scripts/run-node.sh src/index.js",
+    "db:setup": "/bin/sh src/scripts/db-setup.sh"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.106.1",
+    "@aws-sdk/client-s3": "^3.901.0",
+    "@aws-sdk/s3-request-presigner": "^3.901.0",
+    "@google/generative-ai": "^0.24.1",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^4.21.2",
     "firebase-admin": "^13.10.0",
     "jose": "^6.2.3",
-    "ws": "^8.21.0"
+    "pg": "^8.16.3"
   }
 }

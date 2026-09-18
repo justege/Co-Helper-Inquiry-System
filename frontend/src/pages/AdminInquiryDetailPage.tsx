@@ -92,6 +92,7 @@ const INQUIRY_STATUS: Record<string, { bg: string; color: string; label: string 
   offered:     { bg: "#F0FAF5", color: "#1E40AF", label: "Offered" },
   accepted:    { bg: "#ECFDF5", color: "#065F46", label: "Accepted" },
   in_progress: { bg: "#F0FDF4", color: "#15803D", label: "In Production" },
+  waiting:     { bg: "#FFFBEB", color: "#B45309", label: "Waiting" },
   delivered:   { bg: "#DCFCE7", color: "#166534", label: "Delivered" },
   escalated:   { bg: "#FFFBEB", color: "#B45309", label: "Escalated" },
   cancelled:   { bg: "#FEF2F2", color: "#991B1B", label: "Cancelled" },

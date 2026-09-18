@@ -33,7 +33,7 @@ export const FOOTER_LINKS: { label: string; items: FooterLink[] }[] = [
       { label: "Help Center", to: "/help" },
       { label: "Contact", to: "/contact" },
       { label: "Status", to: "/status" },
-      { label: "Partners", to: "/partners" },
+      { label: "For one-person businesses", to: "/partners" },
     ],
   },
 ]

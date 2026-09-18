@@ -1,5 +1,5 @@
 import { Router } from "express";
-import supabase from "../db.js";
+import { query, queryOne, execute, buildSet } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { isSuperadmin } from "../middleware/requireRole.js";
 
@@ -9,85 +9,69 @@ function slugify(name) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
-// ── GET /api/categories ── (any authenticated user) ────────────────────────────
 router.get("/", requireAuth, async (req, res) => {
   const { type } = req.query;
   const VALID_TYPES = ["service", "tool_sourcing"];
-
-  let query = supabase.from("categories").select("*").order("name");
-  if (type && VALID_TYPES.includes(type)) query = query.eq("type", type);
-
-  const { data, error } = await query;
-  if (error) return res.status(500).json({ error: error.message });
-  res.json(data);
+  try {
+    const rows = type && VALID_TYPES.includes(type)
+      ? await query("SELECT * FROM categories WHERE type = $1 ORDER BY name", [type])
+      : await query("SELECT * FROM categories ORDER BY name");
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// ── GET /api/categories/:id ── (any authenticated user) ───────────────────────
 router.get("/:id", requireAuth, async (req, res) => {
-  const { data, error } = await supabase
-    .from("categories")
-    .select("*")
-    .eq("id", req.params.id)
-    .single();
-  if (error) return res.status(404).json({ error: "Category not found" });
+  const data = await queryOne("SELECT * FROM categories WHERE id = $1", [req.params.id]);
+  if (!data) return res.status(404).json({ error: "Category not found" });
   res.json(data);
 });
 
-// ── POST /api/categories ── (superadmin only) ──────────────────────────────────
 router.post("/", requireAuth, ...isSuperadmin, async (req, res) => {
   const { name, type = "service", description } = req.body ?? {};
   if (!name?.trim()) return res.status(400).json({ error: "name is required" });
   const VALID_TYPES = ["service", "tool_sourcing"];
   if (!VALID_TYPES.includes(type)) return res.status(400).json({ error: "type must be service or tool_sourcing" });
-
-  const { data, error } = await supabase
-    .from("categories")
-    .insert({
-      name: name.trim(),
-      slug: slugify(name.trim()),
-      type,
-      description: description?.trim() || null,
-      created_by: req.dbUser.id,
-    })
-    .select()
-    .single();
-
-  if (error) return res.status(500).json({ error: error.message });
-  res.status(201).json(data);
+  try {
+    const data = await queryOne(
+      `INSERT INTO categories (name, slug, type, description, created_by)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [name.trim(), slugify(name.trim()), type, description?.trim() || null, req.dbUser.id]
+    );
+    res.status(201).json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// ── PUT /api/categories/:id ── (superadmin only) ───────────────────────────────
 router.put("/:id", requireAuth, ...isSuperadmin, async (req, res) => {
   const { name, type, description } = req.body ?? {};
   const VALID_TYPES = ["service", "tool_sourcing"];
-  const updates = {};
+  const fields = {};
   if (name?.trim()) {
-    updates.name = name.trim();
-    updates.slug = slugify(name.trim());
+    fields.name = name.trim();
+    fields.slug = slugify(name.trim());
   }
-  if (type && VALID_TYPES.includes(type)) updates.type = type;
-  if (description !== undefined) updates.description = description?.trim() || null;
-
-  const { data, error } = await supabase
-    .from("categories")
-    .update(updates)
-    .eq("id", req.params.id)
-    .select()
-    .single();
-
-  if (error) return res.status(500).json({ error: error.message });
-  res.json(data);
+  if (type && VALID_TYPES.includes(type)) fields.type = type;
+  if (description !== undefined) fields.description = description?.trim() || null;
+  const { set, values, next } = buildSet(fields);
+  if (!set) return res.status(400).json({ error: "Nothing to update" });
+  try {
+    const data = await queryOne(`UPDATE categories SET ${set} WHERE id = $${next} RETURNING *`, [...values, req.params.id]);
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// ── DELETE /api/categories/:id ── (superadmin only) ───────────────────────────
 router.delete("/:id", requireAuth, ...isSuperadmin, async (req, res) => {
-  const { error } = await supabase
-    .from("categories")
-    .delete()
-    .eq("id", req.params.id);
-
-  if (error) return res.status(500).json({ error: error.message });
-  res.status(204).send();
+  try {
+    await execute("DELETE FROM categories WHERE id = $1", [req.params.id]);
+    res.status(204).send();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 export default router;

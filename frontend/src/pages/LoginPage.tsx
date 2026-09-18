@@ -1,4 +1,4 @@
-import { useNavigate, Link } from "react-router-dom"
+import { useNavigate, useSearchParams, Link } from "react-router-dom"
 import { Box, Button, Text, VStack } from "@chakra-ui/react"
 import { useForm } from "react-hook-form"
 import { Field } from "@/components/ui/field"
@@ -8,6 +8,7 @@ import { AuthShell } from "@/components/auth/AuthShell"
 import { AuthDivider, SocialAuthButtons } from "@/components/auth/SocialAuthButtons"
 import { authFieldLabel, authInputProps, authPrimaryButtonProps } from "@/components/auth/authStyles"
 import { useAuthContext } from "../components/auth/AuthContext"
+import { acceptInvite } from "@/api/workspace"
 import loginPng from "@/assets/login.png"
 
 type LoginFields = { email: string; password: string }
@@ -15,6 +16,8 @@ type LoginFields = { email: string; password: string }
 export default function LoginPage() {
   const { loginWithEmail, loginWithGoogle } = useAuthContext()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const invite = searchParams.get("invite")
 
   const {
     register,
@@ -23,10 +26,17 @@ export default function LoginPage() {
     formState: { errors, isSubmitting },
   } = useForm<LoginFields>()
 
+  async function afterAuth() {
+    if (invite) {
+      try { await acceptInvite(invite) } catch { /* invite may already be accepted */ }
+    }
+    navigate("/app/board", { replace: true })
+  }
+
   async function onSubmit(data: LoginFields) {
     try {
       await loginWithEmail(data.email, data.password)
-      navigate("/app/dashboard", { replace: true })
+      await afterAuth()
     } catch (err: unknown) {
       setError("root", { message: err instanceof Error ? err.message : "Login failed" })
     }
@@ -35,7 +45,7 @@ export default function LoginPage() {
   async function handleGoogle() {
     try {
       await loginWithGoogle()
-      navigate("/app/dashboard", { replace: true })
+      await afterAuth()
     } catch (err: unknown) {
       setError("root", { message: err instanceof Error ? err.message : "Google login failed" })
     }
@@ -44,9 +54,9 @@ export default function LoginPage() {
   return (
     <AuthShell
       title="Sign in"
-      subtitle="Welcome back to Co-Helper."
+      subtitle="See your jobs, agreed rates, and payments — all in one workspace."
       promo={{
-        tagline: "Outsource digital work with a project manager who delivers.",
+        tagline: "You were invited here — every job, rate, and payment, in one place.",
         imageSrc: loginPng,
       }}
       footer={
@@ -55,9 +65,21 @@ export default function LoginPage() {
           <Link to="/register" style={{ color: "#0F6E56", fontWeight: "700" }}>
             Create one
           </Link>
+          {" · "}
+          <Link to="/partner/login" style={{ color: "#64748B", fontWeight: "600" }}>
+            Run a one-person business?
+          </Link>
         </>
       }
     >
+      {invite && (
+        <Box bg="#F0FAF5" border="1px solid #A7D7C5" rounded="10px" px={4} py={3} mb={5}>
+          <Text fontSize="0.8125rem" color="#0F6E56" fontWeight="600">
+            Sign in to accept your workspace invitation.
+          </Text>
+        </Box>
+      )}
+
       {errors.root && (
         <Box bg="#FEF2F2" border="1px solid #FECACA" rounded="10px" px={4} py={3} mb={5}>
           <Text fontSize="sm" color="#B91C1C">{errors.root.message}</Text>

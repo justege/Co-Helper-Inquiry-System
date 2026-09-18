@@ -500,9 +500,9 @@ export default function PartnerServicesPage() {
 
   return (
     <PageShell
-      eyebrow="Partner Profile"
+      eyebrow="Workspace"
       title="My Services"
-      subtitle="Showcase your capabilities, pricing and company documents to potential clients."
+      subtitle="What you offer the companies you work with — not a public marketplace catalogue."
     >
       <Grid templateColumns={{ base: "1fr", lg: "1fr 360px" }} gap={4} alignItems="start">
         {/* Left — services list */}

@@ -52,7 +52,7 @@ export function AnnounceBar() {
           flexWrap="wrap"
         >
           <Text fontSize="0.8125rem" color="rgba(255,255,255,0.78)" fontWeight="500">
-            Digital services specialist?
+            One-person business?
           </Text>
           <Text
             fontSize="0.8125rem"
@@ -61,7 +61,7 @@ export function AnnounceBar() {
             letterSpacing="0.01em"
             fontFamily="var(--font-heading)"
           >
-            Apply as Expert / Partner →
+            Start your workspace →
           </Text>
         </Flex>
       </Box>
@@ -191,7 +191,7 @@ export function MarketingNav() {
         <Logo />
         <Flex align="center" gap={2}>
           <CTA to="/login" variant="ghost">Sign in</CTA>
-          <CTA to="/register" variant="navy">Get started</CTA>
+          <CTA to="/partner/register" variant="navy">Start workspace</CTA>
         </Flex>
       </Flex>
     </Box>
@@ -220,10 +220,10 @@ export function MarketingFooter() {
             <Box maxW="300px">
               <Logo />
               <Text fontSize="0.875rem" color={MUTED} mt={4} lineHeight="1.75">
-                The managed platform for software development — one PM, fixed quotes, and vetted developers on every build.
+                The shared workspace between a one-person business and the companies they work with — jobs, AI-clarified briefs, rates, hours, and payment logs.
               </Text>
               <Flex gap={2} mt={6} flexWrap="wrap">
-                {["50+ Dev Services", "500+ Specialists", "Berlin HQ"].map((b) => (
+                {["Invite clients", "Edit with AI", "Track hours"].map((b) => (
                   <Box
                     key={b}
                     px={3}
@@ -285,7 +285,7 @@ export function MarketingFooter() {
               © {new Date().getFullYear()} Co-Helper. All rights reserved.
             </Text>
             <Text fontSize="0.8125rem" color={MUTED} fontWeight="500">
-              Berlin · Remote-first · PM-led dev delivery
+              Berlin · Remote-first · One-person businesses
             </Text>
           </Flex>
         </Box>
@@ -298,6 +298,7 @@ export function MarketingFooter() {
 export function PageHero({
   label,
   title,
+  
   subtitle,
 }: {
   label?: string

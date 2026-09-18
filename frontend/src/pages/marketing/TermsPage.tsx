@@ -7,7 +7,7 @@ export default function TermsPage() {
       <PageHero
         label="Legal"
         title="Terms of Service"
-        subtitle="Last updated: May 2026"
+        subtitle="Last updated: September 2026"
       />
 
       <ContentSection narrow>
@@ -15,55 +15,62 @@ export default function TermsPage() {
           <h2>1. Agreement</h2>
           <p>
             By accessing or using Co-Helper, you agree to these Terms of Service. If you do not agree,
-            you may not use the platform.
+            you may not use the service.
           </p>
 
-          <h2>2. Platform description</h2>
+          <h2>2. What Co-Helper is</h2>
           <p>
-            Co-Helper is a digital services outsourcing platform that connects clients with verified
-            specialists worldwide. Each project is assigned a dedicated project manager who coordinates
-            delivery. We facilitate project briefs, milestone tracking, and deliverable management. We are
-            not a party to transactions between clients and specialists unless explicitly stated.
+            Co-Helper is software for a workspace owned by a one-person business. You invite the companies
+            you already work with and run jobs (inquiries) with shared requirements, chat, to-dos, rate
+            agreements, time logs, and payment records. We do not match companies with operators, assign a
+            project manager, hold escrow, or process payments. We are not a party to the commercial
+            relationship between a one-person business and a company.
           </p>
 
           <h2>3. Account registration</h2>
           <p>
-            You must provide accurate information when creating an account. You are responsible for maintaining
-            the confidentiality of your credentials and for all activity under your account.
+            You must provide accurate information when creating an account. One-person business accounts use
+            the workspace sign-up path. Companies typically join with an invite token. You are responsible for
+            keeping your credentials confidential and for activity under your account.
           </p>
 
-          <h2>4. Client obligations</h2>
+          <h2>4. Company obligations</h2>
           <ul>
-            <li>Provide accurate and complete project specifications</li>
-            <li>Respond to your project manager in a timely manner</li>
-            <li>Honour accepted proposals according to agreed terms</li>
-            <li>Not use the platform for unlawful or fraudulent purposes</li>
+            <li>Use an invite from a one-person business you know, or only open jobs inside a workspace you belong to</li>
+            <li>Keep briefs, chat, and documents accurate for the other party</li>
+            <li>Honour rates you agree inside the workspace; payment still happens off-platform</li>
+            <li>Not use the service for unlawful or fraudulent purposes</li>
           </ul>
 
-          <h2>5. Specialist obligations</h2>
+          <h2>5. One-person business obligations</h2>
           <ul>
-            <li>Maintain accurate profiles and capability listings</li>
-            <li>Deliver work according to agreed specifications and timelines</li>
-            <li>Communicate through assigned project managers as required</li>
-            <li>Maintain professional standards and confidentiality</li>
+            <li>Invite only companies you intend to work with</li>
+            <li>Keep services, jobs, hours, and payment logs accurate</li>
+            <li>Use optional integrations (such as Trello) only with accounts you are authorized to connect</li>
+            <li>Not use Edit with AI to generate unlawful, deceptive, or infringing content</li>
           </ul>
 
-          <h2>6. Fees</h2>
+          <h2>6. Fees and payments</h2>
           <p>
-            Client accounts are free. Specialists may be charged a success fee on completed projects as described on
-            our Pricing page. Enterprise plans are governed by separate agreements.
+            The workspace is $9 USD per month until 31 December 2026, then $49 USD per month with no discount,
+            as described on the Pricing page. There is no other plan. Payment records in Co-Helper are logs
+            only. You remain responsible for invoicing, tax, and transferring money outside the product.
+            Companies invited into a workspace do not pay Co-Helper.
           </p>
 
           <h2>7. Intellectual property</h2>
           <p>
-            The Co-Helper platform, branding, and software are owned by Co-Helper. Users retain ownership
-            of content they upload but grant us a licence to use it for platform operations.
+            The Co-Helper product, branding, and software are owned by Co-Helper. You retain ownership of
+            content you upload (briefs, files, messages) and grant us a licence to host and display it as
+            needed to operate the workspace, including sending text you choose to our AI provider when you
+            use Edit with AI.
           </p>
 
           <h2>8. Limitation of liability</h2>
           <p>
             Co-Helper is provided "as is". We do not guarantee the quality, delivery, or performance of any
-            specialist. Our liability is limited to the maximum extent permitted by applicable law.
+            one-person business or company, and we do not guarantee that recorded payments were actually made. Our
+            liability is limited to the maximum extent permitted by applicable law.
           </p>
 
           <h2>9. Termination</h2>

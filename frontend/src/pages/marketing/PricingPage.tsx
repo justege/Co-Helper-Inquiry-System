@@ -3,52 +3,15 @@ import MarketingLayout from "@/components/marketing/MarketingLayout"
 import { ContentSection, CTA, PageHero } from "@/components/marketing/MarketingUI"
 import { INK, MUTED, RULE, SURFACE } from "@/components/marketing/tokens"
 
-const PLANS = [
-  {
-    name: "Client",
-    price: "Free",
-    period: "Pay per project only",
-    description: "For teams outsourcing software development, MVPs, and digital builds.",
-    features: [
-      "Unlimited project briefs",
-      "Dedicated PM on every build",
-      "Fixed quote before work starts",
-      "Escrow-protected milestones",
-      "Multi-user team access",
-    ],
-    cta: { to: "/register", label: "Post a project", variant: "primary" as const },
-    highlighted: true,
-  },
-  {
-    name: "Specialist",
-    price: "Success-based",
-    period: "Per completed project",
-    description: "For verified developers, mobile engineers, and automation specialists.",
-    features: [
-      "Pre-scoped dev briefs in your stack",
-      "Co-Helper PM handles client communication",
-      "Verified specialist badge",
-      "Service catalogue publishing",
-      "No subscription required to start",
-    ],
-    cta: { to: "/partners", label: "Apply as developer", variant: "outline" as const },
-    highlighted: false,
-  },
-  {
-    name: "Enterprise",
-    price: "Custom",
-    period: "Annual contract",
-    description: "For organisations with ongoing dev capacity needs and volume requirements.",
-    features: [
-      "Dedicated account manager",
-      "Custom approval workflows",
-      "API access & integrations",
-      "Priority developer matching",
-      "SLA-backed delivery guarantees",
-    ],
-    cta: { to: "/contact", label: "Book a callback", variant: "outline" as const },
-    highlighted: false,
-  },
+const FEATURES = [
+  "Private workspace you own",
+  "Invite the companies you already work with",
+  "Jobs, chat, to-dos, and documents",
+  "Edit with AI on the job",
+  "Hourly or project rates, hours, and payment logs",
+  "Trello import included",
+  "Companies you invite join at no extra cost",
+  "No commission, no escrow, no matching fees",
 ]
 
 export default function PricingPage() {
@@ -57,60 +20,95 @@ export default function PricingPage() {
       <PageHero
         label="Platform"
         title="Pricing"
-        subtitle="No client platform fees. Every project gets a fixed quote upfront — you pay only for scoped work, protected by escrow."
+        subtitle="One plan. $9 per month until 31 December 2026, then $49 per month — with no discount after that."
       />
 
       <ContentSection>
-        <Grid templateColumns={{ base: "1fr", md: "repeat(3,1fr)" }} gap={6} mb={16}>
-          {PLANS.map((plan) => (
-            <Box
-              key={plan.name}
-              p={8}
-              bg={plan.highlighted ? INK : "white"}
-              color={plan.highlighted ? "white" : INK}
-              borderRadius="8px"
-              border={`1px solid ${plan.highlighted ? INK : RULE}`}
-            >
-              <Text fontSize="0.75rem" fontWeight="600" letterSpacing="0.08em" textTransform="uppercase"
-                color={plan.highlighted ? "rgba(255,255,255,0.6)" : MUTED} mb={3}>
-                {plan.name}
-              </Text>
-              <Heading fontSize="2rem" fontWeight="700" letterSpacing="-0.03em" mb={1}>{plan.price}</Heading>
-              <Text fontSize="0.8125rem" color={plan.highlighted ? "rgba(255,255,255,0.55)" : MUTED} mb={5}>{plan.period}</Text>
-              <Text fontSize="0.875rem" color={plan.highlighted ? "rgba(255,255,255,0.72)" : MUTED} lineHeight="1.65" mb={6}>
-                {plan.description}
-              </Text>
-              <Stack gap={2.5} mb={8}>
-                {plan.features.map((f) => (
-                  <Text key={f} fontSize="0.875rem" fontWeight="500"
-                    color={plan.highlighted ? "rgba(255,255,255,0.9)" : INK}>
-                    {f}
-                  </Text>
-                ))}
-              </Stack>
-              <CTA to={plan.cta.to} variant={plan.highlighted ? "white" : plan.cta.variant}>{plan.cta.label}</CTA>
+        <Grid templateColumns={{ base: "1fr", lg: "1.1fr 0.9fr" }} gap={8} mb={16} alignItems="stretch">
+          <Box p={{ base: 8, md: 10 }} bg={INK} color="white" borderRadius="8px" border={`1px solid ${INK}`}>
+            <Text fontSize="0.75rem" fontWeight="600" letterSpacing="0.08em" textTransform="uppercase"
+              color="rgba(255,255,255,0.6)" mb={3}>
+              Workspace
+            </Text>
+            <Box display="flex" alignItems="baseline" gap={2} mb={1} flexWrap="wrap">
+              <Heading fontSize="3rem" fontWeight="700" letterSpacing="-0.04em" lineHeight="1">$9</Heading>
+              <Text fontSize="1rem" color="rgba(255,255,255,0.55)">USD / month</Text>
             </Box>
-          ))}
+            <Text fontSize="0.875rem" color="rgba(255,255,255,0.72)" mb={2}>
+              Early price through 31 December 2026
+            </Text>
+            <Text fontSize="0.9375rem" color="rgba(255,255,255,0.78)" lineHeight="1.7" mb={8}>
+              For one-person businesses and the companies they work with. After 31.12.2026 the price is
+              $49 USD per month, with no discount.
+            </Text>
+            <Stack gap={2.5} mb={8}>
+              {FEATURES.map((f) => (
+                <Text key={f} fontSize="0.875rem" fontWeight="500" color="rgba(255,255,255,0.9)">
+                  {f}
+                </Text>
+              ))}
+            </Stack>
+            <CTA to="/partner/register" variant="white">Start your workspace</CTA>
+          </Box>
+
+          <Stack gap={6}>
+            <Box p={8} bg="white" borderRadius="8px" border={`1px solid ${RULE}`}>
+              <Text fontSize="0.75rem" fontWeight="600" letterSpacing="0.08em" textTransform="uppercase" color={MUTED} mb={3}>
+                From 1 January 2027
+              </Text>
+              <Heading fontSize="2rem" fontWeight="700" letterSpacing="-0.03em" color={INK} mb={1}>$49</Heading>
+              <Text fontSize="0.8125rem" color={MUTED} mb={4}>USD / month · no discount</Text>
+              <Text fontSize="0.875rem" color={MUTED} lineHeight="1.7">
+                The same workspace. The early $9 rate ends on 31 December 2026. There is no other plan,
+                no annual coupon, and no marketplace cut.
+              </Text>
+            </Box>
+            <Box p={8} bg={SURFACE} borderRadius="8px" border={`1px solid ${RULE}`}>
+              <Text fontSize="0.75rem" fontWeight="600" letterSpacing="0.08em" textTransform="uppercase" color={MUTED} mb={3}>
+                For companies
+              </Text>
+              <Heading fontSize="1.25rem" fontWeight="600" letterSpacing="-0.02em" color={INK} mb={3}>
+                Join with an invite — no extra fee
+              </Heading>
+              <Text fontSize="0.875rem" color={MUTED} lineHeight="1.7" mb={6}>
+                The companies you work with see only the jobs you share: brief, chat, rates, hours, and
+                payment logs. They do not pay Co-Helper.
+              </Text>
+              <CTA to="/login" variant="outline">I have an invite</CTA>
+            </Box>
+          </Stack>
         </Grid>
 
         <Box p={8} bg={SURFACE} borderRadius="8px" border={`1px solid ${RULE}`}>
           <Heading fontSize="1.0625rem" fontWeight="600" color={INK} mb={4}>Frequently asked questions</Heading>
           <Grid templateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={8}>
             <Box>
-              <Text fontSize="0.875rem" fontWeight="600" color={INK} mb={2}>Is there a fee for clients?</Text>
-              <Text fontSize="0.875rem" color={MUTED} lineHeight="1.65">No. Clients post projects, receive fixed quotes, and pay only for approved deliverables — with no platform commission.</Text>
+              <Text fontSize="0.875rem" fontWeight="600" color={INK} mb={2}>Is there anything else to pay?</Text>
+              <Text fontSize="0.875rem" color={MUTED} lineHeight="1.65">
+                No. $9/month until 31 December 2026, then $49/month. No commission, no usage fees, no
+                add-ons. Invited companies do not pay.
+              </Text>
             </Box>
             <Box>
-              <Text fontSize="0.875rem" fontWeight="600" color={INK} mb={2}>How is pricing determined?</Text>
-              <Text fontSize="0.875rem" color={MUTED} lineHeight="1.65">Your PM scopes the work and returns a fixed quote with a committed delivery date — before any development starts.</Text>
+              <Text fontSize="0.875rem" fontWeight="600" color={INK} mb={2}>Do you process payments?</Text>
+              <Text fontSize="0.875rem" color={MUTED} lineHeight="1.65">
+                No. You record what was agreed and what was paid. Money still moves the way you already
+                work — invoice, transfer, cash.
+              </Text>
             </Box>
             <Box>
-              <Text fontSize="0.875rem" fontWeight="600" color={INK} mb={2}>Do I get a project manager?</Text>
-              <Text fontSize="0.875rem" color={MUTED} lineHeight="1.65">Yes. Every project is assigned a dedicated Co-Helper PM who coordinates developers and keeps you updated through one platform.</Text>
+              <Text fontSize="0.875rem" fontWeight="600" color={INK} mb={2}>Is this a marketplace?</Text>
+              <Text fontSize="0.875rem" color={MUTED} lineHeight="1.65">
+                No. Co-Helper does not match you with strangers or take a cut of jobs. You invite the
+                companies you already work with.
+              </Text>
             </Box>
             <Box>
-              <Text fontSize="0.875rem" fontWeight="600" color={INK} mb={2}>Can I upgrade to Enterprise later?</Text>
-              <Text fontSize="0.875rem" color={MUTED} lineHeight="1.65">Yes. Contact our team when your dev volume, SLA requirements, or integration needs grow.</Text>
+              <Text fontSize="0.875rem" fontWeight="600" color={INK} mb={2}>What about Trello and AI?</Text>
+              <Text fontSize="0.875rem" color={MUTED} lineHeight="1.65">
+                Trello import and Edit with AI are included. AI uses your job context on our servers; we
+                don’t expose the API key to the browser.
+              </Text>
             </Box>
           </Grid>
         </Box>

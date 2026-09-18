@@ -4,7 +4,7 @@ import { useAuthContext } from "../components/auth/AuthContext"
 import { getMe, type User } from "../api/users"
 import { useEffect, useState } from "react"
 import {
-  LuLayoutDashboard,
+  LuColumns3,
   LuPenLine,
   LuInbox,
   LuUser,
@@ -14,6 +14,7 @@ import {
   LuClipboardList,
   LuUsers,
   LuSlidersHorizontal,
+  LuWallet,
 } from "react-icons/lu"
 import type { IconType } from "react-icons"
 
@@ -37,14 +38,21 @@ interface NavItem {
 const sections: { label: string; items: NavItem[] }[] = [
   {
     label: "Overview",
-    items: [{ to: "/app/dashboard", icon: LuLayoutDashboard, label: "Dashboard" }],
+    items: [{ to: "/app/board", icon: LuColumns3, label: "Board" }],
   },
   {
-    label: "Marketplace",
+    label: "Jobs",
     items: [
-      { to: "/app/inquiries/new", icon: LuPenLine, label: "New Inquiry", clientOnly: true },
-      { to: "/app/inquiries", icon: LuInbox, label: "My Inquiries", clientOnly: true },
+      { to: "/app/inquiries/new", icon: LuPenLine, label: "New Job" },
+      { to: "/app/inquiries", icon: LuInbox, label: "My Jobs" },
       { to: "/app/partner-services", icon: LuShieldCheck, label: "My Services", partnerOnly: true },
+    ],
+  },
+  {
+    label: "Workspace",
+    items: [
+      { to: "/app/clients", icon: LuUsers, label: "Companies", partnerOnly: true },
+      { to: "/app/finance", icon: LuWallet, label: "Finance" },
     ],
   },
   {
@@ -58,7 +66,7 @@ const sections: { label: string; items: NavItem[] }[] = [
     label: "Administration",
     items: [
       { to: "/app/admin/inquiries", icon: LuClipboardList,    label: "Inquiry Dashboard", adminOnly: true },
-      { to: "/app/admin/experts",   icon: LuUsers,            label: "Partners",      adminOnly: true },
+      { to: "/app/admin/experts",   icon: LuUsers,            label: "Businesses",   adminOnly: true },
       { to: "/app/admin",           icon: LuSlidersHorizontal, label: "Control Panel", adminOnly: true },
     ],
   },
@@ -67,12 +75,10 @@ const sections: { label: string; items: NavItem[] }[] = [
 // ── Mobile bottom nav (5 items max) ─────────────────────────────────────────
 
 const mobileNav: (NavItem & { emphasis?: boolean })[] = [
-  { to: "/app/dashboard",     icon: LuLayoutDashboard, label: "Home" },
-  { to: "/app/inquiries",     icon: LuInbox,           label: "Inquiries", clientOnly: true },
-  { to: "/app/inquiries/new", icon: LuPenLine,         label: "New", emphasis: true, clientOnly: true },
-  { to: "/app/partner-services", icon: LuShieldCheck,  label: "Services", partnerOnly: true },
-  { to: "/app/settings",       icon: LuSettings,        label: "Settings" },
-  { to: "/app/profile",       icon: LuUser,            label: "Profile" },
+  { to: "/app/board",         icon: LuColumns3, label: "Board" },
+  { to: "/app/inquiries",     icon: LuInbox,    label: "Jobs" },
+  { to: "/app/inquiries/new", icon: LuPenLine,  label: "New", emphasis: true },
+  { to: "/app/settings",      icon: LuSettings, label: "Settings" },
 ]
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -279,7 +285,7 @@ export default function ProtectedLayout() {
 function SidebarItem({ item }: { item: NavItem }) {
   const Icon = item.icon
   return (
-    <NavLink to={item.to} end={item.to === "/app/inquiries" || item.to === "/app/admin"}>
+    <NavLink to={item.to} end={item.to === "/app/inquiries" || item.to === "/app/board" || item.to === "/app/admin"}>
       {({ isActive }: { isActive: boolean }) => (
         <Box
           as="span"
@@ -327,7 +333,7 @@ function SidebarItem({ item }: { item: NavItem }) {
 function MobileNavItem({ item }: { item: NavItem & { emphasis?: boolean } }) {
   const Icon = item.icon
   return (
-    <NavLink to={item.to} end={item.to === "/app/inquiries"} style={{ flex: 1 }}>
+    <NavLink to={item.to} end={item.to === "/app/inquiries" || item.to === "/app/board"} style={{ flex: 1 }}>
       {({ isActive }: { isActive: boolean }) => (
         <Box
           as="span"

@@ -23,16 +23,20 @@ import { auth } from "../lib/firebase"
 import { api } from "../lib/api"
 import type { CreateInquiryInput, Inquiry, BusinessType, Urgency } from "../api/inquiries"
 import { getCategories, type Category } from "../api/categories"
+import { getMe } from "../api/users"
+import { getMyWorkspace, type FreelancerWorkspaceMe, type ClientWorkspaceMe } from "../api/workspace"
 import {
   APP_BORDER,
   APP_BG_SUBTLE,
   APP_BTN_PRIMARY,
   APP_LABEL,
 } from "@/components/ui/appUi"
+import { StartWorkspaceEmptyState } from "@/components/ui/FeatureEmptyState"
 import AiInquiryChat, { type AiChatResult } from "@/components/ai/AiInquiryChat"
 import { draftToInquiryInput } from "@/lib/gemini"
 import { INK, MUTED } from "@/components/marketing/tokens"
 import avatarSrc from "@/assets/avatar.png"
+import { Link as RouterLink } from "react-router-dom"
 
 const URGENCY_OPTIONS: { value: Urgency; label: string; accent: string }[] = [
   { value: "low",      label: "Low",      accent: "#64748B" },
@@ -92,7 +96,7 @@ function AppModeToggle({ mode, onChange }: { mode: FormMode; onChange: (m: FormM
                 </svg>
               </span>
             )}
-            {m === "standard" ? "Standard form" : "AI Project Manager"}
+            {m === "standard" ? "Standard form" : "Edit with AI"}
           </button>
         )
       })}
@@ -124,21 +128,21 @@ function AiPanel({ categories, onComplete }: AiPanelProps) {
                 overflow="hidden" border={`2px solid ${APP_BORDER}`}
                 boxShadow="0 2px 6px rgba(0,0,0,0.1)"
               >
-                <img src={avatarSrc} alt="AI Project Manager"
+                <img src={avatarSrc} alt="AI assistant"
                   style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top" }} />
               </Box>
               <Box>
-                <Text fontSize="0.8125rem" fontWeight="700" color={INK}>AI Project Manager</Text>
+                <Text fontSize="0.8125rem" fontWeight="700" color={INK}>AI assistant</Text>
                 <Flex align="center" gap={1.5}>
                   <Box w="5px" h="5px" borderRadius="full" bg="#4ADE80"
                     style={{ animation: "pulse 2s infinite" }} />
-                  <Text fontSize="0.6875rem" color={MUTED}>Gemini 2.5 Flash · Online</Text>
+                  <Text fontSize="0.6875rem" color={MUTED}>Clarify the job in conversation</Text>
                 </Flex>
               </Box>
             </Flex>
           <Text fontSize="0.75rem" color={MUTED} maxW="280px" textAlign="right" lineHeight="1.5"
             display={{ base: "none", md: "block" }}>
-            Describe your project in plain language — the AI will structure it for you.
+            Describe the work in plain language — AI structures it as a job in this workspace.
           </Text>
         </Flex>
       </Box>
@@ -164,6 +168,36 @@ export default function NewInquiryPage() {
   const [catLoading, setCatLoading] = useState(true)
   const [mode, setMode] = useState<FormMode>("ai")
   const [aiError, setAiError] = useState<string>()
+
+  // Workspace context: who is this job for / whose workspace does it belong to.
+  const [isFreelancer, setIsFreelancer] = useState(false)
+  const [workspaceLoading, setWorkspaceLoading] = useState(true)
+  const [freelancerWs, setFreelancerWs] = useState<FreelancerWorkspaceMe | null>(null)
+  const [clientWs, setClientWs] = useState<ClientWorkspaceMe | null>(null)
+  const [clientId, setClientId] = useState("")
+  const [workspaceId, setWorkspaceId] = useState("")
+  const [myId, setMyId] = useState("")
+
+  useEffect(() => {
+    getMe()
+      .then((me) => {
+        const freelancer = me.role === "expert"
+        setIsFreelancer(freelancer)
+        setMyId(me.id)
+        if (freelancer) setClientId(me.id)
+        return getMyWorkspace()
+      })
+      .then((ws) => {
+        if (ws.role === "owner") {
+          setFreelancerWs(ws)
+        } else {
+          setClientWs(ws)
+          if (ws.workspaces.length >= 1) setWorkspaceId(ws.workspaces[0].id)
+        }
+      })
+      .catch(() => null)
+      .finally(() => setWorkspaceLoading(false))
+  }, [])
 
   const {
     register,
@@ -202,6 +236,10 @@ export default function NewInquiryPage() {
       setAiError("Not signed in")
       return
     }
+    if (isFreelancer && !clientId) {
+      setAiError("Pick who this job is for")
+      return
+    }
     try {
       const payload = draftToInquiryInput(result.draft, result.categoryId)
       const created = await api.post<Inquiry>("/api/inquiries", {
@@ -209,6 +247,8 @@ export default function NewInquiryPage() {
         estimatedQuantity: payload.estimatedQuantity ?? null,
         targetStartDate: payload.targetStartDate ?? null,
         targetEndDate: payload.targetEndDate ?? null,
+        clientId: isFreelancer ? clientId : undefined,
+        workspaceId: !isFreelancer && workspaceId ? workspaceId : undefined,
       })
       navigate(`/app/inquiries/${created.id}`)
     } catch (err) {
@@ -221,6 +261,10 @@ export default function NewInquiryPage() {
       setError("root", { message: "Not signed in" })
       return
     }
+    if (isFreelancer && !clientId) {
+      setError("root", { message: "Pick who this job is for" })
+      return
+    }
     const payload = {
       ...values,
       estimatedQuantity:
@@ -229,6 +273,8 @@ export default function NewInquiryPage() {
           : null,
       targetStartDate: values.targetStartDate || null,
       targetEndDate:   values.targetEndDate || null,
+      clientId: isFreelancer ? clientId : undefined,
+      workspaceId: !isFreelancer && workspaceId ? workspaceId : undefined,
     }
     try {
       const created = await api.post<Inquiry>("/api/inquiries", payload)
@@ -238,14 +284,70 @@ export default function NewInquiryPage() {
     }
   }
 
+  if (!workspaceLoading && !isFreelancer && (clientWs?.workspaces.length ?? 0) === 0) {
+    return (
+      <PageShell
+        eyebrow="Jobs"
+        title="New job"
+        subtitle="Start your own workspace, or join one you’ve been invited to."
+        backHref="/app/inquiries"
+        backLabel="My jobs"
+      >
+        <StartWorkspaceEmptyState />
+      </PageShell>
+    )
+  }
+
   return (
     <PageShell
-      eyebrow="Marketplace"
-      title="Post a new inquiry"
-      subtitle="Describe your needs — a project manager will match specialists and deliver on time."
+      eyebrow="Jobs"
+      title="New job"
+      subtitle={
+        isFreelancer
+          ? "Open a job for a company — or keep it on your workspace until you invite them."
+          : "Describe the work so you and the one-person business have one shared brief."
+      }
       backHref="/app/inquiries"
-      backLabel="My inquiries"
+      backLabel="My jobs"
     >
+      {/* Client / workspace picker */}
+      {!workspaceLoading && isFreelancer && (
+        <Box mb={5}>
+          <Field label="Company" required>
+            <FormNativeSelect value={clientId} onChange={(e) => setClientId(e.target.value)}>
+              {myId && <option value={myId}>Keep on my workspace (no client)</option>}
+              {(freelancerWs?.clients ?? []).map((c) => (
+                <option key={c.id} value={c.id}>
+                  {[c.firstName, c.lastName].filter(Boolean).join(" ") || c.email}
+                </option>
+              ))}
+            </FormNativeSelect>
+          </Field>
+          {(freelancerWs?.clients.length ?? 0) === 0 && (
+            <Text fontSize="0.75rem" color={MUTED} mt={2}>
+              No clients yet.{" "}
+              <RouterLink to="/app/clients" style={{ color: INK, fontWeight: 600 }}>Invite someone</RouterLink>
+              {" "}so they can see this job.
+            </Text>
+          )}
+        </Box>
+      )}
+      {!workspaceLoading && !isFreelancer && (clientWs?.workspaces.length ?? 0) > 1 && (
+        <Box mb={5}>
+          <Field label="Workspace">
+            <FormNativeSelect value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)}>
+              {(clientWs?.workspaces ?? []).map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.freelancer
+                    ? [w.freelancer.firstName, w.freelancer.lastName].filter(Boolean).join(" ") || w.freelancer.companyName || w.freelancer.email
+                    : w.name}
+                </option>
+              ))}
+            </FormNativeSelect>
+          </Field>
+        </Box>
+      )}
+
       {/* Mode toggle */}
       <Box mb={5}>
         <AppModeToggle mode={mode} onChange={(m) => { setMode(m); setAiError(undefined) }} />
@@ -285,7 +387,7 @@ export default function NewInquiryPage() {
           >
             <Box px={{ base: 5, md: 7 }} py={4} mb={0} borderBottom={`1px solid ${APP_BORDER}`} bg={APP_BG_SUBTLE}>
               <Text fontSize="0.6875rem" fontWeight="700" color={APP_LABEL} letterSpacing="0.09em" textTransform="uppercase">
-                Inquiry Details
+                Job details
               </Text>
             </Box>
 
@@ -293,7 +395,7 @@ export default function NewInquiryPage() {
               <Fieldset.Root>
                 <Fieldset.Content>
                   <Grid templateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={5} mb={5}>
-                    <Field label="Inquiry type" invalid={!!errors.type} errorText={errors.type?.message} required>
+                    <Field label="Job type" invalid={!!errors.type} errorText={errors.type?.message} required>
                       <FormNativeSelect {...register("type", { required: "Type is required" })}>
                         <option value="service">Ongoing Service</option>
                         <option value="tool_sourcing">Fixed Project</option>
@@ -327,7 +429,7 @@ export default function NewInquiryPage() {
                   <Box mb={5}>
                     <Field label="Title" invalid={!!errors.title} errorText={errors.title?.message} required>
                       <FormInput
-                        placeholder="e.g., 500 custom steel molds for automotive parts"
+                        placeholder="e.g. Website redesign for Acme"
                         {...formInvalidBorder(!!errors.title)}
                         {...register("title", {
                           required: "Title is required",
@@ -341,7 +443,7 @@ export default function NewInquiryPage() {
                   <Box mb={5}>
                     <Field label="Description" invalid={!!errors.description} errorText={errors.description?.message} required>
                       <FormTextarea
-                        placeholder="Describe your requirements, specs, materials, quality standards…"
+                        placeholder="Goals, scope, deliverables, and anything the other party needs to know."
                         rows={5}
                         {...formInvalidBorder(!!errors.description)}
                         {...register("description", {
@@ -432,8 +534,9 @@ export default function NewInquiryPage() {
                       {...APP_BTN_PRIMARY}
                       type="submit" size="lg" px={10}
                       loading={isSubmitting} loadingText="Submitting…"
+                      disabled={isFreelancer && !clientId}
                     >
-                      Submit Inquiry
+                      {isFreelancer ? "Create Job" : "Open job"}
                     </Button>
                   </Box>
                 </Fieldset.Content>

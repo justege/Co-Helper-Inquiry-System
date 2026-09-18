@@ -56,6 +56,12 @@ export function toInquiryResponse(row) {
   return {
     id: row.id,
     clientId: row.client_id,
+    workspaceId: row.workspace_id ?? null,
+    projectId: row.project_id ?? null,
+    trelloCardId: row.trello_card_id ?? null,
+    project: row.project
+      ? { id: row.project.id, name: row.project.name }
+      : undefined,
     categoryId: row.category_id,
     category: row.categories
       ? { id: row.categories.id, name: row.categories.name, type: row.categories.type }
@@ -68,6 +74,15 @@ export function toInquiryResponse(row) {
     targetEndDate: row.target_end_date ?? null,
     estimatedQuantity: row.estimated_quantity ?? null,
     status: row.status,
+    client: row.client
+      ? {
+          id: row.client.id,
+          firstName: row.client.first_name ?? null,
+          lastName: row.client.last_name ?? null,
+          companyName: row.client.company_name ?? null,
+          email: row.client.email ?? null,
+        }
+      : undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

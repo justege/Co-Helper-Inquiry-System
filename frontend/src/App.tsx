@@ -10,12 +10,17 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import PartnerLoginPage from "./pages/PartnerLoginPage";
 import PartnerRegisterPage from "./pages/PartnerRegisterPage";
+import AcceptInvitePage from "./pages/AcceptInvitePage";
 import DashboardPage from "./pages/DashboardPage";
+import BoardPage from "./pages/BoardPage";
 import ProfilePage from "./pages/ProfilePage";
 import SettingsPage from "./pages/SettingsPage";
 import NewInquiryPage from "./pages/NewInquiryPage";
 import InquiriesListPage from "./pages/InquiriesListPage";
 import InquiryDetailPage from "./pages/InquiryDetailPage";
+import TrelloPage from "./pages/TrelloPage";
+import ClientsPage from "./pages/ClientsPage";
+import FinancePage from "./pages/FinancePage";
 import SuperAdminPage from "./pages/SuperAdminPage";
 import AdminInquiriesListPage from "./pages/AdminInquiriesListPage";
 import AdminInquiryDetailPage from "./pages/AdminInquiryDetailPage";
@@ -67,15 +72,20 @@ export default function App() {
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/status" element={<StatusPage />} />
             <Route path="/partners" element={<PartnersPage />} />
+            <Route path="/invite/:token" element={<AcceptInvitePage />} />
           </Route>
 
           {/* ── Protected routes (redirect to /login if not signed in) ── */}
           <Route path="/app" element={<ProtectedLayout />}>
-            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route index element={<Navigate to="board" replace />} />
+            <Route path="board" element={<BoardPage />} />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="inquiries" element={<InquiriesListPage />} />
             <Route path="inquiries/new" element={<NewInquiryPage />} />
             <Route path="inquiries/:id" element={<InquiryDetailPage />} />
+            <Route path="trello" element={<TrelloPage />} />
+            <Route path="clients" element={<ClientsPage />} />
+            <Route path="finance" element={<FinancePage />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="admin" element={<SuperAdminPage />} />

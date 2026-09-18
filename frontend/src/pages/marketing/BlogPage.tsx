@@ -6,40 +6,40 @@ import { INK, MUTED, RULE } from "@/components/marketing/tokens"
 
 const POSTS = [
   {
-    category: "Outsourcing",
-    date: "May 12, 2026",
-    title: "Why businesses are moving from freelancers to managed outsourcing",
-    excerpt: "Dedicated project managers, vetted specialists, and structured delivery beat the chaos of managing contractors yourself.",
-  },
-  {
-    category: "Platform",
-    date: "April 28, 2026",
-    title: "Introducing dedicated project managers on every Co-Helper project",
-    excerpt: "One PM coordinates specialists, tracks milestones, and keeps clients updated — no need to speak to developers directly.",
-  },
-  {
-    category: "Industry",
-    date: "April 3, 2026",
-    title: "Building a Shopify store without hiring a full-time developer",
-    excerpt: "How e-commerce businesses outsource store setup, integrations, and ongoing management through Co-Helper.",
+    category: "Product",
+    date: "September 12, 2026",
+    title: "Why we dropped marketplace matching",
+    excerpt: "Clients already come from you. Co-Helper is now a private workspace: invite, run the job, log the hours — no browsing, no PM, no escrow.",
   },
   {
     category: "Guides",
-    date: "March 15, 2026",
-    title: "A client's guide to posting your first project brief",
-    excerpt: "What to include in your brief, how to set realistic deadlines, and tips for getting the best results.",
+    date: "September 4, 2026",
+    title: "How to invite a client without posting a project",
+    excerpt: "Send a workspace invite, open a job, and keep the brief, chat, and rate in one record. The client never has to shop around.",
   },
   {
-    category: "Specialists",
-    date: "February 20, 2026",
-    title: "How verified specialists win more projects on Co-Helper",
-    excerpt: "Best practices for delivering quality work, maintaining high ratings, and building long-term client relationships.",
+    category: "AI",
+    date: "August 21, 2026",
+    title: "Edit with AI uses the job — not a generic prompt",
+    excerpt: "Rewrites pull from that job’s requirements, messages, and to-dos. The Gemini key stays on the server. You still own the words.",
   },
   {
-    category: "Remote Work",
-    date: "January 30, 2026",
-    title: "Managing global development teams across time zones",
-    excerpt: "How Co-Helper project managers coordinate specialists in the Americas, Europe, and Asia-Pacific for 24/7 progress.",
+    category: "Integrations",
+    date: "August 8, 2026",
+    title: "Import a Trello board as jobs and to-dos",
+    excerpt: "Columns become projects, cards become jobs, checklists and comments become to-dos. Optional webhook keep-alive after the first import.",
+  },
+  {
+    category: "Finance",
+    date: "July 22, 2026",
+    title: "Hours and payment logs — without becoming a processor",
+    excerpt: "Agree an hourly or project rate, log time, record what was paid. Invoicing and transfers stay how you already operate.",
+  },
+  {
+    category: "Clients",
+    date: "July 3, 2026",
+    title: "What invited clients actually see",
+    excerpt: "Each client sees only the jobs you share with them — brief, chat, files, to-dos, and the payment log. No marketplace catalogue.",
   },
 ]
 
@@ -49,7 +49,7 @@ export default function BlogPage() {
       <PageHero
         label="Company"
         title="Blog"
-        subtitle="Insights on digital outsourcing, project management best practices, and platform updates."
+        subtitle="Notes on running a one-person business workspace — invites, jobs, AI, hours, and payment logs."
       />
 
       <ContentSection>

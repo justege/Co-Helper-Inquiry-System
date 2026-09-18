@@ -6,28 +6,28 @@ import { GREEN, INK, LIGHT, MUTED, RULE, SURFACE } from "@/components/marketing/
 const STEPS = [
   {
     n: "01",
-    title: "Post your project brief",
-    body: "Describe what you need built — MVP, full-stack app, mobile, API, automation, or e-commerce. Attach specs, wireframes, or references. Most clients complete their first brief in under five minutes.",
+    title: "Open a workspace",
+    body: "A one-person business creates an account and gets a private workspace. There is no marketplace browse, no matching, and no Co-Helper PM — you already have the companies you work with.",
   },
   {
     n: "02",
-    title: "Your PM scopes and quotes",
-    body: "A dedicated Co-Helper project manager reviews your brief, matches vetted developers from our network, and returns a fixed quote with a committed delivery date — typically within 24 hours.",
+    title: "Invite the companies you work with",
+    body: "Send each company an invite link. They join your workspace and only see the jobs you share with them. Someone invited by two operators simply belongs to two workspaces.",
   },
   {
     n: "03",
-    title: "Track delivery to approval",
-    body: "Your PM manages milestones, code review, and client updates until you approve the deliverable. Briefs, files, and status live in one platform — no chasing contractors.",
+    title: "Run every job in one place",
+    body: "Open a job (or import a Trello board). Clarify the brief and chat with Edit with AI, agree hourly or project rates, keep to-dos, log hours, and record payments — so both sides always know where things stand.",
   },
 ]
 
-const SERVICE_CATEGORIES = [
-  { name: "Full Stack Development", examples: "SaaS platforms, APIs, admin tools, Chrome extensions" },
-  { name: "MVP & Product Builds", examples: "Startup prototypes, marketplace MVPs, AI-assisted v1 products" },
-  { name: "Mobile Apps", examples: "React Native, native iOS/Android, store launch support" },
-  { name: "Automation & Integrations", examples: "n8n, CRM sync, webhooks, Zapier/Make workflows" },
-  { name: "E-commerce", examples: "Shopify, headless commerce, migrations, subscriptions" },
-  { name: "SEO & Marketing", examples: "Technical SEO, GA4/GTM, paid search setup" },
+const JOB_TYPES = [
+  { name: "Ongoing service", examples: "Retainers, weekly support, continuous product work" },
+  { name: "Fixed-scope project", examples: "A launch, a rebuild, a defined delivery with an end date" },
+  { name: "Requirements & chat", examples: "One shared brief, messages, and documents per job" },
+  { name: "To-dos", examples: "Checklists from you — or imported from Trello cards" },
+  { name: "Rates & hours", examples: "Hourly or project price, then logged time against the job" },
+  { name: "Payment logs", examples: "Record paid, partial, or unpaid — Co-Helper does not process money" },
 ]
 
 export default function HowItWorksPage() {
@@ -36,7 +36,7 @@ export default function HowItWorksPage() {
       <PageHero
         label="Platform"
         title="How it works"
-        subtitle="Managed software delivery from first brief to shipped code — with a dedicated project manager on every build."
+        subtitle="A private workspace between a one-person business and the companies they work with — invite, open jobs, clarify with AI, and track rates, hours, and payments."
       />
 
       <ContentSection>
@@ -54,17 +54,16 @@ export default function HowItWorksPage() {
           <Text fontSize="0.7rem" fontWeight="700" color={GREEN}
             letterSpacing="0.12em" textTransform="uppercase" mb={4}
             fontFamily="var(--font-heading)">
-            Service catalog
+            What lives on a job
           </Text>
           <Heading fontSize="1.25rem" fontWeight="600" color={INK} mb={3} letterSpacing="-0.02em">
-            50+ software services. One managed workflow.
+            One job. Everything you used to scatter across email and Trello.
           </Heading>
           <Text fontSize="0.9375rem" color={MUTED} lineHeight="1.75" mb={8} maxW="640px">
-            Whether you need an MVP this quarter or ongoing feature work, every service is scoped,
-            quoted, and delivered through the same PM-led platform.
+            You decide the work. Co-Helper is the shared record — not a staffing network and not an escrow agent.
           </Text>
           <Grid templateColumns={{ base: "1fr", md: "repeat(2,1fr)", lg: "repeat(3,1fr)" }} gap={4}>
-            {SERVICE_CATEGORIES.map((cat) => (
+            {JOB_TYPES.map((cat) => (
               <Box key={cat.name} p={6} bg={LIGHT} borderRadius="8px" border={`1px solid ${RULE}`}>
                 <Text fontSize="0.9375rem" fontWeight="700" color={INK} mb={2} fontFamily="var(--font-heading)">
                   {cat.name}
@@ -77,33 +76,34 @@ export default function HowItWorksPage() {
 
         <Grid templateColumns={{ base: "1fr", lg: "1fr 1fr" }} gap={6}>
           <Box p={10} bg="white" borderRadius="8px" border={`1px solid ${RULE}`}>
-            <Heading fontSize="1.125rem" fontWeight="600" color={INK} mb={4}>For clients</Heading>
+            <Heading fontSize="1.125rem" fontWeight="600" color={INK} mb={4}>For companies</Heading>
             <Stack gap={3} mb={8}>
               {[
-                "No platform commission on accepted projects",
-                "Dedicated PM on every software build",
-                "Fixed quote before work starts",
-                "Escrow-protected payment on approval",
-                "Milestone tracking and document management",
+                "You join with an invite from the one-person business you work with",
+                "See only the jobs they share with you",
+                "Agree hourly or project rates together",
+                "Follow hours, to-dos, and what you’ve paid",
+                "No browsing, matching, or platform commission",
               ].map((item) => (
                 <CheckItem key={item}>{item}</CheckItem>
               ))}
             </Stack>
-            <CTA to="/register" variant="primary">Post a project</CTA>
+            <CTA to="/login" variant="primary">I have an invite</CTA>
           </Box>
           <Box p={10} bg={SURFACE} borderRadius="8px" border={`1px solid ${RULE}`}>
-            <Heading fontSize="1.125rem" fontWeight="600" color={INK} mb={4}>For specialists</Heading>
+            <Heading fontSize="1.125rem" fontWeight="600" color={INK} mb={4}>For one-person businesses</Heading>
             <Stack gap={3} mb={8}>
               {[
-                "Pre-scoped dev briefs matched to your stack",
-                "Co-Helper PM handles all client communication",
-                "Verified specialist profile",
-                "Focus on shipping code, not sales",
+                "Your own workspace — you own the client relationship",
+                "Invite companies by email and copy a link",
+                "Import Trello columns as projects and cards as jobs",
+                "Edit with AI on requirements, chat, and to-dos",
+                "Log hours and payments; we don’t take a cut or hold funds",
               ].map((item) => (
                 <CheckItem key={item}>{item}</CheckItem>
               ))}
             </Stack>
-            <CTA to="/partners" variant="outline">Join the developer network</CTA>
+            <CTA to="/partner/register" variant="outline">Start your workspace</CTA>
           </Box>
         </Grid>
       </ContentSection>

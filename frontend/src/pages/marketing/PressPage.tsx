@@ -5,19 +5,19 @@ import { INK, MUTED, RULE, SURFACE } from "@/components/marketing/tokens"
 
 const PRESS_ITEMS = [
   {
-    date: "April 2026",
-    outlet: "TechCrunch",
-    title: "Co-Helper launches managed outsourcing platform for digital services",
+    date: "September 2026",
+    outlet: "Product",
+    title: "Co-Helper launches a workspace for one-person businesses and the companies they work with",
   },
   {
-    date: "March 2026",
-    outlet: "Remote Work Weekly",
-    title: "How dedicated project managers are replacing freelance marketplaces",
+    date: "August 2026",
+    outlet: "Integrations",
+    title: "Trello import: columns become projects, cards become jobs",
   },
   {
-    date: "February 2026",
-    outlet: "SaaS Magazine",
-    title: "New platform connects businesses with vetted global specialists — no direct developer contact needed",
+    date: "July 2026",
+    outlet: "AI",
+    title: "Edit with AI ships on the job — Gemini key stays on the server",
   },
 ]
 
@@ -68,9 +68,10 @@ export default function PressPage() {
             <Box p={7} bg="white" borderRadius="8px" border={`1px solid ${RULE}`}>
               <Heading fontSize="1rem" fontWeight="600" color={INK} mb={3}>Company boilerplate</Heading>
               <Text fontSize="0.875rem" color={MUTED} lineHeight="1.75">
-                Co-Helper is a digital services outsourcing platform connecting businesses worldwide with
-                vetted specialists. Every project is assigned a dedicated project manager who coordinates
-                delivery — so clients never need to speak to developers directly.
+                Co-Helper is a shared workspace for one-person businesses and the companies they work with.
+                Operators invite the companies they already serve, then keep the brief, chat, files, to-dos,
+                rates, hours, and payment logs in one place. Co-Helper does not match parties, assign a
+                project manager, or process payments.
               </Text>
             </Box>
           </Stack>

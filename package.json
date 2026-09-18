@@ -11,7 +11,8 @@
     "install:all": "npm ci --prefix backend && npm ci --prefix frontend",
     "build": "npm run build:frontend",
     "build:frontend": "npm --prefix frontend run build",
-    "start": "npm --prefix backend start"
+    "start": "npm --prefix backend start",
+    "db:setup": "npm --prefix backend run db:setup --"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

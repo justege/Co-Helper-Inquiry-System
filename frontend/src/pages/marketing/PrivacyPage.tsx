@@ -7,48 +7,60 @@ export default function PrivacyPage() {
       <PageHero
         label="Legal"
         title="Privacy Policy"
-        subtitle="Last updated: May 2026"
+        subtitle="Last updated: September 2026"
       />
 
       <ContentSection narrow>
         <ProseBlock>
           <h2>1. Introduction</h2>
           <p>
-            Co-Helper ("we", "our", or "us") operates the Co-Helper digital services outsourcing platform. This Privacy
-            Policy explains how we collect, use, disclose, and safeguard your information when you use our website
-            and services.
+            Co-Helper ("we", "our", or "us") operates a shared workspace for one-person businesses and the companies they invite.
+            This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use
+            our website and services. Co-Helper is not a marketplace, staffing agency, or payment processor.
           </p>
 
           <h2>2. Information we collect</h2>
           <p>We collect information you provide directly to us, including:</p>
           <ul>
-            <li>Account information: name, email address, company name, and role</li>
-            <li>Project data: service requirements, timelines, budgets, and attachments</li>
-            <li>Communication records: messages exchanged through the platform and with project managers</li>
-            <li>Payment-related metadata: billing details where applicable (payments between parties are handled directly)</li>
+            <li>Account information: name, email address, company name, and role (workspace owner or invited company)</li>
+            <li>Workspace data: invitations, membership, jobs (inquiries), requirements, documents, to-dos, and chat</li>
+            <li>Commercial records you choose to keep: price agreements, logged hours, and payment status notes (not card numbers)</li>
+            <li>Optional integrations: if you connect Trello, we store the token you authorize and import boards, lists, and cards you select</li>
+            <li>AI inputs: text you send to Edit with AI or the job-brief helper, together with the job context needed to rewrite it</li>
           </ul>
-          <p>We also automatically collect usage data such as IP address, browser type, pages visited, and device information.</p>
+          <p>We also automatically collect usage data such as IP address, browser type, pages visited, and device information. Authentication is provided by Firebase.</p>
 
           <h2>3. How we use your information</h2>
           <ul>
-            <li>To provide, operate, and maintain the platform</li>
-            <li>To match client projects with relevant specialists and assign project managers</li>
-            <li>To send transactional notifications and service updates</li>
-            <li>To improve platform functionality and user experience</li>
-            <li>To comply with legal obligations and enforce our terms</li>
+            <li>To provide, operate, and maintain each one-person business’s private workspace</li>
+            <li>To show jobs only to the workspace owner and the invited company on that job</li>
+            <li>To run optional features you enable (Trello import, file storage, Edit with AI)</li>
+            <li>To send transactional notifications (for example invite or account emails) when configured</li>
+            <li>To improve the product and to comply with legal obligations</li>
           </ul>
+          <p>
+            We do not use your jobs to match you with third-party specialists, assign a Co-Helper project manager,
+            or process payments between you and your clients.
+          </p>
 
           <h2>4. Sharing of information</h2>
           <p>
-            We share project details with verified specialists and assigned project managers relevant to your request.
-            We do not sell personal data to third parties. We may share information with service providers who assist
-            in operating the platform (e.g. hosting, email delivery), subject to confidentiality agreements.
+            Job content is visible to members of that workspace who are allowed to see the job (typically the
+            workspace owner and the company on the inquiry). We do not sell personal data. We may share information
+            with processors who help run the platform, for example:
           </p>
+          <ul>
+            <li>Hosting and database (for example DigitalOcean)</li>
+            <li>Authentication (Firebase)</li>
+            <li>AI rewrite (Google Gemini) when you use Edit with AI or the brief helper</li>
+            <li>Trello, only if you connect an account and authorize access</li>
+          </ul>
+          <p>Those processors act on our instructions and under confidentiality terms where applicable.</p>
 
           <h2>5. Data retention</h2>
           <p>
-            We retain account and transaction data for as long as your account is active or as needed to provide
-            services. You may request deletion of your account by contacting us at privacy@co-helper.com.
+            We retain workspace and account data for as long as your account is active or as needed to provide the
+            service. You may request deletion of your account by contacting us at privacy@co-helper.com.
           </p>
 
           <h2>6. Your rights</h2>
@@ -60,13 +72,13 @@ export default function PrivacyPage() {
           <h2>7. Security</h2>
           <p>
             We implement industry-standard security measures including encryption in transit, access controls,
-            and regular security reviews. No method of transmission over the internet is 100% secure.
+            and regular reviews. No method of transmission over the internet is 100% secure.
           </p>
 
           <h2>8. International transfers</h2>
           <p>
             Your data may be processed in the European Union, United States, or other countries where our service
-            providers operate. We ensure appropriate safeguards are in place for cross-border transfers.
+            providers operate. We use appropriate safeguards for cross-border transfers where required.
           </p>
 
           <h2>9. Contact</h2>

@@ -1,19 +1,17 @@
-import supabase from "../db.js";
-
-const ROLE_HIERARCHY = { superadmin: 3, admin: 2, member: 1 };
+import { queryOne } from "../db.js";
 
 /**
  * Fetches the current user's role from the DB and attaches it to `req.userRole`.
  * Must be used after `requireAuth`.
  */
 export async function attachRole(req, res, next) {
-  const { data, error } = await supabase
-    .from("users")
-    .select("id, role, company_name, email, first_name, last_name")
-    .eq("firebase_uid", req.uid)
-    .maybeSingle();
+  const data = await queryOne(
+    `SELECT id, role, company_name, username, email, first_name, last_name
+     FROM users WHERE firebase_uid = $1`,
+    [req.uid]
+  );
 
-  if (error || !data) {
+  if (!data) {
     return res.status(403).json({ error: "User profile not found" });
   }
 
@@ -22,12 +20,6 @@ export async function attachRole(req, res, next) {
   next();
 }
 
-/**
- * Returns middleware that allows access only if the user's role meets
- * the minimum required level.
- *
- * Usage:  router.delete("/:id", requireAuth, requireRole("superadmin"), handler)
- */
 export function requireRole(...allowedRoles) {
   return [
     attachRole,
@@ -38,8 +30,5 @@ export function requireRole(...allowedRoles) {
   ];
 }
 
-/**
- * Convenience helpers
- */
 export const isSuperadmin = requireRole("superadmin");
 export const isAdminOrAbove = requireRole("superadmin", "admin");

@@ -8,6 +8,7 @@ export type InquiryStatus =
   | "offered"
   | "accepted"
   | "in_progress"
+  | "waiting"
   | "delivered"
   | "escalated"
   | "cancelled";
@@ -37,9 +38,22 @@ export interface ProjectOfferSummary {
   experts?: OfferExpert[];
 }
 
+export interface InquiryClientBrief {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  companyName: string | null;
+  email: string | null;
+}
+
 export interface Inquiry {
   id: string;
   clientId: string;
+  client?: InquiryClientBrief;
+  workspaceId: string | null;
+  projectId: string | null;
+  trelloCardId?: string | null;
+  project?: { id: string; name: string };
   categoryId: string;
   category?: { id: string; name: string; type: BusinessType };
   title: string;
@@ -57,13 +71,19 @@ export interface Inquiry {
 
 export interface CreateInquiryInput {
   title: string;
-  description: string;
-  categoryId: string;
-  type: BusinessType;
-  urgency: Urgency;
+  description?: string;
+  categoryId?: string;
+  type?: BusinessType;
+  urgency?: Urgency;
   targetStartDate?: string | null;
   targetEndDate?: string | null;
   estimatedQuantity?: number | null;
+  /** Freelancers opening a job on behalf of one of their workspace clients. */
+  clientId?: string;
+  /** Clients opening a job inside a specific freelancer's workspace. */
+  workspaceId?: string;
+  /** Title-only create from the shared board. */
+  quickAdd?: boolean;
 }
 
 export interface InquiryDocument {
@@ -80,6 +100,10 @@ export const getMyInquiries = () => api.get<Inquiry[]>("/api/inquiries/mine");
 export const getInquiry = (id: string) => api.get<Inquiry>(`/api/inquiries/${id}`);
 export const createInquiry = (data: CreateInquiryInput) =>
   api.post<Inquiry>("/api/inquiries", data);
+export const updateInquiry = (id: string, data: { title?: string; description?: string }) =>
+  api.patch<Inquiry>(`/api/inquiries/${id}`, data);
+export const updateInquiryStatus = (id: string, status: InquiryStatus) =>
+  api.patch<Inquiry>(`/api/inquiries/${id}/status`, { status });
 
 export interface LandingInquirySubmissionInput extends CreateInquiryInput {
   username: string;
@@ -124,3 +148,42 @@ export const getDownloadUrl = (inquiryId: string, documentId: string) =>
 
 export const deleteDocument = (inquiryId: string, documentId: string) =>
   api.delete<void>(`/api/inquiries/${inquiryId}/documents/${documentId}`);
+
+// ── Chat ──────────────────────────────────────────────────────────────────────
+
+export interface InquiryMessageAuthor {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  companyName: string | null;
+  email: string;
+}
+
+export interface InquiryMessage {
+  id: string;
+  body: string;
+  originalBody: string | null;
+  createdAt: string;
+  authorId: string;
+  author: InquiryMessageAuthor | null;
+}
+
+export const listMessages = (inquiryId: string) =>
+  api.get<InquiryMessage[]>(`/api/inquiries/${inquiryId}/messages`);
+
+export const sendMessage = (inquiryId: string, body: string) =>
+  api.post<InquiryMessage>(`/api/inquiries/${inquiryId}/messages`, { body });
+
+// ── Activity log ──────────────────────────────────────────────────────────────
+
+export interface ActivityEvent {
+  id: string;
+  type: string;
+  payload: Record<string, unknown>;
+  createdAt: string;
+  actorId: string | null;
+  actor: InquiryMessageAuthor | null;
+}
+
+export const listActivity = (inquiryId: string) =>
+  api.get<ActivityEvent[]>(`/api/inquiries/${inquiryId}/activity`);

@@ -29,9 +29,9 @@ interface AiInquiryChatProps {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const OPENING = `Hi! I'm your AI Project Manager. I'll help you put together a clear project brief so we can get you matched with the right specialists.
+const OPENING = `Hi — I can help you turn a rough idea into a clear job brief for this workspace.
 
-To start — what are you looking to get built or improved?`
+What should this job cover?`
 
 const TYPING_DELAY_MS = 900
 
@@ -47,7 +47,7 @@ function BotAvatar({ size = 30 }: { size?: number }) {
     >
       <img
         src={avatarSrc}
-        alt="AI Project Manager"
+        alt="AI assistant"
         style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top" }}
       />
     </Box>
@@ -319,7 +319,7 @@ export default function AiInquiryChat({
     ]
 
     try {
-      const result = await sendGeminiMessage(newHistory, userText, categoriesHint)
+      const result = await sendGeminiMessage(history, userText, categoriesHint)
 
       setIsTyping(false)
 

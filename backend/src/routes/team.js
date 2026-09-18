@@ -1,22 +1,21 @@
 import { Router } from "express";
-import supabase from "../db.js";
+import { query, queryOne, execute, buildSet } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { attachRole } from "../middleware/requireRole.js";
 
 const router = Router();
 router.use(requireAuth, attachRole);
 
-// ── GET /api/team ── list company team members ──────────────────────────────
 router.get("/", async (req, res) => {
   try {
     if (!req.dbUser.company_name) return res.json([]);
-    const { data, error } = await supabase
-      .from("users")
-      .select("id, email, first_name, last_name, role, created_at")
-      .eq("company_name", req.dbUser.company_name)
-      .neq("id", req.dbUser.id)
-      .order("created_at");
-    if (error) throw error;
+    const data = await query(
+      `SELECT id, email, first_name, last_name, role, created_at
+       FROM users
+       WHERE company_name = $1 AND id <> $2
+       ORDER BY created_at`,
+      [req.dbUser.company_name, req.dbUser.id]
+    );
     res.json(data.map((u) => ({
       id: u.id,
       email: u.email,
@@ -31,24 +30,21 @@ router.get("/", async (req, res) => {
   }
 });
 
-// ── GET /api/team/invitations ── list pending invitations sent by me ─────────
 router.get("/invitations", async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from("team_invitations")
-      .select("*")
-      .eq("inviter_id", req.dbUser.id)
-      .eq("status", "pending")
-      .order("created_at", { ascending: false });
-    if (error) throw error;
-    res.json(data ?? []);
+    const data = await query(
+      `SELECT * FROM team_invitations
+       WHERE inviter_id = $1 AND status = 'pending'
+       ORDER BY created_at DESC`,
+      [req.dbUser.id]
+    );
+    res.json(data);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// ── POST /api/team/invitations ── invite someone by email ────────────────────
 router.post("/invitations", async (req, res) => {
   const { email } = req.body ?? {};
   if (!email?.trim()) return res.status(400).json({ error: "email is required" });
@@ -56,16 +52,11 @@ router.post("/invitations", async (req, res) => {
     return res.status(400).json({ error: "Set your company name before inviting team members" });
   }
   try {
-    const { data, error } = await supabase
-      .from("team_invitations")
-      .insert({
-        inviter_id:    req.dbUser.id,
-        invited_email: email.trim().toLowerCase(),
-        company_name:  req.dbUser.company_name,
-      })
-      .select()
-      .single();
-    if (error) throw error;
+    const data = await queryOne(
+      `INSERT INTO team_invitations (inviter_id, invited_email, company_name)
+       VALUES ($1, $2, $3) RETURNING *`,
+      [req.dbUser.id, email.trim().toLowerCase(), req.dbUser.company_name]
+    );
     res.status(201).json(data);
   } catch (err) {
     console.error(err);
@@ -73,15 +64,12 @@ router.post("/invitations", async (req, res) => {
   }
 });
 
-// ── DELETE /api/team/invitations/:id ── revoke invitation ───────────────────
 router.delete("/invitations/:id", async (req, res) => {
   try {
-    const { error } = await supabase
-      .from("team_invitations")
-      .update({ status: "revoked" })
-      .eq("id", req.params.id)
-      .eq("inviter_id", req.dbUser.id);
-    if (error) throw error;
+    await execute(
+      `UPDATE team_invitations SET status = 'revoked' WHERE id = $1 AND inviter_id = $2`,
+      [req.params.id, req.dbUser.id]
+    );
     res.status(204).send();
   } catch (err) {
     console.error(err);
@@ -89,38 +77,29 @@ router.delete("/invitations/:id", async (req, res) => {
   }
 });
 
-// ── GET /api/team/contact ── read contact preferences + phone ────────────────
 router.get("/contact", async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from("users")
-      .select("phone, contact_pref")
-      .eq("id", req.dbUser.id)
-      .single();
-    if (error) throw error;
-    res.json({ phone: data.phone ?? null, contactPref: data.contact_pref ?? "email" });
+    const data = await queryOne("SELECT phone, contact_pref FROM users WHERE id = $1", [req.dbUser.id]);
+    res.json({ phone: data?.phone ?? null, contactPref: data?.contact_pref ?? "email" });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// ── PUT /api/team/contact ── update contact preferences + phone ──────────────
 router.put("/contact", async (req, res) => {
   const { phone, contactPref } = req.body ?? {};
   const VALID = ["email", "phone", "both"];
-  const updates = {};
-  if (phone !== undefined) updates.phone = phone?.trim() || null;
-  if (contactPref && VALID.includes(contactPref)) updates.contact_pref = contactPref;
-
+  const fields = {};
+  if (phone !== undefined) fields.phone = phone?.trim() || null;
+  if (contactPref && VALID.includes(contactPref)) fields.contact_pref = contactPref;
+  const { set, values, next } = buildSet(fields);
+  if (!set) return res.status(400).json({ error: "Nothing to update" });
   try {
-    const { data, error } = await supabase
-      .from("users")
-      .update(updates)
-      .eq("id", req.dbUser.id)
-      .select("id, phone, contact_pref")
-      .single();
-    if (error) throw error;
+    const data = await queryOne(
+      `UPDATE users SET ${set} WHERE id = $${next} RETURNING phone, contact_pref`,
+      [...values, req.dbUser.id]
+    );
     res.json({ phone: data.phone, contactPref: data.contact_pref });
   } catch (err) {
     console.error(err);

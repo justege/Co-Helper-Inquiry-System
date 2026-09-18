@@ -4,10 +4,11 @@ import { ContentSection, PageHero } from "@/components/marketing/MarketingUI"
 import { INK, MUTED, RULE, SURFACE } from "@/components/marketing/tokens"
 
 const SERVICES = [
-  { name: "Platform (app.co-helper.com)", status: "operational", uptime: "99.98%" },
+  { name: "Workspace (app.co-helper.com)", status: "operational", uptime: "99.98%" },
   { name: "API", status: "operational", uptime: "99.95%" },
-  { name: "Authentication", status: "operational", uptime: "99.99%" },
-  { name: "Email notifications", status: "operational", uptime: "99.90%" },
+  { name: "Authentication (Firebase)", status: "operational", uptime: "99.99%" },
+  { name: "Edit with AI (Gemini)", status: "operational", uptime: "99.90%" },
+  { name: "Trello import / webhooks", status: "operational", uptime: "99.90%" },
   { name: "Document uploads", status: "operational", uptime: "99.97%" },
 ]
 
@@ -27,7 +28,7 @@ export default function StatusPage() {
       <PageHero
         label="Support"
         title="System status"
-        subtitle="Current operational status of Co-Helper services."
+        subtitle="Current operational status of the Co-Helper workspace, AI, and optional Trello sync."
       />
 
       <ContentSection narrow>

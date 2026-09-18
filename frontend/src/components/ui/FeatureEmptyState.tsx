@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { Box, Button, Stack, Text } from "@chakra-ui/react"
 import { Link } from "react-router-dom"
 import {
@@ -7,7 +8,9 @@ import {
   LuBuilding2,
   LuClipboardList,
   LuUsers,
+  LuPlus,
 } from "react-icons/lu"
+import { createMyWorkspace } from "@/api/workspace"
 import {
   APP_ACCENT,
   APP_BG_SUBTLE,
@@ -316,25 +319,100 @@ export function AdminInquiryMockup() {
 
 // ── Pre-wired empty states for each page ──────────────────────────────────────
 
-export function InquiriesEmptyState() {
+export function StartWorkspaceButton({
+  redirectTo = "/app/board",
+  size = "md",
+}: {
+  redirectTo?: string
+  size?: "sm" | "md"
+}) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function onStart() {
+    setBusy(true)
+    setError(null)
+    try {
+      await createMyWorkspace()
+      window.location.assign(redirectTo)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not start workspace")
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Box>
+      <Button
+        {...APP_BTN_PRIMARY}
+        size={size}
+        h={size === "sm" ? "34px" : "42px"}
+        px={size === "sm" ? 4 : 6}
+        fontSize={size === "sm" ? "0.8125rem" : "0.9375rem"}
+        display="inline-flex"
+        alignItems="center"
+        gap={2}
+        loading={busy}
+        loadingText="Starting…"
+        onClick={onStart}
+      >
+        <LuPlus size={size === "sm" ? 14 : 16} />
+        Start my workspace
+      </Button>
+      {error && (
+        <Text fontSize="0.8125rem" color="#B91C1C" mt={2}>
+          {error}
+        </Text>
+      )}
+    </Box>
+  )
+}
+
+export function StartWorkspaceEmptyState() {
   return (
     <FeatureEmptyState
-      title="Track all your inquiries in one place"
+      title="Start your workspace"
       bullets={[
-        "Post a project or service request in under 2 minutes",
-        "Get matched with vetted partners who fit your needs",
-        "Manage offers, timelines, and delivery — all here",
+        "Create a workspace for your one-person business in one click",
+        "Invite the companies you work with — they join at no extra fee",
+        "Open jobs, track hours, and keep payment logs in one place",
+      ]}
+      cta={
+        <Box>
+          <StartWorkspaceButton />
+          <Text mt={4} fontSize="0.8125rem" color={APP_MUTED} maxW="420px" lineHeight="1.5">
+            Working with a one-person business instead? Ask them for an invite link — you can open jobs here once you join.
+          </Text>
+        </Box>
+      }
+      mockup={<InquiryMockup />}
+    />
+  )
+}
+
+export function ClientJobsEmptyState() {
+  return (
+    <FeatureEmptyState
+      title="Jobs you share with your partner land here"
+      bullets={[
+        "Open a job in the workspace you were invited to",
+        "Agree rates, follow to-dos, and see what’s been paid",
+        "Use Edit with AI to clarify the brief and chat",
       ]}
       cta={
         <Link to="/app/inquiries/new" style={{ textDecoration: "none" }}>
           <Button {...APP_BTN_PRIMARY} size="md" h="42px" px={6} fontSize="0.9375rem" display="inline-flex" alignItems="center" gap={2}>
-            + Post your first inquiry
+            + Open a job
           </Button>
         </Link>
       }
       mockup={<InquiryMockup />}
     />
   )
+}
+
+export function InquiriesEmptyState() {
+  return <StartWorkspaceEmptyState />
 }
 
 export function AdminInquiriesEmptyState() {

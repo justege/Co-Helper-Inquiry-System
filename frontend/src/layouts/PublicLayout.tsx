@@ -20,11 +20,7 @@ export default function PublicLayout() {
 
   const authGateRoutes = ["/login", "/register", "/partner/login", "/partner/register"];
   if (user && authGateRoutes.includes(pathname)) {
-    const partnerRoutes = ["/partner/login", "/partner/register"];
-    const destination = partnerRoutes.includes(pathname)
-      ? "/app/partner-services"
-      : "/app/dashboard";
-    return <Navigate to={destination} replace />;
+    return <Navigate to="/app/board" replace />;
   }
 
   return <Outlet />;
