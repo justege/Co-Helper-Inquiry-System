@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react"
 import { getMe, updateMe, type User } from "../api/users"
 import { getMyExpertProfile, updateMyExpertProfile } from "../api/expertProfile"
-import { api } from "../lib/api"
-import { Box, Button, Fieldset, Grid, Spinner, Stack, Text } from "@chakra-ui/react"
+import { Box, Fieldset, Grid, Spinner, Stack, Text } from "@chakra-ui/react"
 import { Switch } from "@/components/ui/switch"
 import { useForm } from "react-hook-form"
 import { Field } from "@/components/ui/field"
 import { FormInput, FormNativeSelect, FormTextarea } from "@/components/ui/form-controls"
 import { PageShell } from "@/components/ui/PageShell"
+import { AppButton } from "@/components/ui/AppButton"
 import {
   APP_BG_SUBTLE,
   APP_BORDER,
@@ -71,7 +71,7 @@ export default function ProfilePage() {
         if (p.role === "expert") {
           setPartnerLoading(true)
           Promise.all([
-            api.get<{ phone: string | null; contactPref: string }>("/api/team/contact").catch(() => ({ phone: p.phone ?? null, contactPref: p.contactPref ?? "email" })),
+            Promise.resolve({ phone: p.phone ?? null, contactPref: p.contactPref ?? "email" }),
             getMyExpertProfile(),
           ])
             .then(([contact, expertProfile]) => {
@@ -110,8 +110,8 @@ export default function ProfilePage() {
 
   async function onPartnerSubmit(data: PartnerFields) {
     await Promise.all([
-      updateMe({ companyName: personalForm.getValues("companyName") || undefined }),
-      api.put("/api/team/contact", {
+      updateMe({
+        companyName: personalForm.getValues("companyName") || undefined,
         phone: data.phone || null,
         contactPref: data.contactPref,
       }),
@@ -202,7 +202,7 @@ export default function ProfilePage() {
                 </Fieldset.Content>
               </Fieldset.Root>
               <Box display="flex" alignItems="center" gap={3} mt={6} pt={5} borderTop={`1px solid ${APP_BORDER}`}>
-                <Button
+                <AppButton
                   type="submit"
                   {...APP_BTN_PRIMARY}
                   loading={personalForm.formState.isSubmitting}
@@ -210,7 +210,7 @@ export default function ProfilePage() {
                   _disabled={{ opacity: 0.4, cursor: "not-allowed" }}
                 >
                   Save personal details
-                </Button>
+                </AppButton>
                 {saved && <Text fontSize="sm" color={APP_MUTED} fontWeight="500">Saved</Text>}
               </Box>
             </Box>
@@ -295,7 +295,7 @@ export default function ProfilePage() {
               )}
 
               <Box display="flex" alignItems="center" gap={3} mt={6} pt={5} borderTop={`1px solid ${APP_BORDER}`}>
-                <Button
+                <AppButton
                   type="submit"
                   {...APP_BTN_PRIMARY}
                   loading={partnerForm.formState.isSubmitting}
@@ -303,7 +303,7 @@ export default function ProfilePage() {
                   _disabled={{ opacity: 0.4, cursor: "not-allowed" }}
                 >
                   Save company details
-                </Button>
+                </AppButton>
                 {partnerSaved && <Text fontSize="sm" color={APP_MUTED} fontWeight="500">Saved</Text>}
               </Box>
             </Box>

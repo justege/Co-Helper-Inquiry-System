@@ -129,3 +129,20 @@ export const updatePayment = (
 
 export const getJobFinance = (inquiryId: string) =>
   api.get<JobFinance>(`/api/inquiries/${inquiryId}/finance`);
+
+export async function downloadInvoice(inquiryId: string) {
+  const { auth } = await import("../lib/firebase")
+  const { getApiBaseUrl } = await import("../lib/apiBase")
+  const token = auth?.currentUser ? await auth.currentUser.getIdToken() : null
+  const res = await fetch(`${getApiBaseUrl()}/api/inquiries/${inquiryId}/invoice.pdf`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+  if (!res.ok) throw new Error("Could not download invoice")
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = `invoice-${inquiryId.slice(0, 8)}.pdf`
+  a.click()
+  URL.revokeObjectURL(url)
+}

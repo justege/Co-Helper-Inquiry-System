@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from "react";
-import { Box, Button, Spinner, Stack, Text } from "@chakra-ui/react";
+import { Box, Spinner, Stack, Text } from "@chakra-ui/react";
 import { LuDownload, LuFileText, LuTrash2, LuUpload } from "react-icons/lu";
+import { AppButton } from "@/components/ui/AppButton"
 import {
   listDocuments,
   initUpload,
@@ -11,7 +12,6 @@ import {
 } from "@/api/inquiries";
 
 const BORDER = "#D8DCE8";
-const ACCENT = "#0F6E56";
 
 const DATE_FMT = (d: string) =>
   new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
@@ -29,6 +29,7 @@ export function InquiryDocumentsSection({ inquiryId }: { inquiryId: string }) {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadErr, setUploadErr] = useState<string | null>(null);
+  const [preview, setPreview] = useState<{ url: string; mime: string; name: string } | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const load = useCallback(() => {
@@ -66,6 +67,20 @@ export function InquiryDocumentsSection({ inquiryId }: { inquiryId: string }) {
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  async function handlePreview(doc: InquiryDocument) {
+    try {
+      const { url } = await getDownloadUrl(inquiryId, doc.id);
+      const mime = doc.mimeType || "";
+      if (mime.startsWith("image/") || mime === "application/pdf") {
+        setPreview({ url, mime, name: doc.fileName });
+      } else {
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+    } catch {
+      alert("Preview failed — please try again.");
     }
   }
 
@@ -121,21 +136,13 @@ export function InquiryDocumentsSection({ inquiryId }: { inquiryId: string }) {
             accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.dwg,.step,.stp"
             onChange={handleFileSelect}
           />
-          <Button
-            size="xs"
-            h="28px"
-            px={3}
-            borderRadius="6px"
-            fontWeight="600"
-            bg={ACCENT}
-            color="white"
-            fontSize="0.75rem"
-            _hover={{ bg: "#0a5240" }}
+          <AppButton
+            size="sm"
             loading={uploading}
             onClick={() => fileRef.current?.click()}
           >
-            <LuUpload size={12} /> Upload
-          </Button>
+            <LuUpload size={14} /> Upload
+          </AppButton>
         </Box>
       </Box>
 
@@ -215,11 +222,14 @@ export function InquiryDocumentsSection({ inquiryId }: { inquiryId: string }) {
                   alignSelf={{ base: "flex-end", sm: "center" }}
                   flexShrink={0}
                 >
+                  <AppButton size="sm" variant="ghost" onClick={() => handlePreview(doc)}>
+                    Preview
+                  </AppButton>
                   <Box
                     as="button"
-                    w="30px"
-                    h="30px"
-                    borderRadius="6px"
+                    w="44px"
+                    h="44px"
+                    borderRadius="10px"
                     bg="white"
                     border={`1px solid ${BORDER}`}
                     display="flex"
@@ -256,6 +266,19 @@ export function InquiryDocumentsSection({ inquiryId }: { inquiryId: string }) {
               </Box>
             ))}
           </Stack>
+        )}
+        {preview && (
+          <Box mt={4} border={`1px solid ${BORDER}`} borderRadius="10px" overflow="hidden">
+            <Box px={4} py={3} display="flex" justifyContent="space-between" alignItems="center">
+              <Text fontSize="0.8125rem" fontWeight="600">{preview.name}</Text>
+              <AppButton size="sm" variant="ghost" onClick={() => setPreview(null)}>Close</AppButton>
+            </Box>
+            {preview.mime.startsWith("image/") ? (
+              <img src={preview.url} alt={preview.name} style={{ maxHeight: 480, width: "100%", objectFit: "contain", background: "#F4F1EA", display: "block" }} />
+            ) : (
+              <iframe src={preview.url} title={preview.name} style={{ width: "100%", height: 480, border: 0 }} />
+            )}
+          </Box>
         )}
       </Box>
     </Box>

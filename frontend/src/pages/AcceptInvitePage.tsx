@@ -31,7 +31,7 @@ export default function AcceptInvitePage() {
     if (!token || authLoading || !user || !preview) return
     setAccepting(true)
     acceptInvite(token)
-      .then(() => navigate("/app/board", { replace: true }))
+      .then(() => navigate("/app", { replace: true }))
       .catch((e: unknown) => {
         setError(e instanceof Error ? e.message : "Could not accept invitation")
         setAccepting(false)

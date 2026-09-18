@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useLocation } from "react-router-dom"
-import { Box, Button, Spinner, Text } from "@chakra-ui/react"
+import { Box, Spinner, Text } from "@chakra-ui/react"
 import { FormNativeSelect } from "@/components/ui/form-controls"
 import {
   getMyInquiries,
@@ -13,10 +13,10 @@ import { getMyWorkspace } from "../api/workspace"
 import { PageShell } from "@/components/ui/PageShell"
 import { ClientJobsEmptyState, FeatureEmptyState, InquiryMockup, StartWorkspaceEmptyState } from "@/components/ui/FeatureEmptyState"
 import { LuPlus } from "react-icons/lu"
+import { AppButton } from "@/components/ui/AppButton"
 import {
   APP_BORDER,
   APP_BG_SUBTLE,
-  APP_BTN_PRIMARY,
   APP_CARD,
   APP_INK,
   APP_LABEL,
@@ -100,14 +100,14 @@ export default function InquiriesListPage() {
       subtitle={loading ? undefined : `${inquiries.length} total`}
       action={
         <Link to="/app/inquiries/new" style={{ textDecoration: "none" }}>
-          <Button
+          <AppButton
             size="sm" h="34px" px={4}
             bg="rgba(255,255,255,0.12)" color="white" fontWeight="600" fontSize="0.8125rem"
             borderRadius="8px" border="1px solid rgba(255,255,255,0.25)"
             _hover={{ bg: "rgba(255,255,255,0.2)" }}
           >
             New job
-          </Button>
+          </AppButton>
         </Link>
       }
     >
@@ -136,14 +136,14 @@ export default function InquiriesListPage() {
             cta={
               <Box display="flex" gap={2} flexWrap="wrap">
                 <Link to="/app/trello" style={{ textDecoration: "none" }}>
-                  <Button {...APP_BTN_PRIMARY} size="md" h="42px" px={6} fontSize="0.9375rem">
+                  <AppButton size="md" h="42px" px={6} fontSize="0.9375rem">
                     Connect Trello
-                  </Button>
+                  </AppButton>
                 </Link>
                 <Link to="/app/inquiries/new" style={{ textDecoration: "none" }}>
-                  <Button variant="outline" size="md" h="42px" px={6} borderColor={APP_BORDER}>
+                  <AppButton variant="secondary" size="md">
                     <LuPlus size={16} /> New job
-                  </Button>
+                  </AppButton>
                 </Link>
               </Box>
             }
@@ -222,7 +222,7 @@ export default function InquiriesListPage() {
             </Box>
           ) : filtered.length === 0 ? null : (
             filtered.map((inq, i) => (
-              <AppListRow key={inq.id} href={`/app/inquiries/${inq.id}`} isLast={i === filtered.length - 1}>
+              <AppListRow key={inq.id} href={`/app/jobs/${inq.id}`} isLast={i === filtered.length - 1}>
                 <Box flex="1" minW={0}>
                   <Text fontSize="0.9375rem" fontWeight="600" color={APP_INK} overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
                     {inq.title}

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState, type CSSProperties } from "react"
-import { Box, Button, Spinner, Stack, Text } from "@chakra-ui/react"
+import { useCallback, useEffect, useState } from "react"
+import { Box, Spinner, Stack, Text } from "@chakra-ui/react"
 import { LuCheck, LuClock, LuPlus, LuTrash2 } from "react-icons/lu"
 import EditWithAI from "@/components/ai/EditWithAI"
 import {
@@ -12,6 +12,7 @@ import {
   APP_SURFACE as SURFACE,
   AppCard as Card,
 } from "@/components/ui/appUi"
+import { AppButton } from "@/components/ui/AppButton"
 import {
   agreeAgreement,
   createTodo,
@@ -35,14 +36,12 @@ import {
   type TimeEntry,
 } from "@/api/job"
 
-const TRY_FMT = new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" })
+import { formatMoney } from "@/lib/money"
+import { AppInput } from "@/components/ui/AppInput"
+import { AppSelect } from "@/components/ui/AppSelect"
 
-function money(n: number, currency = "TRY") {
-  try {
-    return new Intl.NumberFormat("tr-TR", { style: "currency", currency }).format(n)
-  } catch {
-    return TRY_FMT.format(n)
-  }
+function money(n: number, currency = "EUR") {
+  return formatMoney(n, currency)
 }
 
 export function TodosCard({
@@ -174,26 +173,22 @@ export function TodosCard({
                 </Box>
                 {canLog && logFor === todo.id && (
                   <Box display="flex" gap={2} mt={2} pl="32px">
-                    <input
+                    <AppInput
                       autoFocus
                       type="number"
                       min="0.25"
                       max="24"
                       step="0.25"
                       placeholder="Hours"
+                      controlSize="sm"
+                      w="90px"
                       value={logHours}
                       onChange={(e) => setLogHours(e.target.value)}
                       onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void addHours(todo) } }}
-                      style={{
-                        width: 90, padding: "8px 12px", fontSize: "0.875rem",
-                        border: `1px solid ${BORDER}`, borderRadius: "8px",
-                        fontFamily: "inherit", outline: "none", background: SURFACE, color: INK,
-                      }}
                     />
-                    <Button size="sm" h="38px" px={3} borderRadius="8px" bg={ACCENT} color="white"
-                      _hover={{ bg: "#0a5240" }} loading={logging} onClick={() => void addHours(todo)} disabled={!logHours}>
+                    <AppButton size="sm" loading={logging} onClick={() => void addHours(todo)} disabled={!logHours}>
                       Log
-                    </Button>
+                    </AppButton>
                   </Box>
                 )}
               </Box>
@@ -206,21 +201,17 @@ export function TodosCard({
             </Box>
           )}
           <Box display="flex" gap={2}>
-            <input
+            <AppInput
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTodo() } }}
               placeholder="Add a to-do…"
-              style={{
-                flex: 1, padding: "8px 12px", fontSize: "0.875rem",
-                border: `1px solid ${BORDER}`, borderRadius: "8px",
-                fontFamily: "inherit", outline: "none", background: SURFACE, color: INK,
-              }}
+              controlSize="sm"
+              flex="1"
             />
-            <Button size="sm" h="38px" px={3} borderRadius="8px" bg={ACCENT} color="white"
-              _hover={{ bg: "#0a5240" }} loading={saving} onClick={addTodo} disabled={!draft.trim()}>
+            <AppButton size="sm" variant="accent" loading={saving} onClick={addTodo} disabled={!draft.trim()}>
               <LuPlus size={14} />
-            </Button>
+            </AppButton>
           </Box>
         </Stack>
       )}
@@ -265,12 +256,6 @@ export function AgreementCard({ inquiryId, currentUserId }: { inquiryId: string;
     }
   }
 
-  const inputStyle: CSSProperties = {
-    width: "100%", padding: "8px 12px", fontSize: "0.875rem",
-    border: `1px solid ${BORDER}`, borderRadius: "8px",
-    fontFamily: "inherit", outline: "none", background: SURFACE, color: INK,
-  }
-
   return (
     <Card label="Price agreement">
       {loading ? (
@@ -289,32 +274,29 @@ export function AgreementCard({ inquiryId, currentUserId }: { inquiryId: string;
               {a.notes && <Text fontSize="0.75rem" color={MUTED} mt={1}>{a.notes}</Text>}
               {a.status === "proposed" && a.proposedBy !== currentUserId && (
                 <Box display="flex" gap={2} mt={2}>
-                  <Button size="xs" bg={ACCENT} color="white" onClick={() => agreeAgreement(inquiryId, a.id).then(load)}>Agree</Button>
-                  <Button size="xs" variant="outline" borderColor={BORDER} onClick={() => declineAgreement(inquiryId, a.id).then(load)}>Decline</Button>
+                  <AppButton size="sm" onClick={() => agreeAgreement(inquiryId, a.id).then(load)}>Agree</AppButton>
+                  <AppButton size="sm" variant="danger" onClick={() => declineAgreement(inquiryId, a.id).then(load)}>Decline</AppButton>
                 </Box>
               )}
             </Box>
           ))}
           {error && <Text fontSize="0.8125rem" color="#B91C1C">{error}</Text>}
           <Box display="flex" gap={2}>
-            <Button size="xs" variant={billingType === "hourly" ? "solid" : "outline"} bg={billingType === "hourly" ? ACCENT : SURFACE}
-              color={billingType === "hourly" ? "white" : INK} borderColor={BORDER} onClick={() => setBillingType("hourly")}>Hourly</Button>
-            <Button size="xs" variant={billingType === "project" ? "solid" : "outline"} bg={billingType === "project" ? ACCENT : SURFACE}
-              color={billingType === "project" ? "white" : INK} borderColor={BORDER} onClick={() => setBillingType("project")}>Project</Button>
+            <AppButton size="sm" variant={billingType === "hourly" ? "primary" : "secondary"} onClick={() => setBillingType("hourly")}>Hourly</AppButton>
+            <AppButton size="sm" variant={billingType === "project" ? "primary" : "secondary"} onClick={() => setBillingType("project")}>Project</AppButton>
           </Box>
           {billingType === "hourly" ? (
             <Box display="flex" gap={2}>
-              <input style={inputStyle} type="number" min="0" placeholder="Rate" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} />
-              <input style={inputStyle} type="number" min="0" placeholder="Est. hours" value={estimatedHours} onChange={(e) => setEstimatedHours(e.target.value)} />
+              <AppInput type="number" min="0" placeholder="Rate" controlSize="sm" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} />
+              <AppInput type="number" min="0" placeholder="Est. hours" controlSize="sm" value={estimatedHours} onChange={(e) => setEstimatedHours(e.target.value)} />
             </Box>
           ) : (
-            <input style={inputStyle} type="number" min="0" placeholder="Project price" value={projectPrice} onChange={(e) => setProjectPrice(e.target.value)} />
+            <AppInput type="number" min="0" placeholder="Project price" controlSize="sm" value={projectPrice} onChange={(e) => setProjectPrice(e.target.value)} />
           )}
-          <input style={inputStyle} placeholder="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} />
-          <Button size="sm" alignSelf="flex-start" bg={ACCENT} color="white" _hover={{ bg: "#0a5240" }}
-            loading={saving} onClick={propose}>
+          <AppInput placeholder="Notes (optional)" controlSize="sm" value={notes} onChange={(e) => setNotes(e.target.value)} />
+          <AppButton size="sm" loading={saving} onClick={propose}>
             Propose
-          </Button>
+          </AppButton>
         </Stack>
       )}
     </Card>
@@ -356,12 +338,6 @@ export function HoursCard({
     }
   }
 
-  const inputStyle: CSSProperties = {
-    width: "100%", padding: "8px 12px", fontSize: "0.875rem",
-    border: `1px solid ${BORDER}`, borderRadius: "8px",
-    fontFamily: "inherit", outline: "none", background: SURFACE, color: INK,
-  }
-
   return (
     <Card label="Hours">
       <Stack gap={3}>
@@ -386,12 +362,12 @@ export function HoursCard({
         {canLog && (
           <>
             <Box display="flex" gap={2}>
-              <input style={{ ...inputStyle, width: 90 }} type="number" min="0.25" max="24" step="0.25" placeholder="Hours" value={hours} onChange={(e) => setHours(e.target.value)} />
-              <input style={inputStyle} placeholder="Note" value={note} onChange={(e) => setNote(e.target.value)} />
+              <AppInput type="number" min="0.25" max="24" step="0.25" placeholder="Hours" controlSize="sm" w="90px" value={hours} onChange={(e) => setHours(e.target.value)} />
+              <AppInput placeholder="Note" controlSize="sm" value={note} onChange={(e) => setNote(e.target.value)} />
             </Box>
-            <Button size="sm" alignSelf="flex-start" bg={ACCENT} color="white" loading={saving} onClick={add} disabled={!hours}>
+            <AppButton size="sm" loading={saving} onClick={add} disabled={!hours}>
               Log hours
-            </Button>
+            </AppButton>
           </>
         )}
       </Stack>
@@ -424,12 +400,6 @@ export function PaymentsCard({ inquiryId, canRecord }: { inquiryId: string; canR
     }
   }
 
-  const inputStyle: CSSProperties = {
-    width: "100%", padding: "8px 12px", fontSize: "0.875rem",
-    border: `1px solid ${BORDER}`, borderRadius: "8px",
-    fontFamily: "inherit", outline: "none", background: SURFACE, color: INK,
-  }
-
   return (
     <Card label="Payments">
       <Stack gap={3}>
@@ -441,26 +411,26 @@ export function PaymentsCard({ inquiryId, canRecord }: { inquiryId: string; canR
               <Text fontSize="0.75rem" color={LABEL} textTransform="capitalize">{p.status}{p.note ? ` · ${p.note}` : ""}</Text>
             </Box>
             {canRecord && p.status !== "paid" && (
-              <Button size="xs" bg={ACCENT} color="white" onClick={() => updatePayment(inquiryId, p.id, { status: "paid" }).then(load)}>
+              <AppButton size="sm" onClick={() => updatePayment(inquiryId, p.id, { status: "paid" }).then(load)}>
                 Mark paid
-              </Button>
+              </AppButton>
             )}
           </Box>
         ))}
         {canRecord && (
           <>
             <Box display="flex" gap={2}>
-              <input style={{ ...inputStyle, width: 110 }} type="number" min="0" placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} />
-              <select style={inputStyle} value={status} onChange={(e) => setStatus(e.target.value as typeof status)}>
+              <AppInput type="number" min="0" placeholder="Amount" controlSize="sm" w="120px" value={amount} onChange={(e) => setAmount(e.target.value)} />
+              <AppSelect controlSize="sm" value={status} onChange={(e) => setStatus(e.target.value as typeof status)}>
                 <option value="paid">Paid</option>
                 <option value="partial">Partial</option>
                 <option value="unpaid">Unpaid</option>
-              </select>
+              </AppSelect>
             </Box>
-            <input style={inputStyle} placeholder="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
-            <Button size="sm" alignSelf="flex-start" bg={ACCENT} color="white" loading={saving} onClick={add} disabled={!amount}>
+            <AppInput placeholder="Note (optional)" controlSize="sm" value={note} onChange={(e) => setNote(e.target.value)} />
+            <AppButton size="sm" loading={saving} onClick={add} disabled={!amount}>
               Record payment
-            </Button>
+            </AppButton>
           </>
         )}
       </Stack>

@@ -1,76 +1,37 @@
+import { useEffect, useState } from "react"
 import { Box, Stack, Text } from "@chakra-ui/react"
 import MarketingLayout from "@/components/marketing/MarketingLayout"
 import { ContentSection, PageHero } from "@/components/marketing/MarketingUI"
 import { INK, MUTED, RULE, SURFACE } from "@/components/marketing/tokens"
-
-const SERVICES = [
-  { name: "Workspace (app.co-helper.com)", status: "operational", uptime: "99.98%" },
-  { name: "API", status: "operational", uptime: "99.95%" },
-  { name: "Authentication (Firebase)", status: "operational", uptime: "99.99%" },
-  { name: "Edit with AI (Gemini)", status: "operational", uptime: "99.90%" },
-  { name: "Trello import / webhooks", status: "operational", uptime: "99.90%" },
-  { name: "Document uploads", status: "operational", uptime: "99.97%" },
-]
-
-function StatusIndicator({ status }: { status: string }) {
-  const isOperational = status === "operational"
-  return (
-    <Box display="flex" alignItems="center" gap={2}>
-      <Box w="8px" h="8px" borderRadius="full" bg={isOperational ? "#374151" : MUTED} />
-      <Text fontSize="0.8125rem" fontWeight="600" color={INK} textTransform="capitalize">{status}</Text>
-    </Box>
-  )
-}
+import { getPublicStatus } from "@/api/public"
 
 export default function StatusPage() {
+  const [status, setStatus] = useState<{ status: string; checks: Record<string, string> } | null>(null)
+  useEffect(() => {
+    getPublicStatus().then(setStatus).catch(() => setStatus({ status: "unknown", checks: { api: "unreachable" } }))
+  }, [])
+  const checks = status?.checks ?? { api: "checking", database: "checking" }
+
   return (
     <MarketingLayout>
       <PageHero
         label="Support"
         title="System status"
-        subtitle="Current operational status of the Co-Helper workspace, AI, and optional Trello sync."
+        subtitle="Live checks against the Co-Helper API and database."
       />
-
       <ContentSection narrow>
         <Box p={6} bg={SURFACE} borderRadius="8px" border={`1px solid ${RULE}`} mb={8}>
-          <Box display="flex" alignItems="center" gap={3}>
-            <Box w="10px" h="10px" borderRadius="full" bg="#374151" />
-            <Text fontSize="0.9375rem" fontWeight="600" color={INK}>All systems operational</Text>
-          </Box>
-          <Text fontSize="0.8125rem" color={MUTED} mt={2}>Last checked: {new Date().toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}</Text>
+          <Text fontSize="0.9375rem" fontWeight="600" color={INK}>
+            {status?.status === "operational" ? "All systems operational" : status?.status ?? "Checking…"}
+          </Text>
         </Box>
-
-        <Box border={`1px solid ${RULE}`} borderRadius="8px" overflow="hidden" mb={10}>
-          {SERVICES.map((service, i) => (
-            <Box
-              key={service.name}
-              px={6} py={5}
-              bg="white"
-              borderTop={i > 0 ? `1px solid ${RULE}` : undefined}
-              display="flex"
-              justifyContent="space-between"
-              alignItems="center"
-              flexWrap="wrap"
-              gap={3}
-            >
-              <Text fontSize="0.9375rem" fontWeight="500" color={INK}>{service.name}</Text>
-              <Box display="flex" alignItems="center" gap={6}>
-                <Text fontSize="0.8125rem" color={MUTED}>{service.uptime} uptime (30d)</Text>
-                <StatusIndicator status={service.status} />
-              </Box>
+        <Stack gap={0} border={`1px solid ${RULE}`} borderRadius="8px" overflow="hidden">
+          {Object.entries(checks).map(([name, value]) => (
+            <Box key={name} px={5} py={4} borderBottom={`1px solid ${RULE}`} display="flex" justifyContent="space-between">
+              <Text fontWeight="600" color={INK} textTransform="capitalize">{name}</Text>
+              <Text color={MUTED}>{value}</Text>
             </Box>
           ))}
-        </Box>
-
-        <Stack gap={6}>
-          <Box>
-            <Text fontSize="0.8125rem" fontWeight="600" color={INK} mb={3}>Recent incidents</Text>
-            <Text fontSize="0.875rem" color={MUTED}>No incidents reported in the last 90 days.</Text>
-          </Box>
-          <Box>
-            <Text fontSize="0.8125rem" fontWeight="600" color={INK} mb={3}>Scheduled maintenance</Text>
-            <Text fontSize="0.875rem" color={MUTED}>No maintenance scheduled. Updates are deployed with zero-downtime releases.</Text>
-          </Box>
         </Stack>
       </ContentSection>
     </MarketingLayout>

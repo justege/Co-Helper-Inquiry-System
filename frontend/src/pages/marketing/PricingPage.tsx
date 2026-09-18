@@ -49,6 +49,9 @@ export default function PricingPage() {
               ))}
             </Stack>
             <CTA to="/partner/register" variant="white">Start your workspace</CTA>
+            <Text fontSize="0.75rem" color="rgba(255,255,255,0.55)" mt={3}>
+              Subscribe in Settings after you create a workspace — Stripe Checkout for $9 intro, then $49.
+            </Text>
           </Box>
 
           <Stack gap={6}>

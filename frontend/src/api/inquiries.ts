@@ -13,31 +13,6 @@ export type InquiryStatus =
   | "escalated"
   | "cancelled";
 
-export interface OfferExpert {
-  id: string;
-  proposedPrice: number;
-  leadTimeDays: number | null;
-  notes: string | null;
-  expert: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    companyName: string | null;
-  } | null;
-}
-
-export interface ProjectOfferSummary {
-  id: string;
-  totalClientPrice: number;
-  validUntil: string | null;
-  status: "draft" | "sent" | "accepted" | "declined";
-  notes: string | null;
-  leadTimeDays: number | null;
-  createdAt: string;
-  itemCount: number;
-  experts?: OfferExpert[];
-}
-
 export interface InquiryClientBrief {
   id: string;
   firstName: string | null;
@@ -64,7 +39,6 @@ export interface Inquiry {
   targetEndDate: string | null;
   estimatedQuantity: number | null;
   status: InquiryStatus;
-  projectOffers?: ProjectOfferSummary[];
   createdAt: string;
   updatedAt: string;
 }
@@ -82,6 +56,8 @@ export interface CreateInquiryInput {
   clientId?: string;
   /** Clients opening a job inside a specific freelancer's workspace. */
   workspaceId?: string;
+  /** Optional project folder in the workspace. */
+  projectId?: string;
   /** Title-only create from the shared board. */
   quickAdd?: boolean;
 }
@@ -100,8 +76,10 @@ export const getMyInquiries = () => api.get<Inquiry[]>("/api/inquiries/mine");
 export const getInquiry = (id: string) => api.get<Inquiry>(`/api/inquiries/${id}`);
 export const createInquiry = (data: CreateInquiryInput) =>
   api.post<Inquiry>("/api/inquiries", data);
-export const updateInquiry = (id: string, data: { title?: string; description?: string }) =>
-  api.patch<Inquiry>(`/api/inquiries/${id}`, data);
+export const updateInquiry = (
+  id: string,
+  data: { title?: string; description?: string; projectId?: string | null }
+) => api.patch<Inquiry>(`/api/inquiries/${id}`, data);
 export const updateInquiryStatus = (id: string, status: InquiryStatus) =>
   api.patch<Inquiry>(`/api/inquiries/${id}/status`, { status });
 

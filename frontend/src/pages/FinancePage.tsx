@@ -16,7 +16,7 @@ import {
 import { getMe } from "@/api/users"
 import { getMyFinance, getWorkspaceFinance, type WorkspaceFinance } from "@/api/workspace"
 
-const TRY_FMT = new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" })
+import { formatMoney } from "@/lib/money"
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
@@ -48,6 +48,7 @@ export default function FinancePage() {
   }, [])
 
   const totals = data?.totals
+  const currency = data?.jobs[0]?.currency || "EUR"
 
   return (
     <PageShell
@@ -65,9 +66,9 @@ export default function FinancePage() {
       ) : (
         <Stack gap={5}>
           <Grid templateColumns={{ base: "1fr 1fr", md: "repeat(4, 1fr)" }} gap={3}>
-            <Stat label="Agreed" value={TRY_FMT.format(totals?.agreedValue ?? 0)} />
-            <Stat label="Paid" value={TRY_FMT.format(totals?.paid ?? 0)} />
-            <Stat label="Remaining" value={TRY_FMT.format(totals?.remaining ?? 0)} />
+            <Stat label="Agreed" value={formatMoney(totals?.agreedValue ?? 0, currency)} />
+            <Stat label="Paid" value={formatMoney(totals?.paid ?? 0, currency)} />
+            <Stat label="Remaining" value={formatMoney(totals?.remaining ?? 0, currency)} />
             <Stat label="Hours logged" value={`${(totals?.billableHours ?? 0).toFixed(1)} h`} />
           </Grid>
 
@@ -86,13 +87,13 @@ export default function FinancePage() {
               </Box>
             ) : (
               (data?.jobs ?? []).map((job, i) => (
-                <AppListRow key={job.inquiryId} href={`/app/inquiries/${job.inquiryId}`} isLast={i === (data?.jobs.length ?? 0) - 1}>
+                <AppListRow key={job.inquiryId} href={`/app/jobs/${job.inquiryId}`} isLast={i === (data?.jobs.length ?? 0) - 1}>
                   <Box flex="1" minW={0}>
                     <Text fontSize="0.9375rem" fontWeight="600" color={APP_INK} overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
                       {job.title}
                     </Text>
                     <Text fontSize="0.75rem" color={APP_LABEL} mt={0.5}>
-                      {TRY_FMT.format(job.paid)} paid · {TRY_FMT.format(job.remaining)} remaining
+                      {formatMoney(job.paid, job.currency)} paid · {formatMoney(job.remaining, job.currency)} remaining
                       {job.billableHours ? ` · ${job.billableHours.toFixed(1)} h` : ""}
                     </Text>
                   </Box>

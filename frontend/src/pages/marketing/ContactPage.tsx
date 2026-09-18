@@ -1,9 +1,12 @@
 import { useForm } from "react-hook-form"
+import { useState } from "react"
 import { Box, Grid, Heading, Stack, Text } from "@chakra-ui/react"
 import { FormInput, FormTextarea } from "@/components/ui/form-controls"
 import MarketingLayout from "@/components/marketing/MarketingLayout"
 import { ContentSection, PageHero } from "@/components/marketing/MarketingUI"
 import { INK, MUTED, RULE, SURFACE } from "@/components/marketing/tokens"
+import { submitContact } from "@/api/public"
+import { AppButton } from "@/components/ui/AppButton"
 
 type ContactFields = {
   name: string
@@ -14,10 +17,19 @@ type ContactFields = {
 }
 
 export default function ContactPage() {
-  const { register, handleSubmit } = useForm<ContactFields>()
+  const { register, handleSubmit, reset } = useForm<ContactFields>()
+  const [sent, setSent] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  function onSubmit(_data: ContactFields) {
-    // Static marketing form — wire to API when available
+  async function onSubmit(data: ContactFields) {
+    setError(null)
+    try {
+      await submitContact(data)
+      setSent(true)
+      reset()
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Could not send")
+    }
   }
 
   return (
@@ -52,21 +64,9 @@ export default function ContactPage() {
                 <Text fontSize="0.8125rem" fontWeight="600" color={INK} mb={1.5}>Message</Text>
                 <FormTextarea placeholder="How can we help?" rows={5} resize="vertical" {...register("message")} />
               </Box>
-              <Box
-                as="button"
-                alignSelf="flex-start"
-                px={5} py="10px"
-                bg={INK}
-                color="white"
-                fontWeight="600"
-                fontSize="0.875rem"
-                borderRadius="6px"
-                border={`1px solid ${INK}`}
-                cursor="pointer"
-                _hover={{ bg: "#1E2530" }}
-              >
-                Send message
-              </Box>
+              {error && <Text color="#B91C1C" fontSize="0.8125rem">{error}</Text>}
+              {sent && <Text color="#047857" fontSize="0.8125rem">Message sent. We’ll get back to you.</Text>}
+              <AppButton type="submit">Send message</AppButton>
             </Stack>
           </Box>
 

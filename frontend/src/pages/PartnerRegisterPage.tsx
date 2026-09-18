@@ -3,7 +3,6 @@ import { useNavigate, Link } from "react-router-dom"
 import {
   Badge,
   Box,
-  Button,
   Flex,
   Grid,
   Stack,
@@ -21,7 +20,7 @@ import {
 import { MultiSelectPopover } from "@/components/ui/multi-select-popover"
 import { AuthShell } from "@/components/auth/AuthShell"
 import { AuthDivider, SocialAuthButtons } from "@/components/auth/SocialAuthButtons"
-import { authFieldLabel, authInputProps, authPrimaryButtonProps } from "@/components/auth/authStyles"
+import { authFieldLabel, authInputProps } from "@/components/auth/authStyles"
 import { useAuthContext } from "../components/auth/AuthContext"
 import { getPublicCategories } from "../api/categories"
 import {
@@ -32,6 +31,8 @@ import {
 } from "../api/partners"
 import { auth } from "../lib/firebase"
 import loginPng from "@/assets/login.png"
+import { AppButton } from "@/components/ui/AppButton"
+
 
 type RegisterFields = {
   username: string
@@ -298,7 +299,7 @@ export default function PartnerRegisterPage() {
       token
     )
 
-    navigate("/app/board", { replace: true })
+    navigate("/app", { replace: true })
   }
 
   async function onSubmit(data: RegisterFields) {
@@ -560,16 +561,16 @@ export default function PartnerRegisterPage() {
               )
             })}
 
-            <Button type="submit" loading={isSubmitting} {...authPrimaryButtonProps}>
+            <AppButton type="submit" size="lg" loading={isSubmitting} w="full">
               Create my workspace
-            </Button>
+            </AppButton>
           </Stack>
         )}
       </Box>
 
       <Flex align="center" justify="space-between" mt={7} pt={5} borderTop="1px solid #E2E8F0">
         {step > 1 ? (
-          <Button
+          <AppButton
             variant="ghost"
             fontSize="0.875rem"
             fontWeight="600"
@@ -581,7 +582,7 @@ export default function PartnerRegisterPage() {
             onClick={() => fadeToStep(step - 1)}
           >
             ← Back
-          </Button>
+          </AppButton>
         ) : (
           <Box />
         )}
@@ -591,7 +592,7 @@ export default function PartnerRegisterPage() {
         </Text>
 
         {step < TOTAL_STEPS ? (
-          <Button
+          <AppButton
             fontSize="0.875rem"
             fontWeight="700"
             bg="#0D1B2E"
@@ -603,7 +604,7 @@ export default function PartnerRegisterPage() {
             onClick={handleContinue}
           >
             Continue →
-          </Button>
+          </AppButton>
         ) : (
           <Box />
         )}

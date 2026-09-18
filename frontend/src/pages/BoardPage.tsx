@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from "react"
-import { Link, useNavigate } from "react-router-dom"
-import { Box, Button, Spinner, Text } from "@chakra-ui/react"
-import { LuPlus, LuUsers } from "react-icons/lu"
+import { DndContext, PointerSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core"
+import { Link, useNavigate, useSearchParams } from "react-router-dom"
+import { Box, Spinner, Text } from "@chakra-ui/react"
+import { LuFolderKanban, LuPlus, LuUsers } from "react-icons/lu"
 import {
   createInquiry,
   getMyInquiries,
@@ -10,7 +11,7 @@ import {
   type Urgency,
 } from "../api/inquiries"
 import { getMe, type User } from "../api/users"
-import { getMyWorkspace, type FreelancerWorkspaceMe } from "../api/workspace"
+import { getMyWorkspace, getWorkspaceProjects, type FreelancerWorkspaceMe, type WorkspaceProject } from "../api/workspace"
 import { PageShell } from "@/components/ui/PageShell"
 import { StartWorkspaceEmptyState } from "@/components/ui/FeatureEmptyState"
 import {
@@ -23,6 +24,7 @@ import {
   APP_SURFACE,
   AppFilterChip,
 } from "@/components/ui/appUi"
+import { AppButton } from "@/components/ui/AppButton"
 import {
   BOARD_COLUMNS,
   clientDisplayName,
@@ -41,31 +43,43 @@ type ClientFilter = "all" | "none" | string
 
 export default function BoardPage() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [me, setMe] = useState<User | null>(null)
   const [inquiries, setInquiries] = useState<Inquiry[]>([])
   const [workspace, setWorkspace] = useState<FreelancerWorkspaceMe | null>(null)
+  const [projects, setProjects] = useState<WorkspaceProject[]>([])
   const [clientWorkspaceCount, setClientWorkspaceCount] = useState(0)
   const [clientWorkspaceId, setClientWorkspaceId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<ClientFilter>("all")
-  const [dragOver, setDragOver] = useState<BoardColumnId | null>(null)
-  const [draggingId, setDraggingId] = useState<string | null>(null)
+  const projectFilter = searchParams.get("project") ?? "all"
   const snapshotRef = useRef<Inquiry[] | null>(null)
 
   const isFreelancer = me?.role === "expert"
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+
+  function onDragEnd(event: DragEndEvent) {
+    const overId = event.over?.id
+    const activeId = String(event.active.id)
+    if (typeof overId === "string" && BOARD_COLUMNS.some((c) => c.id === overId)) {
+      void moveCard(activeId, overId as BoardColumnId)
+    }
+  }
 
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const [profile, jobs, ws] = await Promise.all([
+      const [profile, jobs, ws, projectData] = await Promise.all([
         getMe(),
         getMyInquiries(),
         getMyWorkspace().catch(() => null),
+        getWorkspaceProjects().catch(() => ({ projects: [] as WorkspaceProject[] })),
       ])
       setMe(profile)
       setInquiries(jobs)
+      setProjects(projectData.projects)
       if (ws?.role === "owner") {
         setWorkspace(ws)
         setClientWorkspaceCount(0)
@@ -93,10 +107,20 @@ export default function BoardPage() {
   const clients = workspace?.clients ?? []
   const visible = useMemo(() => {
     const boardJobs = inquiries.filter((job) => job.workspaceId)
-    if (!isFreelancer || filter === "all") return boardJobs
-    if (filter === "none") return boardJobs.filter((job) => job.clientId === me?.id)
-    return boardJobs.filter((job) => job.clientId === filter)
-  }, [filter, inquiries, isFreelancer, me?.id])
+    let next = boardJobs
+    if (isFreelancer && filter === "none") next = next.filter((job) => job.clientId === me?.id)
+    else if (isFreelancer && filter !== "all") next = next.filter((job) => job.clientId === filter)
+    if (projectFilter === "none") next = next.filter((job) => !job.projectId)
+    else if (projectFilter !== "all") next = next.filter((job) => job.projectId === projectFilter)
+    return next
+  }, [filter, inquiries, isFreelancer, me?.id, projectFilter])
+
+  function setProjectFilter(id: string) {
+    const next = new URLSearchParams(searchParams)
+    if (id === "all") next.delete("project")
+    else next.set("project", id)
+    setSearchParams(next, { replace: true })
+  }
 
   async function moveCard(id: string, columnId: BoardColumnId) {
     const job = inquiries.find((item) => item.id === id)
@@ -142,16 +166,28 @@ export default function BoardPage() {
       subtitle="Same columns for you and your client. Drag a card to update it."
       action={
         isFreelancer ? (
-          <Link to="/app/clients" style={{ textDecoration: "none" }}>
-            <Button
-              size="sm" h="34px" px={4}
-              bg="rgba(255,255,255,0.12)" color="white" fontWeight="600" fontSize="0.8125rem"
-              borderRadius="8px" border="1px solid rgba(255,255,255,0.25)"
-              _hover={{ bg: "rgba(255,255,255,0.2)" }}
-            >
-              <LuUsers size={14} /> Invite
-            </Button>
-          </Link>
+          <Box display="flex" gap={2}>
+            <Link to="/app/projects" style={{ textDecoration: "none" }}>
+              <AppButton
+                size="sm" h="34px" px={4}
+                bg="rgba(255,255,255,0.12)" color="white" fontWeight="600" fontSize="0.8125rem"
+                borderRadius="8px" border="1px solid rgba(255,255,255,0.25)"
+                _hover={{ bg: "rgba(255,255,255,0.2)" }}
+              >
+                <LuFolderKanban size={14} /> Projects
+              </AppButton>
+            </Link>
+            <Link to="/app/clients" style={{ textDecoration: "none" }}>
+              <AppButton
+                size="sm" h="34px" px={4}
+                bg="rgba(255,255,255,0.12)" color="white" fontWeight="600" fontSize="0.8125rem"
+                borderRadius="8px" border="1px solid rgba(255,255,255,0.25)"
+                _hover={{ bg: "rgba(255,255,255,0.2)" }}
+              >
+                <LuUsers size={14} /> Invite
+              </AppButton>
+            </Link>
+          </Box>
         ) : undefined
       }
     >
@@ -177,6 +213,23 @@ export default function BoardPage() {
         </Box>
       )}
 
+      {projects.length > 0 && (
+        <Box display="flex" gap={2} overflowX="auto" pb={3} mb={1}>
+          <AppFilterChip active={projectFilter === "all"} onClick={() => setProjectFilter("all")}>
+            All projects
+          </AppFilterChip>
+          {projects.map((project) => (
+            <AppFilterChip key={project.id} active={projectFilter === project.id} onClick={() => setProjectFilter(project.id)}>
+              {project.name}
+            </AppFilterChip>
+          ))}
+          <AppFilterChip active={projectFilter === "none"} onClick={() => setProjectFilter("none")}>
+            No project
+          </AppFilterChip>
+        </Box>
+      )}
+
+      <DndContext sensors={sensors} onDragEnd={onDragEnd}>
       <Box
         display="flex"
         gap={3}
@@ -194,20 +247,6 @@ export default function BoardPage() {
             cards={visible.filter((job) => columnForStatus(job.status) === column.id)}
             showClient={Boolean(isFreelancer && filter === "all")}
             myId={me?.id ?? ""}
-            isOver={dragOver === column.id}
-            draggingId={draggingId}
-            onDragOverColumn={(id) => setDragOver(id)}
-            onDragLeaveColumn={() => setDragOver((current) => (current === column.id ? null : current))}
-            onDropCard={(id) => {
-              setDragOver(null)
-              setDraggingId(null)
-              void moveCard(id, column.id)
-            }}
-            onDragStartCard={setDraggingId}
-            onDragEndCard={() => {
-              setDraggingId(null)
-              setDragOver(null)
-            }}
             canQuickAdd={column.id === "requested"}
             onQuickAdd={async (title) => {
               const created = await createInquiry({
@@ -217,13 +256,15 @@ export default function BoardPage() {
                   ? (filter !== "all" && filter !== "none" ? filter : me?.id)
                   : undefined,
                 workspaceId: !isFreelancer ? clientWorkspaceId ?? undefined : undefined,
+                projectId: projectFilter !== "all" && projectFilter !== "none" ? projectFilter : undefined,
               })
               setInquiries((prev) => [created, ...prev])
-              navigate(`/app/inquiries/${created.id}`)
+              navigate(`/app/jobs/${created.id}`)
             }}
           />
         ))}
       </Box>
+      </DndContext>
     </PageShell>
   )
 }
@@ -233,13 +274,6 @@ function BoardColumnView({
   cards,
   showClient,
   myId,
-  isOver,
-  draggingId,
-  onDragOverColumn,
-  onDragLeaveColumn,
-  onDropCard,
-  onDragStartCard,
-  onDragEndCard,
   canQuickAdd,
   onQuickAdd,
 }: {
@@ -247,37 +281,22 @@ function BoardColumnView({
   cards: Inquiry[]
   showClient: boolean
   myId: string
-  isOver: boolean
-  draggingId: string | null
-  onDragOverColumn: (id: BoardColumnId) => void
-  onDragLeaveColumn: () => void
-  onDropCard: (id: string) => void
-  onDragStartCard: (id: string) => void
-  onDragEndCard: () => void
   canQuickAdd: boolean
   onQuickAdd: (title: string) => Promise<void>
 }) {
+  const { setNodeRef, isOver } = useDroppable({ id: column.id })
   return (
     <Box
+      ref={setNodeRef}
       flex="1 0 240px"
       maxW={{ lg: "none" }}
       minW="240px"
       bg={isOver ? "#F3FBF7" : APP_BG_SUBTLE}
       border={`1px solid ${isOver ? APP_ACCENT : APP_BORDER}`}
-      borderRadius="12px"
+      borderRadius="14px"
       display="flex"
       flexDir="column"
       minH="360px"
-      onDragOver={(e) => {
-        e.preventDefault()
-        onDragOverColumn(column.id)
-      }}
-      onDragLeave={onDragLeaveColumn}
-      onDrop={(e) => {
-        e.preventDefault()
-        const id = e.dataTransfer.getData("text/plain")
-        if (id) onDropCard(id)
-      }}
     >
       <Box px={3.5} pt={3} pb={2} display="flex" alignItems="baseline" justifyContent="space-between" gap={2}>
         <Box>
@@ -289,16 +308,11 @@ function BoardColumnView({
 
       <Box flex="1" px={2} pb={2} display="flex" flexDir="column" gap={2}>
         {cards.map((job) => (
-          <BoardCard
-            key={job.id}
-            job={job}
-            showClient={showClient}
-            myId={myId}
-            dimmed={draggingId === job.id}
-            onDragStart={() => onDragStartCard(job.id)}
-            onDragEnd={onDragEndCard}
-          />
+          <BoardCard key={job.id} job={job} showClient={showClient} myId={myId} />
         ))}
+        {cards.length === 0 && (
+          <Text px={2} py={6} fontSize="0.8125rem" color={APP_MUTED}>Nothing here yet.</Text>
+        )}
         {canQuickAdd && <QuickAdd onAdd={onQuickAdd} />}
       </Box>
     </Box>
@@ -309,59 +323,45 @@ function BoardCard({
   job,
   showClient,
   myId,
-  dimmed,
-  onDragStart,
-  onDragEnd,
 }: {
   job: Inquiry
   showClient: boolean
   myId: string
-  dimmed: boolean
-  onDragStart: () => void
-  onDragEnd: () => void
 }) {
   const navigate = useNavigate()
-  const dragged = useRef(false)
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: job.id,
+    disabled: !job.workspaceId,
+  })
   const clientName = job.clientId === myId ? "No client" : clientDisplayName(job.client)
   const urgency = URGENCY_TONE[job.urgency]
+  const style = transform
+    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
+    : undefined
 
   return (
-    <article
-      draggable={Boolean(job.workspaceId)}
-      onDragStart={(e) => {
-        dragged.current = true
-        e.dataTransfer.setData("text/plain", job.id)
-        e.dataTransfer.effectAllowed = "move"
-        onDragStart()
-      }}
-      onDragEnd={() => {
-        onDragEnd()
-        window.setTimeout(() => { dragged.current = false }, 50)
-      }}
-      onClick={() => {
-        if (dragged.current) return
-        navigate(`/app/inquiries/${job.id}`)
-      }}
-      style={{
-        opacity: dimmed ? 0.45 : 1,
-        background: APP_SURFACE,
-        border: `1px solid ${APP_BORDER}`,
-        borderRadius: 10,
-        padding: 12,
-        cursor: job.workspaceId ? "grab" : "pointer",
-        boxShadow: "0 1px 2px rgba(14,27,23,0.04)",
-      }}
+    <Box
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      onClick={() => navigate(`/app/jobs/${job.id}`)}
+      style={style}
+      opacity={isDragging ? 0.45 : 1}
+      bg={APP_SURFACE}
+      border={`1px solid ${APP_BORDER}`}
+      borderRadius="10px"
+      p="12px"
+      cursor={job.workspaceId ? "grab" : "pointer"}
+      boxShadow="0 1px 2px rgba(14,27,23,0.04)"
     >
       <Text fontSize="0.875rem" fontWeight="600" color={APP_INK} lineHeight="1.35">
         {job.title}
       </Text>
-      {(showClient || urgency) && (
+      {(showClient || urgency || job.project?.name) && (
         <Box mt={2} display="flex" alignItems="center" justifyContent="space-between" gap={2}>
-          {showClient ? (
-            <Text fontSize="0.6875rem" color={APP_MUTED} overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
-              {clientName}
-            </Text>
-          ) : <span />}
+          <Text fontSize="0.6875rem" color={APP_MUTED} overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
+            {[showClient ? clientName : null, job.project?.name].filter(Boolean).join(" · ")}
+          </Text>
           {urgency && (
             <Text fontSize="0.6875rem" fontWeight="600" color={urgency.color} flexShrink={0}>
               {urgency.label}
@@ -369,7 +369,7 @@ function BoardCard({
           )}
         </Box>
       )}
-    </article>
+    </Box>
   )
 }
 
@@ -454,12 +454,12 @@ function QuickAdd({ onAdd }: { onAdd: (title: string) => Promise<void> }) {
       />
       {error && <Text fontSize="0.6875rem" color="#B91C1C" px={2} pb={1}>{error}</Text>}
       <Box display="flex" gap={2} px={1} pb={1} pt={1}>
-        <Button size="xs" bg={APP_ACCENT} color="white" loading={busy} onClick={() => void submit()}>
+        <AppButton size="sm" loading={busy} onClick={() => void submit()}>
           Add
-        </Button>
-        <Button size="xs" variant="ghost" color={APP_MUTED} onClick={() => { setOpen(false); setError(null) }}>
+        </AppButton>
+        <AppButton size="sm" variant="ghost" onClick={() => { setOpen(false); setError(null) }}>
           Cancel
-        </Button>
+        </AppButton>
       </Box>
     </Box>
   )

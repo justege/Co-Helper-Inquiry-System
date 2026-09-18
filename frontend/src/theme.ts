@@ -1,23 +1,24 @@
 import { createSystem, defaultConfig, defineConfig } from "@chakra-ui/react"
+import { INK, PAPER } from "./theme/tokens"
 
 const config = defineConfig({
   globalCss: {
-    html: { background: "#F7F8FA" },
+    html: { background: PAPER },
     body: {
       fontFamily: "body",
-      color: "#0E1B17",
-      background: "#F7F8FA",
+      color: INK,
+      background: PAPER,
       fontFeatureSettings: '"cv02", "cv03", "cv04", "cv11"',
+      lineHeight: "1.5",
     },
   },
   theme: {
     tokens: {
       fonts: {
         body: { value: "'Inter', system-ui, -apple-system, sans-serif" },
-        heading: { value: "'Inter', system-ui, -apple-system, sans-serif" },
+        heading: { value: "'Space Grotesk', Inter, system-ui, sans-serif" },
       },
       colors: {
-        // Co-Helper brand — Trust Green
         green: {
           50:  { value: "#F0FAF5" },
           100: { value: "#D6EFE4" },
@@ -30,7 +31,6 @@ const config = defineConfig({
           800: { value: "#052B20" },
           900: { value: "#031810" },
         },
-        // Neutral grays — ink-tinted
         gray: {
           50:  { value: "#F5F7FA" },
           100: { value: "#F2F4F0" },
@@ -43,7 +43,6 @@ const config = defineConfig({
           800: { value: "#1A2535" },
           900: { value: "#0E1B17" },
         },
-        // Lime — action & CTA
         amber: {
           50:  { value: "#F4FFE0" },
           400: { value: "#D8FF86" },

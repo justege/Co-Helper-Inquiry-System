@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
-import { Box, Button, Spinner, Stack, Text } from "@chakra-ui/react"
+import { Link } from "react-router-dom"
+import { Box, Spinner, Stack, Text } from "@chakra-ui/react"
 import { LuCopy, LuPlus, LuTrash2, LuUsers } from "react-icons/lu"
 import { PageShell } from "@/components/ui/PageShell"
 import { Field } from "@/components/ui/field"
@@ -18,13 +19,12 @@ import {
   APP_ACCENT,
   APP_BG_SUBTLE,
   APP_BORDER,
-  APP_BTN_GHOST,
-  APP_BTN_PRIMARY,
   APP_CARD,
   APP_INK,
   APP_LABEL,
   APP_MUTED,
 } from "@/components/ui/appUi"
+import { AppButton } from "@/components/ui/AppButton"
 import {
   getMyWorkspace,
   getWorkspaceInvitations,
@@ -88,12 +88,12 @@ export default function ClientsPage() {
   return (
     <PageShell
       eyebrow="Workspace"
-      title="Companies"
+      title="Clients"
       subtitle="Invite the companies you already work with. They only see the jobs you share."
       action={
-        <Button {...APP_BTN_PRIMARY} size="sm" onClick={() => { setInviteSent(null); setInviteOpen(true) }}>
+        <AppButton size="sm" onClick={() => { setInviteSent(null); setInviteOpen(true) }}>
           <LuPlus size={14} /> Invite client
-        </Button>
+        </AppButton>
       }
     >
       {loading ? (
@@ -117,7 +117,8 @@ export default function ClientsPage() {
               ) : (
                 <Stack gap={3}>
                   {(data?.clients ?? []).map((c) => (
-                    <Box key={c.id} display="flex" alignItems="center" justifyContent="space-between" gap={3}
+                    <Link key={c.id} to={`/app/clients/${c.id}`} style={{ textDecoration: "none" }}>
+                    <Box display="flex" alignItems="center" justifyContent="space-between" gap={3}
                       px={4} py={3} bg={APP_BG_SUBTLE} borderRadius="10px" border={`1px solid ${APP_BORDER}`}>
                       <Box>
                         <Text fontSize="0.875rem" fontWeight="600" color={APP_INK}>
@@ -127,6 +128,7 @@ export default function ClientsPage() {
                       </Box>
                       <Text fontSize="0.75rem" fontWeight="600" color={APP_MUTED}>Client</Text>
                     </Box>
+                    </Link>
                   ))}
                 </Stack>
               )}
@@ -200,18 +202,18 @@ export default function ClientsPage() {
                 <Box mt={3} p={3} bg={APP_BG_SUBTLE} borderRadius="8px">
                   <Text fontSize="sm" color="#047857" fontWeight="600" mb={2}>Invitation created</Text>
                   {inviteSent.token && (
-                    <Button {...APP_BTN_GHOST} size="sm" onClick={() => copyLink(inviteSent.token, inviteSent.id)}>
+                    <AppButton variant="ghost" size="sm" onClick={() => copyLink(inviteSent.token, inviteSent.id)}>
                       <LuCopy size={12} /> {copiedId === inviteSent.id ? "Copied" : "Copy invite link"}
-                    </Button>
+                    </AppButton>
                   )}
                 </Box>
               )}
             </DialogBody>
             <DialogFooter px={6} pb={5} pt={0} display="flex" gap={2}>
-              <Button {...APP_BTN_PRIMARY} type="submit" loading={isSubmitting} flex={1}>
+              <AppButton type="submit" loading={isSubmitting} flex={1}>
                 Create invitation
-              </Button>
-              <Button {...APP_BTN_GHOST} color={APP_MUTED} onClick={() => setInviteOpen(false)}>Cancel</Button>
+              </AppButton>
+              <AppButton variant="ghost" color={APP_MUTED} onClick={() => setInviteOpen(false)}>Cancel</AppButton>
             </DialogFooter>
           </Box>
         </DialogContent>

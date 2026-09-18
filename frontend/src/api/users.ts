@@ -21,12 +21,14 @@ export interface User {
 
 export const getMe = () => api.get<User>("/api/users/me");
 export const updateMe = (data: {
-  username?: string;
-  avatarUrl?: string;
-  firstName?: string;
-  lastName?: string;
-  companyName?: string;
-}) => api.put<User>("/api/users/me", data);
+  username?: string
+  avatarUrl?: string
+  firstName?: string
+  lastName?: string
+  companyName?: string
+  phone?: string | null
+  contactPref?: string
+}) => api.put<User>("/api/users/me", data)
 export const getUsers = () => api.get<User[]>("/api/users");
 export const updateUserRole = (userId: string, role: Role) =>
   api.put<User>(`/api/users/${userId}/role`, { role });

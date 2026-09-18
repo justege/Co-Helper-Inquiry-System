@@ -1,8 +1,4 @@
-import {
-  FloatingPanel as ChakraFloatingPanel,
-  IconButton,
-  useFloatingPanelContext,
-} from "@chakra-ui/react"
+import { FloatingPanel as ChakraFloatingPanel, IconButton, useFloatingPanelContext } from "@chakra-ui/react"
 import * as React from "react"
 import {
   LuGripHorizontal,

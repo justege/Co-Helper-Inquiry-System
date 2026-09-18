@@ -12,6 +12,8 @@ import PartnerLoginPage from "./pages/PartnerLoginPage";
 import PartnerRegisterPage from "./pages/PartnerRegisterPage";
 import AcceptInvitePage from "./pages/AcceptInvitePage";
 import DashboardPage from "./pages/DashboardPage";
+import ActivityPage from "./pages/ActivityPage";
+import DesignSystemPage from "./pages/DesignSystemPage";
 import BoardPage from "./pages/BoardPage";
 import ProfilePage from "./pages/ProfilePage";
 import SettingsPage from "./pages/SettingsPage";
@@ -20,13 +22,18 @@ import InquiriesListPage from "./pages/InquiriesListPage";
 import InquiryDetailPage from "./pages/InquiryDetailPage";
 import TrelloPage from "./pages/TrelloPage";
 import ClientsPage from "./pages/ClientsPage";
+import ClientDetailPage from "./pages/ClientDetailPage";
+import ProjectsPage from "./pages/ProjectsPage";
+import ProjectDetailPage from "./pages/ProjectDetailPage";
 import FinancePage from "./pages/FinancePage";
 import SuperAdminPage from "./pages/SuperAdminPage";
-import AdminInquiriesListPage from "./pages/AdminInquiriesListPage";
-import AdminInquiryDetailPage from "./pages/AdminInquiryDetailPage";
-import AdminExpertsListPage from "./pages/AdminExpertsListPage";
-import AdminExpertDetailPage from "./pages/AdminExpertDetailPage";
-import PartnerServicesPage from "./pages/PartnerServicesPage";
+import JobLayout from "./pages/jobs/JobLayout";
+import JobOverview from "./pages/jobs/JobOverview";
+import JobMessages from "./pages/jobs/JobMessages";
+import JobTasks from "./pages/jobs/JobTasks";
+import JobFiles from "./pages/jobs/JobFiles";
+import JobAgreements from "./pages/jobs/JobAgreements";
+import JobActivity from "./pages/jobs/JobActivity";
 
 import HowItWorksPage from "./pages/marketing/HowItWorksPage";
 import PricingPage from "./pages/marketing/PricingPage";
@@ -50,7 +57,6 @@ export default function App() {
       <SetupBanner />
       <BrowserRouter>
         <Routes>
-          {/* ── Public routes (redirect to /app if already signed in) ── */}
           <Route element={<PublicLayout />}>
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
@@ -75,28 +81,34 @@ export default function App() {
             <Route path="/invite/:token" element={<AcceptInvitePage />} />
           </Route>
 
-          {/* ── Protected routes (redirect to /login if not signed in) ── */}
           <Route path="/app" element={<ProtectedLayout />}>
-            <Route index element={<Navigate to="board" replace />} />
+            <Route index element={<DashboardPage />} />
+            <Route path="activity" element={<ActivityPage />} />
+            <Route path="design-system" element={<DesignSystemPage />} />
             <Route path="board" element={<BoardPage />} />
-            <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="dashboard" element={<Navigate to="/app" replace />} />
             <Route path="inquiries" element={<InquiriesListPage />} />
             <Route path="inquiries/new" element={<NewInquiryPage />} />
             <Route path="inquiries/:id" element={<InquiryDetailPage />} />
+            <Route path="jobs/:id" element={<JobLayout />}>
+              <Route index element={<JobOverview />} />
+              <Route path="messages" element={<JobMessages />} />
+              <Route path="tasks" element={<JobTasks />} />
+              <Route path="files" element={<JobFiles />} />
+              <Route path="agreements" element={<JobAgreements />} />
+              <Route path="activity" element={<JobActivity />} />
+            </Route>
             <Route path="trello" element={<TrelloPage />} />
             <Route path="clients" element={<ClientsPage />} />
+            <Route path="clients/:id" element={<ClientDetailPage />} />
+            <Route path="projects" element={<ProjectsPage />} />
+            <Route path="projects/:id" element={<ProjectDetailPage />} />
             <Route path="finance" element={<FinancePage />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="admin" element={<SuperAdminPage />} />
-            <Route path="admin/inquiries" element={<AdminInquiriesListPage />} />
-            <Route path="admin/inquiries/:id" element={<AdminInquiryDetailPage />} />
-            <Route path="admin/experts" element={<AdminExpertsListPage />} />
-            <Route path="admin/experts/:id" element={<AdminExpertDetailPage />} />
-            <Route path="partner-services" element={<PartnerServicesPage />} />
           </Route>
 
-          {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

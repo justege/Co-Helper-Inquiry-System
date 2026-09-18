@@ -142,6 +142,44 @@ export async function checkInquiryAccess(inquiryId, userId, userRole) {
   };
 }
 
+export async function resolveWorkspaceProject(workspaceId, projectId) {
+  if (projectId == null || projectId === "") return null;
+  if (typeof projectId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectId)) {
+    const err = new Error("projectId must be a valid UUID");
+    err.status = 400;
+    throw err;
+  }
+  if (!workspaceId) {
+    const err = new Error("A workspace is required to attach a project");
+    err.status = 400;
+    throw err;
+  }
+  const row = await queryOne(
+    `SELECT id, name FROM projects WHERE id = $1 AND workspace_id = $2`,
+    [projectId, workspaceId]
+  );
+  if (!row) {
+    const err = new Error("That project is not in this workspace");
+    err.status = 400;
+    throw err;
+  }
+  return row;
+}
+
+export function mapProject(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description ?? null,
+    sortOrder: row.sort_order,
+    trelloListId: row.trello_list_id ?? null,
+    trelloBoardId: row.trello_board_id ?? null,
+    inquiryCount: row.inquiry_count ?? 0,
+    createdAt: row.created_at,
+  };
+}
+
 export function mapUserBrief(u) {
   if (!u) return null;
   return {

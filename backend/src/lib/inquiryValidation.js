@@ -1,6 +1,6 @@
 const URGENCIES = ["low", "medium", "high", "critical"];
 const TYPES = ["service", "tool_sourcing"];
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function validateInquiryInput(body) {
   const {

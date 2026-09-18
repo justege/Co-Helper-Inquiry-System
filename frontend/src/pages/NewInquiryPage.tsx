@@ -1,16 +1,7 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useForm, Controller } from "react-hook-form"
-import {
-  Box,
-  Button,
-  Fieldset,
-  Flex,
-  Grid,
-  RadioGroup,
-  Stack,
-  Text,
-} from "@chakra-ui/react"
+import { Box, Fieldset, Flex, Grid, RadioGroup, Stack, Text } from "@chakra-ui/react"
 import { Field } from "@/components/ui/field"
 import {
   FormInput,
@@ -24,7 +15,7 @@ import { api } from "../lib/api"
 import type { CreateInquiryInput, Inquiry, BusinessType, Urgency } from "../api/inquiries"
 import { getCategories, type Category } from "../api/categories"
 import { getMe } from "../api/users"
-import { getMyWorkspace, type FreelancerWorkspaceMe, type ClientWorkspaceMe } from "../api/workspace"
+import { getMyWorkspace, getWorkspaceProjects, type FreelancerWorkspaceMe, type ClientWorkspaceMe, type WorkspaceProject } from "../api/workspace"
 import {
   APP_BORDER,
   APP_BG_SUBTLE,
@@ -37,6 +28,8 @@ import { draftToInquiryInput } from "@/lib/gemini"
 import { INK, MUTED } from "@/components/marketing/tokens"
 import avatarSrc from "@/assets/avatar.png"
 import { Link as RouterLink } from "react-router-dom"
+import { AppButton } from "@/components/ui/AppButton"
+
 
 const URGENCY_OPTIONS: { value: Urgency; label: string; accent: string }[] = [
   { value: "low",      label: "Low",      accent: "#64748B" },
@@ -176,6 +169,8 @@ export default function NewInquiryPage() {
   const [clientWs, setClientWs] = useState<ClientWorkspaceMe | null>(null)
   const [clientId, setClientId] = useState("")
   const [workspaceId, setWorkspaceId] = useState("")
+  const [projectId, setProjectId] = useState("")
+  const [projects, setProjects] = useState<WorkspaceProject[]>([])
   const [myId, setMyId] = useState("")
 
   useEffect(() => {
@@ -194,6 +189,10 @@ export default function NewInquiryPage() {
           setClientWs(ws)
           if (ws.workspaces.length >= 1) setWorkspaceId(ws.workspaces[0].id)
         }
+        return getWorkspaceProjects().catch(() => ({ projects: [] as WorkspaceProject[] }))
+      })
+      .then((data) => {
+        if (data?.projects) setProjects(data.projects)
       })
       .catch(() => null)
       .finally(() => setWorkspaceLoading(false))
@@ -249,8 +248,9 @@ export default function NewInquiryPage() {
         targetEndDate: payload.targetEndDate ?? null,
         clientId: isFreelancer ? clientId : undefined,
         workspaceId: !isFreelancer && workspaceId ? workspaceId : undefined,
+        projectId: projectId || undefined,
       })
-      navigate(`/app/inquiries/${created.id}`)
+      navigate(`/app/jobs/${created.id}`)
     } catch (err) {
       setAiError(err instanceof Error ? err.message : "Submission failed")
     }
@@ -275,10 +275,11 @@ export default function NewInquiryPage() {
       targetEndDate:   values.targetEndDate || null,
       clientId: isFreelancer ? clientId : undefined,
       workspaceId: !isFreelancer && workspaceId ? workspaceId : undefined,
+      projectId: projectId || undefined,
     }
     try {
       const created = await api.post<Inquiry>("/api/inquiries", payload)
-      navigate(`/app/inquiries/${created.id}`)
+      navigate(`/app/jobs/${created.id}`)
     } catch (err) {
       setError("root", { message: err instanceof Error ? err.message : "Request failed" })
     }
@@ -345,6 +346,24 @@ export default function NewInquiryPage() {
               ))}
             </FormNativeSelect>
           </Field>
+        </Box>
+      )}
+      {!workspaceLoading && (
+        <Box mb={5}>
+          <Field label="Project" optionalText="optional">
+            <FormNativeSelect value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+              <option value="">No project</option>
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>{project.name}</option>
+              ))}
+            </FormNativeSelect>
+          </Field>
+          {isFreelancer && (
+            <Text fontSize="0.75rem" color={MUTED} mt={2}>
+              Group this job with others.{" "}
+              <RouterLink to="/app/projects" style={{ color: INK, fontWeight: 600 }}>Manage projects</RouterLink>
+            </Text>
+          )}
         </Box>
       )}
 
@@ -530,14 +549,14 @@ export default function NewInquiryPage() {
                   )}
 
                   <Box pt={2} borderTop={`1px solid ${APP_BORDER}`} display="flex" justifyContent="flex-end">
-                    <Button
+                    <AppButton
                       {...APP_BTN_PRIMARY}
                       type="submit" size="lg" px={10}
                       loading={isSubmitting} loadingText="Submitting…"
                       disabled={isFreelancer && !clientId}
                     >
                       {isFreelancer ? "Create Job" : "Open job"}
-                    </Button>
+                    </AppButton>
                   </Box>
                 </Fieldset.Content>
               </Fieldset.Root>

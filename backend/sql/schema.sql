@@ -35,20 +35,6 @@ EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$ BEGIN
-  CREATE TYPE expert_offer_status AS ENUM (
-    'invited', 'submitted', 'rejected', 'accepted'
-  );
-EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
-
-DO $$ BEGIN
-  CREATE TYPE project_offer_status AS ENUM (
-    'draft', 'sent', 'accepted', 'declined'
-  );
-EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
-
-DO $$ BEGIN
   CREATE TYPE billing_type AS ENUM ('hourly', 'project');
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
@@ -128,50 +114,15 @@ CREATE TABLE IF NOT EXISTS expert_profiles (
   updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS partner_services (
-  id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  partner_id  UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  category_id UUID        REFERENCES categories(id) ON DELETE SET NULL,
-  title       TEXT        NOT NULL CHECK (char_length(title) BETWEEN 1 AND 200),
-  description TEXT,
-  price_from  NUMERIC(12, 2),
-  price_to    NUMERIC(12, 2),
-  price_unit  TEXT        NOT NULL DEFAULT 'piece'
-              CHECK (price_unit IN ('piece', 'hour', 'day', 'project', 'kg', 'm2')),
-  currency    TEXT        NOT NULL DEFAULT 'EUR',
-  is_active   BOOLEAN     NOT NULL DEFAULT TRUE,
-  sort_order  INTEGER     NOT NULL DEFAULT 0,
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS partner_services_partner_idx
-  ON partner_services (partner_id, sort_order);
-
-CREATE TABLE IF NOT EXISTS partner_documents (
-  id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  partner_id  UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  title       TEXT        NOT NULL,
-  file_name   TEXT        NOT NULL,
-  file_path   TEXT        NOT NULL,
-  file_size   BIGINT,
-  mime_type   TEXT,
-  doc_type    TEXT        NOT NULL DEFAULT 'brochure'
-              CHECK (doc_type IN ('brochure', 'certification', 'portfolio', 'price_list', 'other')),
-  is_public   BOOLEAN     NOT NULL DEFAULT TRUE,
-  confirmed   BOOLEAN     NOT NULL DEFAULT FALSE,
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS partner_docs_partner_idx
-  ON partner_documents (partner_id, created_at DESC);
-
 -- ── workspaces ───────────────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS workspaces (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   owner_id   UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
   name       TEXT NOT NULL DEFAULT 'My workspace',
+  currency   TEXT NOT NULL DEFAULT 'EUR',
+  timezone   TEXT NOT NULL DEFAULT 'UTC',
+  logo_url   TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -206,6 +157,7 @@ CREATE TABLE IF NOT EXISTS projects (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id    UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
   name            TEXT NOT NULL,
+  description     TEXT,
   sort_order      INTEGER NOT NULL DEFAULT 0,
   trello_list_id  TEXT,
   trello_board_id TEXT,
@@ -272,17 +224,6 @@ CREATE TABLE IF NOT EXISTS inquiry_documents (
 CREATE INDEX IF NOT EXISTS inquiry_docs_inquiry_idx
   ON inquiry_documents (inquiry_id, created_at DESC);
 
-CREATE TABLE IF NOT EXISTS inquiry_notes (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  inquiry_id  UUID NOT NULL REFERENCES inquiries(id) ON DELETE CASCADE,
-  author_id   UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  content     TEXT NOT NULL CHECK (char_length(content) BETWEEN 1 AND 4000),
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS inquiry_notes_inquiry_idx
-  ON inquiry_notes (inquiry_id, created_at DESC);
-
 CREATE TABLE IF NOT EXISTS inquiry_messages (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   inquiry_id    UUID NOT NULL REFERENCES inquiries(id) ON DELETE CASCADE,
@@ -312,42 +253,6 @@ CREATE TABLE IF NOT EXISTS inquiry_todos (
 CREATE INDEX IF NOT EXISTS inquiry_todos_inquiry_idx ON inquiry_todos (inquiry_id, sort_order);
 CREATE UNIQUE INDEX IF NOT EXISTS inquiry_todos_trello_item_uidx
   ON inquiry_todos (trello_checkitem_id) WHERE trello_checkitem_id IS NOT NULL;
-
--- ── marketplace offers (kept for admin tools; not the core product) ──────────
-
-CREATE TABLE IF NOT EXISTS expert_offers (
-  id                       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  inquiry_id               UUID NOT NULL REFERENCES inquiries(id) ON DELETE CASCADE,
-  expert_id                UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  proposed_price           NUMERIC(10, 2) NOT NULL,
-  estimated_lead_time_days INT,
-  notes                    TEXT,
-  status                   expert_offer_status NOT NULL DEFAULT 'submitted',
-  created_at               TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT unique_expert_inquiry_offer UNIQUE (inquiry_id, expert_id)
-);
-
-CREATE INDEX IF NOT EXISTS expert_offers_inquiry_idx ON expert_offers (inquiry_id, status);
-CREATE INDEX IF NOT EXISTS expert_offers_expert_idx  ON expert_offers (expert_id, status);
-
-CREATE TABLE IF NOT EXISTS project_offers (
-  id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  inquiry_id         UUID NOT NULL REFERENCES inquiries(id) ON DELETE CASCADE,
-  total_client_price NUMERIC(10, 2) NOT NULL,
-  valid_until        TIMESTAMPTZ,
-  status             project_offer_status NOT NULL DEFAULT 'draft',
-  notes              TEXT,
-  lead_time_days     INTEGER,
-  created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS project_offers_inquiry_idx ON project_offers (inquiry_id, status);
-
-CREATE TABLE IF NOT EXISTS project_offer_items (
-  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  project_offer_id UUID NOT NULL REFERENCES project_offers(id) ON DELETE CASCADE,
-  expert_offer_id  UUID NOT NULL REFERENCES expert_offers(id) ON DELETE CASCADE
-);
 
 -- ── agreements, hours, payments, activity ────────────────────────────────────
 
@@ -414,22 +319,45 @@ CREATE TABLE IF NOT EXISTS activity_events (
 CREATE INDEX IF NOT EXISTS activity_events_inquiry_idx   ON activity_events (inquiry_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS activity_events_workspace_idx ON activity_events (workspace_id, created_at DESC);
 
--- ── legacy company team invites (admin tools) ────────────────────────────────
-
-CREATE TABLE IF NOT EXISTS team_invitations (
-  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  inviter_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  invited_email TEXT NOT NULL,
-  company_name  TEXT NOT NULL,
-  token         TEXT NOT NULL UNIQUE DEFAULT encode(gen_random_bytes(32), 'hex'),
-  status        TEXT NOT NULL DEFAULT 'pending'
-                CHECK (status IN ('pending', 'accepted', 'revoked')),
-  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  accepted_at   TIMESTAMPTZ
+CREATE TABLE IF NOT EXISTS notifications (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type       TEXT NOT NULL,
+  title      TEXT NOT NULL,
+  body       TEXT,
+  payload    JSONB NOT NULL DEFAULT '{}'::jsonb,
+  read_at    TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS team_inv_inviter_idx ON team_invitations (inviter_id, status);
-CREATE INDEX IF NOT EXISTS team_inv_email_idx   ON team_invitations (invited_email, status);
+CREATE INDEX IF NOT EXISTS notifications_user_idx
+  ON notifications (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS notifications_unread_idx
+  ON notifications (user_id) WHERE read_at IS NULL;
+
+CREATE TABLE IF NOT EXISTS subscriptions (
+  id                     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id           UUID NOT NULL UNIQUE REFERENCES workspaces(id) ON DELETE CASCADE,
+  stripe_customer_id     TEXT,
+  stripe_subscription_id TEXT,
+  plan                   TEXT NOT NULL DEFAULT 'intro'
+                         CHECK (plan IN ('intro', 'standard')),
+  status                 TEXT NOT NULL DEFAULT 'none'
+                         CHECK (status IN ('none', 'trialing', 'active', 'past_due', 'canceled', 'unpaid')),
+  current_period_end     TIMESTAMPTZ,
+  created_at             TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at             TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS contact_messages (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name       TEXT NOT NULL,
+  email      TEXT NOT NULL,
+  company    TEXT,
+  subject    TEXT,
+  message    TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
 -- ── seed categories + catalog ────────────────────────────────────────────────
 

@@ -5,7 +5,8 @@ import { requireAuth } from "../middleware/auth.js";
 import { attachRole } from "../middleware/requireRole.js";
 
 import { validateInquiryInput, toInquiryResponse } from "../lib/inquiryValidation.js";
-import { getWorkspaceByOwner, isWorkspaceMember, logActivity, checkInquiryAccess } from "../lib/workspace.js";
+import { getWorkspaceByOwner, isWorkspaceMember, logActivity, checkInquiryAccess, resolveWorkspaceProject } from "../lib/workspace.js";
+import { notifyInquiryCounterpart } from "../lib/notifications.js";
 
 const router = Router();
 
@@ -44,108 +45,18 @@ async function defaultServiceCategoryId() {
   return row?.id ?? null;
 }
 
-function toProjectOffer(po, { includePartners = false } = {}) {
-  const base = {
-    id: po.id,
-    totalClientPrice: Number(po.total_client_price),
-    validUntil: po.valid_until ?? null,
-    status: po.status,
-    notes: po.notes ?? null,
-    leadTimeDays: po.lead_time_days ?? null,
-    createdAt: po.created_at,
-    itemCount: po.project_offer_items ? po.project_offer_items.length : 0,
-  };
-  if (!includePartners) return base;
-  return {
-    ...base,
-    experts: po.project_offer_items
-      ? po.project_offer_items
-          .filter((i) => i.expert_offers)
-          .map((i) => ({
-            id: i.expert_offers.id,
-            proposedPrice: Number(i.expert_offers.proposed_price),
-            leadTimeDays: i.expert_offers.estimated_lead_time_days ?? null,
-            notes: i.expert_offers.notes ?? null,
-            expert: i.expert_offers.users
-              ? {
-                  id: i.expert_offers.users.id,
-                  firstName: i.expert_offers.users.first_name,
-                  lastName: i.expert_offers.users.last_name,
-                  companyName: i.expert_offers.users.company_name,
-                }
-              : null,
-          }))
-      : [],
-  };
+function toInquiry(r) {
+  return toInquiryResponse(r);
 }
 
-function toInquiry(r, { includePartners = false } = {}) {
-  const base = toInquiryResponse(r);
-  return {
-    ...base,
-    projectOffers: r.project_offers
-      ? r.project_offers.map((po) => toProjectOffer(po, { includePartners }))
-      : undefined,
-  };
-}
-
-async function loadProjectOffers(inquiryId, includePartners) {
-  const offers = await query(
-    `SELECT id, total_client_price, valid_until, status, created_at, notes, lead_time_days
-     FROM project_offers
-     WHERE inquiry_id = $1
-     ORDER BY created_at`,
-    [inquiryId]
+async function fetchInquiry(id) {
+  return queryOne(
+    `SELECT ${INQUIRY_WITH_CATEGORY}
+     FROM inquiries i
+     ${INQUIRY_JOINS}
+     WHERE i.id = $1`,
+    [id]
   );
-  if (offers.length === 0) return [];
-
-  const offerIds = offers.map((o) => o.id);
-  let items;
-  if (includePartners) {
-    items = await query(
-      `SELECT poi.id, poi.project_offer_id,
-              CASE WHEN eo.id IS NULL THEN NULL
-                   ELSE json_build_object(
-                     'id', eo.id,
-                     'proposed_price', eo.proposed_price,
-                     'estimated_lead_time_days', eo.estimated_lead_time_days,
-                     'notes', eo.notes,
-                     'users', CASE WHEN u.id IS NULL THEN NULL
-                                   ELSE json_build_object(
-                                     'id', u.id,
-                                     'first_name', u.first_name,
-                                     'last_name', u.last_name,
-                                     'company_name', u.company_name
-                                   )
-                              END
-                   )
-              END AS expert_offers
-       FROM project_offer_items poi
-       LEFT JOIN expert_offers eo ON eo.id = poi.expert_offer_id
-       LEFT JOIN users u ON u.id = eo.expert_id
-       WHERE poi.project_offer_id = ANY($1::uuid[])`,
-      [offerIds]
-    );
-  } else {
-    items = await query(
-      `SELECT id, project_offer_id
-       FROM project_offer_items
-       WHERE project_offer_id = ANY($1::uuid[])`,
-      [offerIds]
-    );
-  }
-
-  const itemsByOffer = new Map();
-  for (const item of items) {
-    const list = itemsByOffer.get(item.project_offer_id) ?? [];
-    list.push(item);
-    itemsByOffer.set(item.project_offer_id, list);
-  }
-
-  return offers.map((po) => ({
-    ...po,
-    project_offer_items: itemsByOffer.get(po.id) ?? [],
-  }));
 }
 
 function mapMessage(m) {
@@ -227,16 +138,27 @@ router.post("/", requireAuth, attachRole, async (req, res) => {
     workspaceId = req.body.workspaceId;
   }
 
+  let projectId = null;
+  if (req.body?.projectId) {
+    try {
+      const project = await resolveWorkspaceProject(workspaceId, req.body.projectId);
+      projectId = project?.id ?? null;
+    } catch (err) {
+      return res.status(err.status || 400).json({ error: err.message });
+    }
+  }
+
   try {
     const data = await queryOne(
       `INSERT INTO inquiries (
-         client_id, workspace_id, category_id, title, description, type, urgency,
+         client_id, workspace_id, project_id, category_id, title, description, type, urgency,
          target_start_date, target_end_date, estimated_quantity, status
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending')
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending')
        RETURNING *`,
       [
         clientId,
         workspaceId,
+        projectId,
         categoryId,
         title,
         description,
@@ -258,7 +180,8 @@ router.post("/", requireAuth, attachRole, async (req, res) => {
       }).catch(() => null);
     }
 
-    res.status(201).json(toInquiry(data));
+    const full = await fetchInquiry(data.id);
+    res.status(201).json(toInquiry(full ?? data));
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
@@ -316,8 +239,7 @@ router.get("/:id", requireAuth, attachRole, async (req, res) => {
     const isWorkspaceOwner = data.workspaces?.owner_id === req.dbUser.id;
     if (!isOwner && !isWorkspaceOwner && !isAdmin) return res.status(403).json({ error: "Access denied" });
 
-    data.project_offers = await loadProjectOffers(data.id, isAdmin);
-    res.json(toInquiry(data, { includePartners: isAdmin }));
+    res.json(toInquiry(data));
   } catch (err) {
     return res.status(404).json({ error: "Inquiry not found" });
   }
@@ -405,34 +327,49 @@ router.patch("/:id", requireAuth, attachRole, async (req, res) => {
     if (description.length < 10) return res.status(400).json({ error: "description must be at least 10 characters" });
     updates.description = description;
   }
+  let assignedProjectName = null;
+  if (Object.prototype.hasOwnProperty.call(req.body ?? {}, "projectId")) {
+    if (!inquiry?.workspace_id) {
+      return res.status(400).json({ error: "Only workspace jobs can join a project" });
+    }
+    if (req.body.projectId == null || req.body.projectId === "") {
+      updates.project_id = null;
+    } else {
+      try {
+        const project = await resolveWorkspaceProject(inquiry.workspace_id, req.body.projectId);
+        updates.project_id = project.id;
+        assignedProjectName = project.name;
+      } catch (err) {
+        return res.status(err.status || 400).json({ error: err.message });
+      }
+    }
+  }
   if (Object.keys(updates).length === 0) return res.status(400).json({ error: "Nothing to update" });
 
   try {
     const { set, values, next } = buildSet(updates);
-    const data = await queryOne(
-      `WITH updated AS (
-         UPDATE inquiries SET ${set} WHERE id = $${next} RETURNING *
-       )
-       SELECT u.*,
-              CASE WHEN c.id IS NULL THEN NULL
-                   ELSE json_build_object('id', c.id, 'name', c.name, 'type', c.type)
-              END AS categories
-       FROM updated u
-       LEFT JOIN categories c ON c.id = u.category_id`,
+    await queryOne(
+      `UPDATE inquiries SET ${set}, updated_at = NOW() WHERE id = $${next} RETURNING id`,
       [...values, req.params.id]
     );
-    if (!data) return res.status(500).json({ error: "Update failed" });
 
     if (inquiry?.workspace_id) {
+      const activityType = Object.prototype.hasOwnProperty.call(updates, "project_id")
+        ? "project.assigned"
+        : "requirement.updated";
       await logActivity({
         workspaceId: inquiry.workspace_id,
         inquiryId: req.params.id,
         actorId: req.dbUser.id,
-        type: "requirement.updated",
-        payload: { fields: Object.keys(updates) },
+        type: activityType,
+        payload: Object.prototype.hasOwnProperty.call(updates, "project_id")
+          ? { projectId: updates.project_id, name: assignedProjectName }
+          : { fields: Object.keys(updates) },
       }).catch(() => null);
     }
 
+    const data = await fetchInquiry(req.params.id);
+    if (!data) return res.status(500).json({ error: "Update failed" });
     res.json(toInquiry(data));
   } catch (err) {
     return res.status(500).json({ error: err.message });
@@ -614,6 +551,13 @@ router.post("/:id/messages", requireAuth, attachRole, async (req, res) => {
         payload: {},
       }).catch(() => null);
     }
+    await notifyInquiryCounterpart({
+      inquiryId: req.params.id,
+      actorId: req.dbUser.id,
+      type: "message.sent",
+      title: "New message",
+      body: body.slice(0, 140),
+    });
 
     res.status(201).json(mapMessage(data));
   } catch (err) {

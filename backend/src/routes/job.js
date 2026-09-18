@@ -10,6 +10,8 @@ import {
   mapPayment,
   computeJobFinance,
 } from "../lib/finance.js";
+import { notifyInquiryCounterpart } from "../lib/notifications.js";
+import { renderInvoicePdf } from "../lib/invoice.js";
 
 const router = Router();
 router.use(requireAuth, attachRole);
@@ -101,6 +103,13 @@ router.post("/:id/agreements", async (req, res) => {
         payload: { billingType },
       }).catch(() => null);
     }
+    await notifyInquiryCounterpart({
+      inquiryId: req.params.id,
+      actorId: req.dbUser.id,
+      type: "agreement.proposed",
+      title: "New price agreement",
+      body: "A pricing agreement was proposed on a job.",
+    });
 
     res.status(201).json(mapAgreement(data));
   } catch (err) {
@@ -465,6 +474,13 @@ router.post("/:id/payments", async (req, res) => {
         payload: { amount, status },
       }).catch(() => null);
     }
+    await notifyInquiryCounterpart({
+      inquiryId: req.params.id,
+      actorId: req.dbUser.id,
+      type: "payment.recorded",
+      title: "Payment recorded",
+      body: `A payment of ${amount} was logged.`,
+    });
 
     res.status(201).json(mapPayment(data));
   } catch (err) {
@@ -538,6 +554,21 @@ router.get("/:id/finance", async (req, res) => {
     timeEntries,
     payments,
   }));
+});
+
+router.get("/:id/invoice.pdf", async (req, res) => {
+  const ctx = await requireAccess(req, res);
+  if (!ctx) return;
+  try {
+    const pdf = await renderInvoicePdf(req.params.id);
+    if (!pdf) return res.status(404).json({ error: "Job not found" });
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="invoice-${req.params.id.slice(0, 8)}.pdf"`);
+    res.send(pdf);
+  } catch (err) {
+    console.error("[invoice]", err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 export default router;

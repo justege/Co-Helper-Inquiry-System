@@ -3,7 +3,6 @@ import { useForm } from "react-hook-form"
 import { Link } from "react-router-dom"
 import {
   Box,
-  Button,
   Grid,
   Spinner,
   Stack,
@@ -22,13 +21,14 @@ import {
   LuLayoutGrid,
 } from "react-icons/lu"
 import { PageShell } from "@/components/ui/PageShell"
-import { getMe, type User } from "@/api/users"
-import { api } from "@/lib/api"
+import { getMe, updateMe, type User } from "@/api/users"
+import { getBilling, startCheckout, openBillingPortal } from "@/api/billing"
 import {
   getMyWorkspace,
   getWorkspaceInvitations,
   inviteClient,
   revokeInvitation,
+  updateWorkspaceSettings,
   type FreelancerWorkspaceMe,
   type ClientWorkspaceMe,
   type WorkspaceInvitation,
@@ -45,12 +45,11 @@ import {
   DialogFooter,
   DialogCloseTrigger,
 } from "@/components/ui/dialog"
+import { AppButton } from "@/components/ui/AppButton"
 import {
   APP_ACCENT,
   APP_BG_SUBTLE,
   APP_BORDER,
-  APP_BTN_GHOST,
-  APP_BTN_PRIMARY,
   APP_CARD,
   APP_INK,
   APP_LABEL,
@@ -59,11 +58,7 @@ import {
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-interface TeamMember { id: string; email: string; firstName: string | null; lastName: string | null; role: string }
-interface Invitation  { id: string; invited_email: string; company_name: string; created_at: string; status: string }
-
 type ContactFields = { phone: string; contactPref: string }
-type InviteFields  = { email: string }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -120,22 +115,22 @@ export default function SettingsPage() {
                 <Text fontSize="0.8rem" color="#B91C1C" mt={2}>{passwordError}</Text>
               )}
             </Box>
-            <Button {...APP_BTN_GHOST} size="sm" color={APP_ACCENT} onClick={handlePasswordReset} flexShrink={0}>
+            <AppButton variant="ghost" size="sm" color={APP_ACCENT} onClick={handlePasswordReset} flexShrink={0}>
               Send reset link
-            </Button>
+            </AppButton>
           </Box>
         </SectionCard>
 
         {profile?.role === "expert" ? (
           <>
+            <WorkspaceSettingsSection />
+            <BillingSection />
             <FreelancerClientsSection />
             <TrelloImportSection />
           </>
         ) : profile?.role === "client" ? (
           <ClientWorkspacesSection />
-        ) : (
-          <TeamSection profile={profile} />
-        )}
+        ) : null}
       </Stack>
     </PageShell>
   )
@@ -156,14 +151,12 @@ function ContactSection({ profile }: { profile: User | null }) {
 
   useEffect(() => {
     if (!profile) return
-    api.get<{ phone: string | null; contactPref: string }>("/api/team/contact")
-      .then((d) => reset({ phone: d.phone ?? "", contactPref: d.contactPref ?? "email" }))
-      .catch(() => null)
+    reset({ phone: profile.phone ?? "", contactPref: profile.contactPref ?? "email" })
   }, [profile, reset])
 
   async function onSubmit(data: ContactFields) {
     try {
-      await api.put("/api/team/contact", { phone: data.phone || null, contactPref: data.contactPref })
+      await updateMe({ phone: data.phone || null, contactPref: data.contactPref })
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
     } catch (e: unknown) {
@@ -202,7 +195,7 @@ function ContactSection({ profile }: { profile: User | null }) {
         {errors.root && <Text fontSize="sm" color="#B91C1C" mt={3}>{errors.root.message}</Text>}
 
         <Box display="flex" alignItems="center" gap={3} mt={5} pt={5} borderTop={`1px solid ${APP_BORDER}`}>
-          <Button {...APP_BTN_PRIMARY} type="submit" size="sm" loading={isSubmitting}>Save Preferences</Button>
+          <AppButton type="submit" size="sm" loading={isSubmitting}>Save Preferences</AppButton>
           {saved && <Text fontSize="sm" color="#047857" fontWeight="600">✓ Saved</Text>}
         </Box>
       </Box>
@@ -273,9 +266,9 @@ function FreelancerClientsSection() {
         icon={<LuUsers size={16} />}
         title="Your Clients"
         action={
-          <Button {...APP_BTN_PRIMARY} size="sm" onClick={() => setInviteOpen(true)} display="inline-flex" gap={1.5}>
+          <AppButton size="sm" onClick={() => setInviteOpen(true)} display="inline-flex" gap={1.5}>
             <LuPlus size={13} /> Invite Client
-          </Button>
+          </AppButton>
         }
       >
         {loading ? (
@@ -379,12 +372,12 @@ function FreelancerClientsSection() {
             </DialogBody>
 
             <DialogFooter px={6} pb={5} pt={0} display="flex" gap={2}>
-              <Button {...APP_BTN_PRIMARY} type="submit" loading={inviting} flex={1}>
+              <AppButton type="submit" loading={inviting} flex={1}>
                 Send Invitation
-              </Button>
-              <Button {...APP_BTN_GHOST} color={APP_MUTED} onClick={() => { setInviteOpen(false); resetInvite() }}>
+              </AppButton>
+              <AppButton variant="ghost" color={APP_MUTED} onClick={() => { setInviteOpen(false); resetInvite() }}>
                 Cancel
-              </Button>
+              </AppButton>
             </DialogFooter>
           </Box>
         </DialogContent>
@@ -444,179 +437,6 @@ function ClientWorkspacesSection() {
   )
 }
 
-// ── Legacy company team (admin/superadmin only) ──────────────────────────────
-
-function TeamSection({ profile }: { profile: User | null }) {
-  const [members, setMembers] = useState<TeamMember[]>([])
-  const [invitations, setInvitations] = useState<Invitation[]>([])
-  const [loading, setLoading] = useState(true)
-  const [inviteOpen, setInviteOpen] = useState(false)
-  const [inviteSent, setInviteSent] = useState(false)
-
-  const {
-    register,
-    handleSubmit,
-    reset: resetInvite,
-    setError: setInviteError,
-    formState: { errors: inviteErrors, isSubmitting: inviting },
-  } = useForm<InviteFields>({ defaultValues: { email: "" } })
-
-  const load = useCallback(() => {
-    Promise.all([
-      api.get<TeamMember[]>("/api/team"),
-      api.get<Invitation[]>("/api/team/invitations"),
-    ]).then(([m, inv]) => {
-      setMembers(m)
-      setInvitations(inv)
-    }).catch(() => null).finally(() => setLoading(false))
-  }, [])
-
-  useEffect(() => { load() }, [load])
-
-  async function onInvite(data: InviteFields) {
-    try {
-      await api.post("/api/team/invitations", { email: data.email.trim() })
-      setInviteSent(true)
-      resetInvite()
-      load()
-      setTimeout(() => { setInviteSent(false); setInviteOpen(false) }, 2000)
-    } catch (e: unknown) {
-      setInviteError("email", { message: e instanceof Error ? e.message : "Failed to send invite" })
-    }
-  }
-
-  async function handleRevoke(id: string) {
-    await api.delete(`/api/team/invitations/${id}`)
-    load()
-  }
-
-  if (!profile?.companyName) {
-    return (
-      <SectionCard icon={<LuUsers size={16} />} title="Team Members">
-        <Text fontSize="0.875rem" color={APP_MUTED}>
-          Set a company name in your <strong>Profile</strong> to enable team management.
-        </Text>
-      </SectionCard>
-    )
-  }
-
-  return (
-    <>
-      <SectionCard
-        icon={<LuUsers size={16} />}
-        title="Team Members"
-        action={
-          <Button {...APP_BTN_PRIMARY} size="sm" onClick={() => setInviteOpen(true)} display="inline-flex" gap={1.5}>
-            <LuPlus size={13} /> Invite Member
-          </Button>
-        }
-      >
-        {loading ? (
-          <Box display="flex" alignItems="center" gap={2} py={3}>
-            <Spinner size="sm" color="green.500" />
-            <Text fontSize="sm" color={APP_MUTED}>Loading…</Text>
-          </Box>
-        ) : (
-          <Stack gap={3}>
-            {members.length === 0 && invitations.length === 0 ? (
-            <Text fontSize="0.875rem" color={APP_LABEL}>
-              No other members in <strong>{profile.companyName}</strong> yet.
-            </Text>
-            ) : (
-              <>
-                {members.map((m) => (
-                  <Box key={m.id} display="flex" alignItems="center" justifyContent="space-between" gap={3}
-                    px={4} py={3} bg={APP_BG_SUBTLE} borderRadius="10px" border={`1px solid ${APP_BORDER}`}>
-                    <Box>
-                      <Text fontSize="0.875rem" fontWeight="600" color={APP_INK}>
-                        {[m.firstName, m.lastName].filter(Boolean).join(" ") || m.email}
-                      </Text>
-                      {[m.firstName, m.lastName].filter(Boolean).length > 0 && (
-                        <Text fontSize="0.75rem" color={APP_LABEL}>{m.email}</Text>
-                      )}
-                    </Box>
-                    <Text fontSize="0.75rem" fontWeight="600" color={APP_MUTED} textTransform="capitalize">{m.role}</Text>
-                  </Box>
-                ))}
-
-                {invitations.length > 0 && (
-                  <Box mt={2}>
-                    <Text fontSize="0.6875rem" fontWeight="700" color={APP_LABEL} letterSpacing="0.09em" textTransform="uppercase" mb={2}>
-                      Pending invitations
-                    </Text>
-                    {invitations.map((inv) => (
-                      <Box key={inv.id} display="flex" alignItems="center" justifyContent="space-between" gap={3}
-                        px={4} py={3} bg="#FFFBF0" borderRadius="10px" border="1px solid #FCD34D" mb={2}>
-                        <Box>
-                          <Text fontSize="0.875rem" fontWeight="600" color={APP_INK}>{inv.invited_email}</Text>
-                          <Text fontSize="0.75rem" color={APP_LABEL}>
-                            Invited {new Date(inv.created_at).toLocaleDateString("en-GB")}
-                          </Text>
-                        </Box>
-                        <Box as="button" onClick={() => handleRevoke(inv.id)}
-                          display="inline-flex" alignItems="center" gap={1}
-                          color="#B91C1C" fontSize="0.75rem" fontWeight="600" cursor="pointer">
-                          <LuTrash2 size={12} /> Revoke
-                        </Box>
-                      </Box>
-                    ))}
-                  </Box>
-                )}
-              </>
-            )}
-          </Stack>
-        )}
-      </SectionCard>
-
-      {/* Invite Modal */}
-      <DialogRoot open={inviteOpen} onOpenChange={({ open }) => { setInviteOpen(open); if (!open) resetInvite() }} size="sm">
-        <DialogContent style={{ borderRadius: "16px", border: "1px solid #D8DCE8", overflow: "hidden", boxShadow: "0 20px 60px rgba(11,21,40,0.18)" }}>
-          <Box bg="#0B1A15" px={6} py={4} display="flex" alignItems="center" justifyContent="space-between">
-            <Box display="flex" alignItems="center" gap={2.5}>
-              <Box w="7px" h="7px" bg="#0F6E56" rounded="full" />
-              <DialogTitle style={{ color: "white", fontWeight: 700, fontSize: "0.9375rem", margin: 0 }}>
-                Invite Team Member
-              </DialogTitle>
-            </Box>
-            <DialogCloseTrigger style={{ color: "rgba(255,255,255,0.5)" }} />
-          </Box>
-
-          <DialogHeader display="none" />
-
-          <Box as="form" onSubmit={handleSubmit(onInvite)}>
-            <DialogBody px={6} py={5}>
-              <Text fontSize="0.875rem" color={APP_MUTED} mb={4}>
-                Enter the email address of the person you'd like to add to{" "}
-                <strong style={{ color: APP_INK }}>{profile.companyName}</strong>.
-              </Text>
-              <Field label="Email address" invalid={!!inviteErrors.email} errorText={inviteErrors.email?.message}>
-                <FormInput
-                  type="email"
-                  placeholder="colleague@company.com"
-                  {...register("email", {
-                    required: "Email is required",
-                    pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "Enter a valid email" },
-                  })}
-                />
-              </Field>
-              {inviteSent && <Text fontSize="sm" color="#047857" fontWeight="600" mt={2}>✓ Invitation sent!</Text>}
-            </DialogBody>
-
-            <DialogFooter px={6} pb={5} pt={0} display="flex" gap={2}>
-              <Button {...APP_BTN_PRIMARY} type="submit" loading={inviting} flex={1}>
-                Send Invitation
-              </Button>
-              <Button {...APP_BTN_GHOST} color={APP_MUTED} onClick={() => { setInviteOpen(false); resetInvite() }}>
-                Cancel
-              </Button>
-            </DialogFooter>
-          </Box>
-        </DialogContent>
-      </DialogRoot>
-    </>
-  )
-}
-
 function TrelloImportSection() {
   return (
     <SectionCard icon={<LuLayoutGrid size={16} />} title="Import from Trello">
@@ -628,11 +448,87 @@ function TrelloImportSection() {
           </Text>
         </Box>
         <Link to="/app/trello" style={{ textDecoration: "none" }}>
-          <Button {...APP_BTN_GHOST} size="sm" color={APP_ACCENT} flexShrink={0}>
+          <AppButton variant="ghost" size="sm" color={APP_ACCENT} flexShrink={0}>
             Open Trello import
-          </Button>
+          </AppButton>
         </Link>
       </Box>
+    </SectionCard>
+  )
+}
+
+function WorkspaceSettingsSection() {
+  const [currency, setCurrency] = useState("EUR")
+  const [timezone, setTimezone] = useState("UTC")
+  const [name, setName] = useState("")
+  const [saved, setSaved] = useState(false)
+  useEffect(() => {
+    getMyWorkspace().then((ws) => {
+      if (ws.role === "owner") {
+        setName(ws.workspace.name)
+        setCurrency(ws.workspace.currency || "EUR")
+        setTimezone(ws.workspace.timezone || "UTC")
+      }
+    }).catch(() => null)
+  }, [])
+  return (
+    <SectionCard icon={<LuLayoutGrid size={16} />} title="Workspace">
+      <Grid templateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={5}>
+        <Box>
+          <FieldLabel>Name</FieldLabel>
+          <FormInput value={name} onChange={(e) => setName(e.target.value)} />
+        </Box>
+        <Box>
+          <FieldLabel>Currency</FieldLabel>
+          <FormNativeSelect value={currency} onChange={(e) => setCurrency(e.target.value)}>
+            <option value="EUR">EUR</option>
+            <option value="USD">USD</option>
+            <option value="GBP">GBP</option>
+            <option value="TRY">TRY</option>
+          </FormNativeSelect>
+        </Box>
+        <Box>
+          <FieldLabel>Timezone</FieldLabel>
+          <FormInput value={timezone} onChange={(e) => setTimezone(e.target.value)} />
+        </Box>
+      </Grid>
+      <AppButton size="sm" mt={5} onClick={() => updateWorkspaceSettings({ name, currency, timezone }).then(() => { setSaved(true); setTimeout(() => setSaved(false), 2000) })}>
+        Save workspace
+      </AppButton>
+      {saved && <Text fontSize="sm" color="#047857" fontWeight="600" mt={2}>Saved</Text>}
+    </SectionCard>
+  )
+}
+
+function BillingSection() {
+  const [info, setInfo] = useState<Awaited<ReturnType<typeof getBilling>> | null>(null)
+  const [busy, setBusy] = useState(false)
+  useEffect(() => { getBilling().then(setInfo).catch(() => null) }, [])
+  return (
+    <SectionCard icon={<LuShieldCheck size={16} />} title="Billing">
+      <Text fontSize="0.875rem" color={APP_MUTED} mb={3}>
+        {info ? `Plan: ${info.plan} · Status: ${info.status}` : "Loading billing…"}
+      </Text>
+      <Text fontSize="0.8125rem" color={APP_MUTED} mb={4}>
+        Intro pricing is $9/month until 31 Dec 2026, then $49/month. Co-Helper does not take commission on client work.
+      </Text>
+      {info?.stripeConfigured ? (
+        <Box display="flex" gap={2}>
+          <AppButton size="sm" loading={busy} onClick={async () => {
+            setBusy(true)
+            try {
+              const { url } = await startCheckout()
+              window.location.href = url
+            } finally { setBusy(false) }
+          }}>Subscribe</AppButton>
+          <AppButton variant="ghost" size="sm" onClick={async () => {
+            const { url } = await openBillingPortal()
+            window.location.href = url
+          }}>Manage</AppButton>
+        </Box>
+      ) : (
+        <Text fontSize="0.8125rem" color={APP_MUTED}>Stripe is not configured on this environment yet.</Text>
+      )}
     </SectionCard>
   )
 }

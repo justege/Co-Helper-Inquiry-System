@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Box, Button, Stack, Text } from "@chakra-ui/react"
+import { Box, Stack, Text } from "@chakra-ui/react"
 import { Link } from "react-router-dom"
 import {
   LuCircleCheckBig,
@@ -11,11 +11,11 @@ import {
   LuPlus,
 } from "react-icons/lu"
 import { createMyWorkspace } from "@/api/workspace"
+import { AppButton } from "@/components/ui/AppButton"
 import {
   APP_ACCENT,
   APP_BG_SUBTLE,
   APP_BORDER,
-  APP_BTN_PRIMARY,
   APP_INK,
   APP_LABEL,
   APP_MUTED,
@@ -343,22 +343,15 @@ export function StartWorkspaceButton({
 
   return (
     <Box>
-      <Button
-        {...APP_BTN_PRIMARY}
+      <AppButton
+        variant="accent"
         size={size}
-        h={size === "sm" ? "34px" : "42px"}
-        px={size === "sm" ? 4 : 6}
-        fontSize={size === "sm" ? "0.8125rem" : "0.9375rem"}
-        display="inline-flex"
-        alignItems="center"
-        gap={2}
         loading={busy}
-        loadingText="Starting…"
         onClick={onStart}
       >
         <LuPlus size={size === "sm" ? 14 : 16} />
         Start my workspace
-      </Button>
+      </AppButton>
       {error && (
         <Text fontSize="0.8125rem" color="#B91C1C" mt={2}>
           {error}
@@ -401,9 +394,9 @@ export function ClientJobsEmptyState() {
       ]}
       cta={
         <Link to="/app/inquiries/new" style={{ textDecoration: "none" }}>
-          <Button {...APP_BTN_PRIMARY} size="md" h="42px" px={6} fontSize="0.9375rem" display="inline-flex" alignItems="center" gap={2}>
+          <AppButton size="md" h="42px" px={6} fontSize="0.9375rem" display="inline-flex" alignItems="center" gap={2}>
             + Open a job
-          </Button>
+          </AppButton>
         </Link>
       }
       mockup={<InquiryMockup />}
@@ -413,32 +406,4 @@ export function ClientJobsEmptyState() {
 
 export function InquiriesEmptyState() {
   return <StartWorkspaceEmptyState />
-}
-
-export function AdminInquiriesEmptyState() {
-  return (
-    <FeatureEmptyState
-      title="Your inquiry dashboard is ready"
-      bullets={[
-        "All client inquiries will appear here in real time",
-        "Filter by status, urgency, and pipeline stage",
-        "Assign partners and track delivery from a single view",
-      ]}
-      mockup={<AdminInquiryMockup />}
-    />
-  )
-}
-
-export function AdminPartnersEmptyState() {
-  return (
-    <FeatureEmptyState
-      title="Build your partner network"
-      bullets={[
-        "Onboard service providers and assign categories",
-        "Score and rank partners based on performance",
-        "Match the right partner to every incoming inquiry",
-      ]}
-      mockup={<PartnerMockup />}
-    />
-  )
 }

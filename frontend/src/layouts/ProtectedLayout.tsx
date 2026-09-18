@@ -1,8 +1,8 @@
-import { Navigate, Outlet, NavLink, useNavigate } from "react-router-dom"
+import { Navigate, Outlet, NavLink, useNavigate, Link } from "react-router-dom"
 import { Box, Flex, Spinner, Text } from "@chakra-ui/react"
 import { useAuthContext } from "../components/auth/AuthContext"
 import { getMe, type User } from "../api/users"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import {
   LuColumns3,
   LuPenLine,
@@ -10,93 +10,90 @@ import {
   LuUser,
   LuSettings,
   LuLogOut,
-  LuShieldCheck,
-  LuClipboardList,
-  LuUsers,
-  LuSlidersHorizontal,
   LuWallet,
+  LuFolderKanban,
+  LuUsers,
+  LuHouse,
+  LuEllipsis,
+  LuBell,
+  LuSearch,
+  LuX,
 } from "react-icons/lu"
 import type { IconType } from "react-icons"
-
-const SIDEBAR_BG = "#0B1A15"
-const DIVIDER = "rgba(255,255,255,0.07)"
-const ACTIVE_BG = "rgba(15,110,86,0.28)"
-const ACTIVE_COLOR = "#6ABFA2"
-const MUTED = "rgba(255,255,255,0.45)"
-
-// ── Desktop sidebar nav ──────────────────────────────────────────────────────
+import { GREEN, INK, LABEL, MUTED, PAPER, RULE, SURFACE } from "@/theme/tokens"
+import { AppInput } from "@/components/ui/AppInput"
+import { searchWorkspace, type WorkspaceSearchResult } from "@/api/workspace"
+import { getNotifications, markAllNotificationsRead, markNotificationRead, type AppNotification } from "@/api/notifications"
 
 interface NavItem {
   to: string
   icon: IconType
   label: string
-  adminOnly?: boolean
   partnerOnly?: boolean
-  clientOnly?: boolean
+  clientHide?: boolean
 }
 
-const sections: { label: string; items: NavItem[] }[] = [
-  {
-    label: "Overview",
-    items: [{ to: "/app/board", icon: LuColumns3, label: "Board" }],
-  },
-  {
-    label: "Jobs",
-    items: [
-      { to: "/app/inquiries/new", icon: LuPenLine, label: "New Job" },
-      { to: "/app/inquiries", icon: LuInbox, label: "My Jobs" },
-      { to: "/app/partner-services", icon: LuShieldCheck, label: "My Services", partnerOnly: true },
-    ],
-  },
-  {
-    label: "Workspace",
-    items: [
-      { to: "/app/clients", icon: LuUsers, label: "Companies", partnerOnly: true },
-      { to: "/app/finance", icon: LuWallet, label: "Finance" },
-    ],
-  },
-  {
-    label: "Account",
-    items: [
-      { to: "/app/profile",           icon: LuUser,     label: "Profile" },
-      { to: "/app/settings",          icon: LuSettings, label: "Settings" },
-    ],
-  },
-  {
-    label: "Administration",
-    items: [
-      { to: "/app/admin/inquiries", icon: LuClipboardList,    label: "Inquiry Dashboard", adminOnly: true },
-      { to: "/app/admin/experts",   icon: LuUsers,            label: "Businesses",   adminOnly: true },
-      { to: "/app/admin",           icon: LuSlidersHorizontal, label: "Control Panel", adminOnly: true },
-    ],
-  },
+const soloNav: NavItem[] = [
+  { to: "/app", icon: LuHouse, label: "Home" },
+  { to: "/app/board", icon: LuColumns3, label: "Board" },
+  { to: "/app/inquiries", icon: LuInbox, label: "Jobs" },
+  { to: "/app/projects", icon: LuFolderKanban, label: "Projects" },
+  { to: "/app/clients", icon: LuUsers, label: "Clients" },
+  { to: "/app/finance", icon: LuWallet, label: "Finance" },
+  { to: "/app/settings", icon: LuSettings, label: "Settings" },
 ]
 
-// ── Mobile bottom nav (5 items max) ─────────────────────────────────────────
-
-const mobileNav: (NavItem & { emphasis?: boolean })[] = [
-  { to: "/app/board",         icon: LuColumns3, label: "Board" },
-  { to: "/app/inquiries",     icon: LuInbox,    label: "Jobs" },
-  { to: "/app/inquiries/new", icon: LuPenLine,  label: "New", emphasis: true },
-  { to: "/app/settings",      icon: LuSettings, label: "Settings" },
+const clientNav: NavItem[] = [
+  { to: "/app", icon: LuHouse, label: "Home" },
+  { to: "/app/board", icon: LuColumns3, label: "Board" },
+  { to: "/app/inquiries", icon: LuInbox, label: "Jobs" },
+  { to: "/app/finance", icon: LuWallet, label: "Finance" },
+  { to: "/app/settings", icon: LuSettings, label: "Settings" },
 ]
 
-// ── Component ────────────────────────────────────────────────────────────────
+const mobilePrimary: NavItem[] = [
+  { to: "/app", icon: LuHouse, label: "Home" },
+  { to: "/app/board", icon: LuColumns3, label: "Board" },
+  { to: "/app/inquiries/new", icon: LuPenLine, label: "New" },
+  { to: "/app/inquiries", icon: LuInbox, label: "Jobs" },
+]
 
 export default function ProtectedLayout() {
   const { user, loading, logout } = useAuthContext()
   const navigate = useNavigate()
   const [profile, setProfile] = useState<User | null>(null)
+  const [moreOpen, setMoreOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [query, setQuery] = useState("")
+  const [results, setResults] = useState<WorkspaceSearchResult | null>(null)
+  const [bellOpen, setBellOpen] = useState(false)
+  const [notes, setNotes] = useState<AppNotification[]>([])
+  const [unread, setUnread] = useState(0)
+  const searchTimer = useRef<number | null>(null)
 
   useEffect(() => {
     if (user) {
       getMe().then(setProfile).catch(() => null)
+      getNotifications()
+        .then((r) => { setNotes(r.notifications); setUnread(r.unread) })
+        .catch(() => null)
     }
   }, [user])
 
+  useEffect(() => {
+    if (searchTimer.current) window.clearTimeout(searchTimer.current)
+    if (query.trim().length < 2) {
+      setResults(null)
+      return
+    }
+    searchTimer.current = window.setTimeout(() => {
+      searchWorkspace(query.trim()).then(setResults).catch(() => setResults(null))
+    }, 220)
+  }, [query])
+
   if (loading) {
     return (
-      <Flex minH="100vh" align="center" justify="center" bg="#F7F8FA">
+      <Flex minH="100vh" align="center" justify="center" bg={PAPER}>
         <Spinner size="lg" color="green.500" borderWidth="3px" />
       </Flex>
     )
@@ -104,9 +101,9 @@ export default function ProtectedLayout() {
 
   if (!user) return <Navigate to="/login" replace />
 
-  const isSuperadminOrAdmin =
-    profile?.role === "superadmin" || profile?.role === "admin"
   const isPartner = profile?.role === "expert"
+  const isAdmin = profile?.role === "superadmin" || profile?.role === "admin"
+  const nav = isPartner ? soloNav : clientNav
 
   async function handleLogout() {
     await logout()
@@ -114,139 +111,102 @@ export default function ProtectedLayout() {
   }
 
   return (
-    <Flex minH="100vh">
-      {/* ── Desktop sidebar ── */}
+    <Flex minH="100vh" bg={PAPER}>
       <Box
         as="aside"
         display={{ base: "none", lg: "flex" }}
         flexDir="column"
-        w="220px"
+        w="240px"
         flexShrink={0}
-        bg={SIDEBAR_BG}
+        bg={SURFACE}
+        borderRight={`1px solid ${RULE}`}
         position="fixed"
         top={0}
         left={0}
         h="100vh"
         zIndex={10}
       >
-        {/* Logo */}
-        <Box
-          px={5}
-          py={5}
-          borderBottom="1px solid"
-          borderColor={DIVIDER}
-          display="flex"
-          alignItems="center"
-          gap={2.5}
-        >
-          <Box
-            w="28px"
-            h="28px"
-            bg="#0F6E56"
-            rounded="md"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            flexShrink={0}
-          >
+        <Box px={5} py={5} display="flex" alignItems="center" gap={2.5} borderBottom={`1px solid ${RULE}`}>
+          <Box w="28px" h="28px" bg={GREEN} rounded="md" display="flex" alignItems="center" justifyContent="center">
             <Box w="9px" h="9px" bg="white" rounded="sm" transform="rotate(45deg)" />
           </Box>
-          <Text fontSize="0.75rem" fontWeight="800" color="white" letterSpacing="0.05em" textTransform="uppercase">
+          <Text fontSize="0.75rem" fontWeight="800" color={INK} letterSpacing="0.05em" textTransform="uppercase">
             Co-Helper
           </Text>
         </Box>
 
-        {/* Nav */}
-        <Box flex="1" overflowY="auto" px={3} py={4}>
-          {sections.map((section, si) => {
-            const visibleItems = section.items.filter(
-              (item) =>
-                (!item.adminOnly || isSuperadminOrAdmin) &&
-                (!item.partnerOnly || isPartner) &&
-                (!item.clientOnly || !isPartner)
-            )
-            if (visibleItems.length === 0) return null
-            return (
-              <Box key={section.label} mb={si < sections.length - 1 ? 5 : 0}>
-                <Text
-                  fontSize="0.625rem"
-                  fontWeight="700"
-                  color="rgba(255,255,255,0.22)"
-                  letterSpacing="0.1em"
-                  textTransform="uppercase"
-                  px={3}
-                  mb={1.5}
-                >
-                  {section.label}
-                </Text>
-                {visibleItems.map((item) => (
-                  <SidebarItem key={item.to} item={item} />
-                ))}
-              </Box>
-            )
-          })}
-        </Box>
-
-        {/* Footer */}
-        <Box px={4} py={4} borderTop="1px solid" borderColor={DIVIDER}>
-          {profile?.companyName && (
-            <Text
-              fontSize="0.6875rem"
-              color="rgba(255,255,255,0.22)"
-              fontWeight="600"
-              textTransform="uppercase"
-              letterSpacing="0.06em"
-              mb={0.5}
-              overflow="hidden"
-              textOverflow="ellipsis"
-              whiteSpace="nowrap"
-            >
-              {profile.companyName}
-            </Text>
-          )}
-          <Text
-            fontSize="0.75rem"
-            color="rgba(255,255,255,0.35)"
-            fontWeight="400"
-            overflow="hidden"
-            textOverflow="ellipsis"
-            whiteSpace="nowrap"
-            mb={2.5}
-          >
-            {user.email}
-          </Text>
+        <Box px={3} pt={4}>
           <Box
             as="button"
-            display="inline-flex"
+            w="100%"
+            display="flex"
             alignItems="center"
-            gap={1.5}
-            color="rgba(255,255,255,0.28)"
-            fontSize="0.75rem"
-            fontWeight="600"
-            cursor="pointer"
-            _hover={{ color: "rgba(255,255,255,0.7)" }}
-            transition="color 0.12s"
-            onClick={handleLogout}
-            type="button"
+            gap={2}
+            h="44px"
+            px="14px"
+            border={`1px solid ${RULE}`}
+            borderRadius="10px"
+            bg={PAPER}
+            color={MUTED}
+            fontSize="0.8125rem"
+            onClick={() => setSearchOpen(true)}
           >
-            <LuLogOut size={13} />
-            Sign out
+            <LuSearch size={15} /> Search
+          </Box>
+        </Box>
+
+        <Box flex="1" overflowY="auto" px={3} py={4}>
+          {nav.map((item) => (
+            <SidebarItem key={item.to} item={item} />
+          ))}
+          {isAdmin && <SidebarItem item={{ to: "/app/admin", icon: LuUser, label: "Admin" }} />}
+        </Box>
+
+        <Box px={4} py={4} borderTop={`1px solid ${RULE}`}>
+          <Text fontSize="0.75rem" color={MUTED} mb={2} overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
+            {user.email}
+          </Text>
+          <Box as="button" display="inline-flex" alignItems="center" gap={1.5} color={MUTED} fontSize="0.75rem" fontWeight="600" onClick={handleLogout} _hover={{ color: INK }}>
+            <LuLogOut size={13} /> Sign out
           </Box>
         </Box>
       </Box>
 
-      {/* ── Main content ── */}
-      <Box
-        as="main"
-        flex="1"
-        ml={{ base: 0, lg: "220px" }}
-        bg="#F7F8FA"
-        minH="100vh"
-      >
+      <Box as="main" flex="1" ml={{ base: 0, lg: "240px" }} minH="100vh" position="relative">
+        <Box
+          display={{ base: "flex", lg: "none" }}
+          alignItems="center"
+          justifyContent="space-between"
+          px={4}
+          h="56px"
+          borderBottom={`1px solid ${RULE}`}
+          bg={SURFACE}
+          position="sticky"
+          top={0}
+          zIndex={8}
+        >
+          <Text fontSize="0.75rem" fontWeight="800" letterSpacing="0.05em" textTransform="uppercase">Co-Helper</Text>
+          <Box display="flex" gap={2}>
+            <Box as="button" w="44px" h="44px" display="flex" alignItems="center" justifyContent="center" onClick={() => setSearchOpen(true)} aria-label="Search">
+              <LuSearch size={18} />
+            </Box>
+            <Box as="button" w="44px" h="44px" display="flex" alignItems="center" justifyContent="center" position="relative" onClick={() => setBellOpen(true)} aria-label="Notifications">
+              <LuBell size={18} />
+              {unread > 0 && <Box position="absolute" top="10px" right="10px" w="7px" h="7px" bg={GREEN} rounded="full" />}
+            </Box>
+          </Box>
+        </Box>
+
+        <Box display={{ base: "none", lg: "flex" }} justifyContent="flex-end" px={8} pt={4}>
+          <Box as="button" w="44px" h="44px" display="flex" alignItems="center" justifyContent="center" border={`1px solid ${RULE}`} borderRadius="10px" bg={SURFACE} position="relative" onClick={() => setBellOpen((v) => !v)} aria-label="Notifications">
+            <LuBell size={18} />
+            {unread > 0 && <Box position="absolute" top="8px" right="8px" w="7px" h="7px" bg={GREEN} rounded="full" />}
+          </Box>
+        </Box>
+
         <Outlet />
       </Box>
 
-      {/* ── Mobile bottom navigation ── */}
       <Box
         display={{ base: "flex", lg: "none" }}
         position="fixed"
@@ -258,69 +218,156 @@ export default function ProtectedLayout() {
         alignItems="center"
         justifyContent="space-around"
         px={2}
-        style={{
-          background: "rgba(255,255,255,0.92)",
-          backdropFilter: "blur(20px) saturate(180%)",
-          WebkitBackdropFilter: "blur(20px) saturate(180%)",
-          borderTop: "1px solid rgba(0,0,0,0.08)",
-        }}
+        bg="rgba(255,255,255,0.94)"
+        borderTop={`1px solid ${RULE}`}
       >
-        {mobileNav
-          .filter(
-            (item) =>
-              (!item.partnerOnly || isPartner) &&
-              (!item.clientOnly || !isPartner)
-          )
-          .slice(0, 5)
-          .map((item) => (
-          <MobileNavItem key={item.to} item={item} />
+        {mobilePrimary.map((item) => (
+          <MobileNavItem key={item.to} item={item} emphasis={item.to.endsWith("/new")} />
         ))}
+        <Box as="button" flex="1" display="flex" flexDir="column" alignItems="center" gap="3px" onClick={() => setMoreOpen(true)}>
+          <LuEllipsis size={21} color={LABEL} />
+          <Text fontSize="0.6rem" fontWeight="500" color={LABEL}>More</Text>
+        </Box>
       </Box>
+
+      {moreOpen && (
+        <Box position="fixed" inset={0} zIndex={200} bg="rgba(14,27,23,0.4)" onClick={() => setMoreOpen(false)}>
+          <Box position="absolute" bottom={0} left={0} right={0} bg={SURFACE} borderTopRadius="18px" p={5} onClick={(e) => e.stopPropagation()}>
+            <Text fontWeight="700" mb={3}>More</Text>
+            {(isPartner ? [
+              { to: "/app/projects", label: "Projects" },
+              { to: "/app/clients", label: "Clients" },
+              { to: "/app/finance", label: "Finance" },
+              { to: "/app/trello", label: "Trello" },
+              { to: "/app/activity", label: "Activity" },
+              { to: "/app/profile", label: "Profile" },
+              { to: "/app/settings", label: "Settings" },
+            ] : [
+              { to: "/app/finance", label: "Finance" },
+              { to: "/app/profile", label: "Profile" },
+              { to: "/app/settings", label: "Settings" },
+            ]).map((item) => (
+              <Link key={item.to} to={item.to} onClick={() => setMoreOpen(false)} style={{ textDecoration: "none" }}>
+                <Box py={3} borderBottom={`1px solid ${RULE}`} color={INK} fontWeight="600">{item.label}</Box>
+              </Link>
+            ))}
+          </Box>
+        </Box>
+      )}
+
+      {searchOpen && (
+        <Box position="fixed" inset={0} zIndex={220} bg="rgba(14,27,23,0.45)" onClick={() => setSearchOpen(false)}>
+          <Box maxW="560px" mx="auto" mt={{ base: 16, md: 24 }} bg={SURFACE} borderRadius="14px" p={5} onClick={(e) => e.stopPropagation()}>
+            <Box display="flex" justifyContent="space-between" mb={3}>
+              <Text fontWeight="700">Search</Text>
+              <Box as="button" onClick={() => setSearchOpen(false)}><LuX /></Box>
+            </Box>
+            <AppInput autoFocus placeholder="Jobs, projects, clients, messages…" value={query} onChange={(e) => setQuery(e.target.value)} />
+            {results && (
+              <Box mt={4} display="flex" flexDir="column" gap={3}>
+                {results.jobs.map((j) => (
+                  <Link key={j.id} to={`/app/jobs/${j.id}`} onClick={() => setSearchOpen(false)} style={{ textDecoration: "none" }}>
+                    <Text fontWeight="600" color={INK}>{j.title}</Text>
+                    <Text fontSize="0.75rem" color={MUTED}>Job</Text>
+                  </Link>
+                ))}
+                {results.projects.map((p) => (
+                  <Link key={p.id} to={`/app/projects/${p.id}`} onClick={() => setSearchOpen(false)} style={{ textDecoration: "none" }}>
+                    <Text fontWeight="600" color={INK}>{p.name}</Text>
+                    <Text fontSize="0.75rem" color={MUTED}>Project</Text>
+                  </Link>
+                ))}
+                {results.clients.map((c) => (
+                  <Link key={c.id} to={`/app/clients/${c.id}`} onClick={() => setSearchOpen(false)} style={{ textDecoration: "none" }}>
+                    <Text fontWeight="600" color={INK}>{c.companyName || c.email}</Text>
+                    <Text fontSize="0.75rem" color={MUTED}>Client</Text>
+                  </Link>
+                ))}
+                {results.messages.map((m) => (
+                  <Link key={m.id} to={`/app/jobs/${m.inquiryId}/messages`} onClick={() => setSearchOpen(false)} style={{ textDecoration: "none" }}>
+                    <Text fontWeight="600" color={INK}>{m.title}</Text>
+                    <Text fontSize="0.75rem" color={MUTED}>{m.body}</Text>
+                  </Link>
+                ))}
+              </Box>
+            )}
+          </Box>
+        </Box>
+      )}
+
+      {bellOpen && (
+        <Box position="fixed" inset={0} zIndex={220} onClick={() => setBellOpen(false)}>
+          <Box
+            position="absolute"
+            top={{ base: 12, lg: 16 }}
+            right={{ base: 3, lg: 8 }}
+            w={{ base: "calc(100% - 24px)", md: "360px" }}
+            bg={SURFACE}
+            border={`1px solid ${RULE}`}
+            borderRadius="14px"
+            boxShadow="0 12px 40px rgba(14,27,23,0.12)"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Box px={4} py={3} display="flex" justifyContent="space-between" borderBottom={`1px solid ${RULE}`}>
+              <Text fontWeight="700">Notifications</Text>
+              <Box as="button" fontSize="0.75rem" color={GREEN} onClick={() => markAllNotificationsRead().then(() => { setUnread(0); setNotes((n) => n.map((x) => ({ ...x, readAt: x.readAt ?? new Date().toISOString() }))) })}>
+                Mark all read
+              </Box>
+            </Box>
+            <Box maxH="360px" overflowY="auto">
+              {notes.length === 0 ? (
+                <Text p={4} color={MUTED} fontSize="0.875rem">You’re all caught up.</Text>
+              ) : notes.map((n) => (
+                <Box
+                  key={n.id}
+                  px={4}
+                  py={3}
+                  borderBottom={`1px solid ${RULE}`}
+                  bg={n.readAt ? SURFACE : PAPER}
+                  cursor="pointer"
+                  onClick={() => {
+                    markNotificationRead(n.id).catch(() => null)
+                    setNotes((prev) => prev.map((x) => x.id === n.id ? { ...x, readAt: x.readAt ?? new Date().toISOString() } : x))
+                    setUnread((u) => Math.max(0, u - (n.readAt ? 0 : 1)))
+                    const jobId = n.payload?.inquiryId
+                    if (typeof jobId === "string") navigate(`/app/jobs/${jobId}`)
+                    setBellOpen(false)
+                  }}
+                >
+                  <Text fontWeight="600" fontSize="0.875rem">{n.title}</Text>
+                  {n.body && <Text fontSize="0.75rem" color={MUTED}>{n.body}</Text>}
+                </Box>
+              ))}
+            </Box>
+          </Box>
+        </Box>
+      )}
     </Flex>
   )
 }
 
-// ── Desktop sidebar item ─────────────────────────────────────────────────────
-
 function SidebarItem({ item }: { item: NavItem }) {
   const Icon = item.icon
+  const end = item.to === "/app" || item.to === "/app/inquiries" || item.to === "/app/board"
   return (
-    <NavLink to={item.to} end={item.to === "/app/inquiries" || item.to === "/app/board" || item.to === "/app/admin"}>
+    <NavLink to={item.to} end={end}>
       {({ isActive }: { isActive: boolean }) => (
         <Box
           as="span"
-          position="relative"
           display="flex"
           alignItems="center"
           gap={2.5}
           px={3}
-          py="0.5rem"
-          borderRadius="8px"
-          fontSize="0.825rem"
-          fontWeight={isActive ? "600" : "500"}
-          letterSpacing="-0.005em"
-          color={isActive ? ACTIVE_COLOR : MUTED}
-          bg={isActive ? ACTIVE_BG : "transparent"}
+          py="10px"
           mb="2px"
-          cursor="pointer"
-          transition="background 0.14s, color 0.14s"
-          _hover={{ bg: isActive ? ACTIVE_BG : "rgba(255,255,255,0.05)", color: isActive ? ACTIVE_COLOR : "rgba(255,255,255,0.88)", textDecoration: "none" }}
+          borderRadius="10px"
+          fontSize="0.875rem"
+          fontWeight={isActive ? "600" : "500"}
+          color={isActive ? GREEN : MUTED}
+          bg={isActive ? "rgba(15,110,86,0.08)" : "transparent"}
+          _hover={{ bg: isActive ? "rgba(15,110,86,0.08)" : PAPER, color: isActive ? GREEN : INK }}
         >
-          {isActive && (
-            <Box
-              position="absolute"
-              left="-12px"
-              top="50%"
-              transform="translateY(-50%)"
-              w="3px"
-              h="16px"
-              borderRadius="0 3px 3px 0"
-              bg="#0F6E56"
-            />
-          )}
-          <Box as="span" display="flex" alignItems="center" opacity={isActive ? 1 : 0.72} flexShrink={0}>
-            <Icon size={15} strokeWidth={2} />
-          </Box>
+          <Icon size={16} />
           {item.label}
         </Box>
       )}
@@ -328,64 +375,21 @@ function SidebarItem({ item }: { item: NavItem }) {
   )
 }
 
-// ── Mobile bottom nav item ───────────────────────────────────────────────────
-
-function MobileNavItem({ item }: { item: NavItem & { emphasis?: boolean } }) {
+function MobileNavItem({ item, emphasis }: { item: NavItem; emphasis?: boolean }) {
   const Icon = item.icon
   return (
-    <NavLink to={item.to} end={item.to === "/app/inquiries" || item.to === "/app/board"} style={{ flex: 1 }}>
+    <NavLink to={item.to} end={item.to === "/app"} style={{ flex: 1 }}>
       {({ isActive }: { isActive: boolean }) => (
-        <Box
-          as="span"
-          display="flex"
-          flexDir="column"
-          alignItems="center"
-          justifyContent="center"
-          gap="3px"
-          py={1}
-          cursor="pointer"
-          position="relative"
-        >
-          {item.emphasis ? (
-            <Box
-              w="42px"
-              h="42px"
-              rounded="full"
-              bg={isActive ? "#0a5240" : "#0F6E56"}
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-              color="white"
-              shadow="0 4px 12px rgba(15,110,86,0.4)"
-              transform="translateY(-6px)"
-              transition="all 0.15s"
-            >
+        <Box as="span" display="flex" flexDir="column" alignItems="center" gap="3px">
+          {emphasis ? (
+            <Box w="44px" h="44px" rounded="full" bg={GREEN} color="white" display="flex" alignItems="center" justifyContent="center" transform="translateY(-6px)">
               <Icon size={17} />
             </Box>
           ) : (
-            <Box
-              as="span"
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-              w="26px"
-              h="26px"
-              color={isActive ? "#0F6E56" : "#8A96A8"}
-              transition="color 0.1s"
-            >
-              <Icon size={21} />
-            </Box>
-          )}
-          {!item.emphasis && (
-            <Text
-              as="span"
-              fontSize="0.6rem"
-              fontWeight={isActive ? "700" : "500"}
-              color={isActive ? "#0F6E56" : "#8A96A8"}
-              letterSpacing="0.01em"
-            >
-              {item.label}
-            </Text>
+            <>
+              <Icon size={21} color={isActive ? GREEN : LABEL} />
+              <Text fontSize="0.6rem" fontWeight={isActive ? "700" : "500"} color={isActive ? GREEN : LABEL}>{item.label}</Text>
+            </>
           )}
         </Box>
       )}

@@ -1,8 +1,8 @@
 # Co-Helper
 
-**Trusted platform for outsourcing digital services worldwide — with a dedicated project manager on every project.**
+**A private workspace for one-person businesses and the companies they already work with.**
 
-Co-Helper connects businesses with vetted specialists in software development, social media, e-commerce, design, and more. Every project gets a dedicated project manager who coordinates delivery — clients never need to speak to developers directly. The platform manages the full workflow from project brief to final delivery, with milestone tracking, document management, and real-time status updates.
+Co-Helper is not a marketplace. Solo operators invite clients, run jobs on a shared board, chat, attach files, agree rates, log hours, and keep a payment ledger — with optional Trello import and AI-assisted briefs.
 
 Repository: [github.com/justege/outsourceSoft](https://github.com/justege/outsourceSoft)
 
@@ -30,28 +30,24 @@ Repository: [github.com/justege/outsourceSoft](https://github.com/justege/outsou
 
 ## Features
 
-### For clients (clients)
+### For solo businesses (role `expert`)
 
-- Post project briefs with category, urgency, scope, and deadline
-- Attach reference documents and specifications
-- Work with a dedicated project manager — no direct specialist coordination needed
-- Track milestones and deliverables through to completion
-- Team invitations and company contact preferences
+- Own a workspace and invite client companies by email/link
+- Group work into projects; run jobs on a four-column board
+- Agreements (hourly or fixed), hours, payment log, invoice PDF
+- Optional Trello import and Gemini “Edit with AI”
+- Workspace currency/timezone and Stripe subscription billing (when configured)
 
-### For specialists (experts)
+### For invited companies (role `client`)
 
-- Verified specialist profile with bio, location, and availability
-- Publish a **service catalogue** with pricing ranges and units
-- Upload **portfolio documents** (brochures, certifications, portfolios, price lists)
-- Deliver projects coordinated through assigned project managers
-- Category-based matching via admin-assigned specialisations
+- Accept an invite and share jobs in the freelancer’s workspace
+- Chat, files, approve pricing, and see finance summaries
 
-### For administrators & project managers
+### Platform
 
-- **Project dashboard** — filter, assign specialists, update status, add internal notes
-- **Specialist management** — view profiles, services, documents, and scoring
-- **Offer builder** — compose project proposals from specialist work and send to clients
-- **Control panel** — user roles, categories, and platform oversight (superadmin)
+- Firebase Auth, DigitalOcean Postgres + Spaces
+- Notifications, workspace search, contact form
+- Superadmin user/role management only (no marketplace matching)
 
 ### Marketing site
 
@@ -69,8 +65,8 @@ Public-facing pages with a professional B2B design:
 | UI | Chakra UI v3, React Hook Form, React Icons |
 | Backend | Node.js, Express 4 |
 | Auth | Firebase Authentication (email/password + Google) |
-| Database | Supabase (PostgreSQL) |
-| File storage | Supabase Storage (signed upload/download URLs) |
+| Database | PostgreSQL (DigitalOcean) |
+| File storage | DigitalOcean Spaces (S3-compatible signed URLs) |
 | Token verification | Firebase Admin SDK |
 
 ---

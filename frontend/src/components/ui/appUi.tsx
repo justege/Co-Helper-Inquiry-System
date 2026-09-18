@@ -1,22 +1,25 @@
-import { Box, Button, Grid, Spinner, Text } from "@chakra-ui/react"
+import { Box, Grid, Spinner, Text } from "@chakra-ui/react"
 import { Link } from "react-router-dom"
 import { LuArrowRight } from "react-icons/lu"
+import {
+  GREEN, INK, MUTED, LABEL, RULE, SURFACE, LIGHT, AMBER, PAPER,
+  RADIUS_CARD, RADIUS_CONTROL, FOCUS_RING,
+} from "@/theme/tokens"
 
-// ── Design tokens — Co-Helper brand DNA ──────────────────────────────────────
-
-export const APP_INK = "#0E1B17"          // Trust Green near-black
-export const APP_MUTED = "#6B7280"
-export const APP_LABEL = "#8A96A8"
-export const APP_BORDER = "#E5E7EB"
-export const APP_SURFACE = "#FFFFFF"
-export const APP_BG_SUBTLE = "#F7F8FA"
-export const APP_ACCENT = "#0F6E56"       // Trust Green
-export const APP_AMBER = "#D8FF86"        // Action Lime — CTA accents
+export const APP_INK = INK
+export const APP_MUTED = MUTED
+export const APP_LABEL = LABEL
+export const APP_BORDER = RULE
+export const APP_SURFACE = SURFACE
+export const APP_BG_SUBTLE = LIGHT
+export const APP_ACCENT = GREEN
+export const APP_AMBER = AMBER
+export const APP_PAPER = PAPER
 
 export const APP_CARD = {
   bg: APP_SURFACE,
   border: `1px solid ${APP_BORDER}`,
-  borderRadius: "12px",
+  borderRadius: RADIUS_CARD,
   overflow: "hidden" as const,
 }
 
@@ -25,14 +28,17 @@ export const APP_INPUT_STYLE = {
   size: "md" as const,
   bg: APP_SURFACE,
   borderColor: APP_BORDER,
-  borderRadius: "8px",
+  borderRadius: RADIUS_CONTROL,
   fontSize: "0.875rem",
+  h: "44px",
+  px: "16px",
+  py: "12px",
   color: APP_INK,
   _focusVisible: {
     borderColor: APP_ACCENT,
-    boxShadow: "0 0 0 3px rgba(15,110,86,0.12)",
+    boxShadow: FOCUS_RING,
   },
-  _placeholder: { color: APP_LABEL },
+  _placeholder: { color: APP_LABEL, opacity: 1 },
 }
 
 export const APP_BTN_PRIMARY = {
@@ -41,7 +47,9 @@ export const APP_BTN_PRIMARY = {
   fontWeight: "600" as const,
   fontSize: "0.875rem",
   letterSpacing: "-0.005em",
-  borderRadius: "9px",
+  borderRadius: RADIUS_CONTROL,
+  h: "44px",
+  px: "20px",
   boxShadow: "0 1px 2px rgba(14,27,23,0.12), inset 0 1px 0 rgba(255,255,255,0.08)",
   transition: "background 0.14s, box-shadow 0.14s, transform 0.06s",
   _hover: { bg: "#0a5240", boxShadow: "0 2px 8px rgba(15,110,86,0.28)" },
@@ -54,7 +62,9 @@ export const APP_BTN_SECONDARY = {
   fontWeight: "600" as const,
   fontSize: "0.875rem",
   letterSpacing: "-0.005em",
-  borderRadius: "9px",
+  borderRadius: RADIUS_CONTROL,
+  h: "44px",
+  px: "20px",
   border: `1px solid ${APP_BORDER}`,
   boxShadow: "0 1px 2px rgba(14,27,23,0.04)",
   transition: "all 0.14s",
@@ -66,22 +76,14 @@ export const APP_BTN_GHOST = {
   variant: "ghost" as const,
   fontWeight: "500" as const,
   fontSize: "0.875rem",
-  borderRadius: "9px",
+  borderRadius: RADIUS_CONTROL,
+  h: "44px",
+  px: "16px",
   color: APP_MUTED,
   _hover: { bg: APP_BG_SUBTLE, color: APP_INK },
 }
 
-/** Ghost button for the dark island header — white semi-transparent */
-export const APP_BTN_GHOST_ISLAND = {
-  bg: "rgba(255,255,255,0.08)" as const,
-  color: "rgba(255,255,255,0.72)" as const,
-  fontWeight: "500" as const,
-  fontSize: "0.8125rem",
-  borderRadius: "8px",
-  border: "1px solid rgba(255,255,255,0.14)",
-  transition: "all 0.14s",
-  _hover: { bg: "rgba(255,255,255,0.16)", color: "white", borderColor: "rgba(255,255,255,0.28)" },
-}
+export const APP_BTN_GHOST_ISLAND = APP_BTN_GHOST
 
 export function formatStatusLabel(status: string): string {
   return status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
@@ -165,16 +167,17 @@ export function AppFilterChip({
       type="button"
       onClick={onClick}
       flexShrink={0}
-      px={3}
-      py={1.5}
-      borderRadius="6px"
+      px="14px"
+      py="8px"
+      minH="36px"
+      borderRadius={RADIUS_CONTROL}
       fontSize="0.8125rem"
       fontWeight={active ? "600" : "500"}
       color={active ? APP_SURFACE : APP_MUTED}
       bg={active ? APP_ACCENT : APP_SURFACE}
       border={`1px solid ${active ? APP_ACCENT : APP_BORDER}`}
       cursor="pointer"
-      transition="all 0.1s"
+      transition="all 0.14s"
       _hover={{ borderColor: APP_ACCENT, color: active ? APP_SURFACE : APP_INK, bg: active ? APP_ACCENT : "#F5FBF8" }}
       whiteSpace="nowrap"
     >

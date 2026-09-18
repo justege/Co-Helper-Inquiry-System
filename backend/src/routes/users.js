@@ -49,7 +49,7 @@ router.get("/me", requireAuth, async (req, res) => {
 });
 
 router.put("/me", requireAuth, async (req, res) => {
-  const { username, avatarUrl, firstName, lastName, companyName } = req.body ?? {};
+  const { username, avatarUrl, firstName, lastName, companyName, phone, contactPref } = req.body ?? {};
   try {
     await execute(
       `INSERT INTO users (firebase_uid, email, username, avatar_url, first_name, last_name, company_name)
@@ -72,17 +72,17 @@ router.put("/me", requireAuth, async (req, res) => {
       ]
     );
 
-    if (username !== undefined || avatarUrl !== undefined || firstName !== undefined || lastName !== undefined || companyName !== undefined) {
-      const fields = {};
-      if (username !== undefined) fields.username = username;
-      if (avatarUrl !== undefined) fields.avatar_url = avatarUrl;
-      if (firstName !== undefined) fields.first_name = firstName;
-      if (lastName !== undefined) fields.last_name = lastName;
-      if (companyName !== undefined) fields.company_name = companyName;
-      const { set, values, next } = buildSet(fields);
-      if (set) {
-        await execute(`UPDATE users SET ${set} WHERE firebase_uid = $${next}`, [...values, req.uid]);
-      }
+    const fields = {};
+    if (username !== undefined) fields.username = username;
+    if (avatarUrl !== undefined) fields.avatar_url = avatarUrl;
+    if (firstName !== undefined) fields.first_name = firstName;
+    if (lastName !== undefined) fields.last_name = lastName;
+    if (companyName !== undefined) fields.company_name = companyName;
+    if (phone !== undefined) fields.phone = phone?.trim() || null;
+    if (contactPref && ["email", "phone", "both"].includes(contactPref)) fields.contact_pref = contactPref;
+    const { set, values, next } = buildSet(fields);
+    if (set) {
+      await execute(`UPDATE users SET ${set} WHERE firebase_uid = $${next}`, [...values, req.uid]);
     }
 
     const data = await fetchUserWithCategories("u.firebase_uid = $1", [req.uid]);

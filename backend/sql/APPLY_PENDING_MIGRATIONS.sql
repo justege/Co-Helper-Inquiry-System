@@ -124,3 +124,9 @@ VALUES
   ('inquiry-documents', 'inquiry-documents', false, 52428800),
   ('partner-documents', 'partner-documents', false, 52428800)
 ON CONFLICT (id) DO NOTHING;
+
+-- ── 016 + 017: marketplace cleanup and professional features ─────────────────
+-- Apply separately:
+--   node src/scripts/setupDb.js sql/016_cleanup_marketplace.sql
+--   node src/scripts/setupDb.js sql/017_professional_features.sql
+

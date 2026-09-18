@@ -1,15 +1,17 @@
 import { useNavigate, useSearchParams, Link } from "react-router-dom"
-import { Box, Button, Text, VStack } from "@chakra-ui/react"
+import { Box, Text, VStack } from "@chakra-ui/react"
 import { useForm } from "react-hook-form"
 import { Field } from "@/components/ui/field"
 import { PasswordInput } from "@/components/ui/password-input"
 import { FormInput, formInvalidBorder } from "@/components/ui/form-controls"
 import { AuthShell } from "@/components/auth/AuthShell"
 import { AuthDivider, SocialAuthButtons } from "@/components/auth/SocialAuthButtons"
-import { authFieldLabel, authInputProps, authPrimaryButtonProps } from "@/components/auth/authStyles"
+import { authFieldLabel, authInputProps } from "@/components/auth/authStyles"
 import { useAuthContext } from "../components/auth/AuthContext"
 import { acceptInvite } from "@/api/workspace"
 import loginPng from "@/assets/login.png"
+import { AppButton } from "@/components/ui/AppButton"
+
 
 type LoginFields = { email: string; password: string }
 
@@ -30,7 +32,7 @@ export default function LoginPage() {
     if (invite) {
       try { await acceptInvite(invite) } catch { /* invite may already be accepted */ }
     }
-    navigate("/app/board", { replace: true })
+    navigate("/app", { replace: true })
   }
 
   async function onSubmit(data: LoginFields) {
@@ -109,9 +111,9 @@ export default function LoginPage() {
           />
         </Field>
 
-        <Button type="submit" loading={isSubmitting} {...authPrimaryButtonProps}>
+        <AppButton type="submit" size="lg" loading={isSubmitting} w="full">
           Sign In
-        </Button>
+        </AppButton>
       </VStack>
 
       <AuthDivider />

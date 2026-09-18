@@ -6,10 +6,6 @@ import { fileURLToPath } from "url";
 import usersRouter from "./routes/users.js";
 import categoriesRouter from "./routes/categories.js";
 import inquiriesRouter from "./routes/inquiries.js";
-import projectOffersRouter from "./routes/project-offers.js";
-import adminRouter from "./routes/admin.js";
-import teamRouter from "./routes/team.js";
-import partnerServicesRouter from "./routes/partner-services.js";
 import publicRouter from "./routes/public.js";
 import expertProfileRouter from "./routes/expert-profile.js";
 import workspaceRouter from "./routes/workspace.js";
@@ -17,6 +13,8 @@ import jobRouter from "./routes/job.js";
 import aiRouter from "./routes/ai.js";
 import trelloRouter from "./routes/trello.js";
 import storageRouter from "./routes/storage.js";
+import notificationsRouter from "./routes/notifications.js";
+import billingRouter, { stripeWebhook } from "./routes/billing.js";
 import { ensureStorageBuckets } from "./storage.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -61,6 +59,7 @@ app.put(
     storageRouter(req, res, next);
   }
 );
+app.post("/api/billing/webhook", express.raw({ type: "application/json" }), stripeWebhook);
 app.use(express.json({ limit: "2mb" }));
 
 // ── Routes ─────────────────────────────────────────────────────────────────────
@@ -68,15 +67,13 @@ app.use("/api/users", usersRouter);
 app.use("/api/categories", categoriesRouter);
 app.use("/api/inquiries", jobRouter);
 app.use("/api/inquiries", inquiriesRouter);
-app.use("/api/project-offers", projectOffersRouter);
-app.use("/api/admin", adminRouter);
-app.use("/api/team", teamRouter);
-app.use("/api/partner-services", partnerServicesRouter);
 app.use("/api/expert-profile", expertProfileRouter);
 app.use("/api/workspace", workspaceRouter);
 app.use("/api/ai", aiRouter);
 app.use("/api/trello", trelloRouter);
 app.use("/api/storage", storageRouter);
+app.use("/api/notifications", notificationsRouter);
+app.use("/api/billing", billingRouter);
 app.use("/api/public", publicRouter);
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));

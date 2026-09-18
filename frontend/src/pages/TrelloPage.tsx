@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
-import { Box, Button, Spinner, Stack, Text } from "@chakra-ui/react"
+import { Box, Spinner, Stack, Text } from "@chakra-ui/react"
 import { LuLayoutGrid, LuLink, LuUnlink, LuRefreshCw } from "react-icons/lu"
 import { PageShell } from "@/components/ui/PageShell"
 import { FormNativeSelect } from "@/components/ui/form-controls"
@@ -8,7 +8,6 @@ import {
   APP_ACCENT,
   APP_BG_SUBTLE,
   APP_BORDER,
-  APP_BTN_GHOST,
   APP_BTN_PRIMARY,
   APP_CARD,
   APP_INK,
@@ -29,6 +28,8 @@ import {
   type TrelloStatus,
 } from "@/api/trello"
 import { getMyWorkspace, type FreelancerWorkspaceMe } from "@/api/workspace"
+import { AppButton } from "@/components/ui/AppButton"
+
 
 function hashToken(): string | null {
   if (typeof window === "undefined") return null
@@ -177,9 +178,9 @@ export default function TrelloPage() {
       subtitle="Import a board: each column becomes a project, each card a job, and checklists become to-dos."
       action={
         status?.connected ? (
-          <Button {...APP_BTN_GHOST} size="sm" color={APP_MUTED} onClick={handleDisconnect}>
+          <AppButton variant="ghost" size="sm" color={APP_MUTED} onClick={handleDisconnect}>
             <LuUnlink size={14} /> Disconnect
-          </Button>
+          </AppButton>
         ) : undefined
       }
     >
@@ -226,9 +227,9 @@ export default function TrelloPage() {
                   After you pick a board, we import columns as projects and keep them in sync automatically
                   when cards move or change.
                 </Text>
-                <Button {...APP_BTN_PRIMARY} onClick={handleConnect}>
+                <AppButton onClick={handleConnect}>
                   <LuLink size={14} /> Connect Trello
-                </Button>
+                </AppButton>
               </Box>
             </Box>
           )}
@@ -358,7 +359,7 @@ export default function TrelloPage() {
                         </Text>
                       </Box>
                     </Box>
-                    <Button
+                    <AppButton
                       {...APP_BTN_PRIMARY}
                       onClick={handleImport}
                       loading={importing}
@@ -367,7 +368,7 @@ export default function TrelloPage() {
                     >
                       <LuRefreshCw size={14} />
                       {status.boardId === boardId ? "Import / refresh board" : "Import board"}
-                    </Button>
+                    </AppButton>
                   </Stack>
                 </Box>
               </Box>
@@ -391,7 +392,7 @@ export default function TrelloPage() {
                 </Text>
               )}
               <Link to="/app/inquiries" style={{ textDecoration: "none" }}>
-                <Button {...APP_BTN_PRIMARY} size="sm" mt={4}>Open jobs</Button>
+                <AppButton size="sm" mt={4}>Open jobs</AppButton>
               </Link>
             </Box>
           )}

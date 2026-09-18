@@ -1,9 +1,8 @@
 import { Router } from "express";
-import { query, queryOne } from "../db.js";
+import { query, queryOne, execute } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
-import { validateInquiryInput, toInquiryResponse } from "../lib/inquiryValidation.js";
-import { ensureUserByFirebaseUid, isClientRole } from "../lib/userProfile.js";
 import { registerPartner } from "../lib/partnerRegistration.js";
+import { sendEmail } from "../lib/email.js";
 
 const router = Router();
 const VALID_TYPES = ["service", "tool_sourcing"];
@@ -52,7 +51,7 @@ router.get("/category-services", async (req, res) => {
 });
 
 router.post("/partner-registration", requireAuth, async (req, res) => {
-  const { username, companyName, bio, locationCity, categoryIds = [], services = [] } = req.body ?? {};
+  const { username, companyName, bio, locationCity, categoryIds = [] } = req.body ?? {};
   try {
     const result = await registerPartner({
       firebaseUid: req.uid,
@@ -62,7 +61,6 @@ router.post("/partner-registration", requireAuth, async (req, res) => {
       bio,
       locationCity,
       categoryIds,
-      services,
     });
     if (result.error) return res.status(result.status).json({ error: result.error });
     res.status(201).json({ success: true });
@@ -72,47 +70,49 @@ router.post("/partner-registration", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/inquiry-submission", requireAuth, async (req, res) => {
-  const { username, ...inquiryBody } = req.body ?? {};
-  if (!username || typeof username !== "string" || username.trim().length < 2) {
-    return res.status(400).json({ error: "username must be at least 2 characters" });
-  }
-  const validation = validateInquiryInput(inquiryBody);
-  if (validation.error) return res.status(400).json({ error: validation.error });
-  const inquiry = validation.data;
-
+router.get("/health-status", async (_req, res) => {
   try {
-    const profile = await ensureUserByFirebaseUid({
-      firebaseUid: req.uid,
-      email: req.firebaseUser.email ?? "",
-      username: username.trim(),
-      role: "client",
+    await queryOne("SELECT 1 AS ok");
+    res.json({
+      status: "operational",
+      checks: {
+        api: "operational",
+        database: "operational",
+      },
     });
-    if (!isClientRole(profile.role)) {
-      return res.status(403).json({ error: "Only client accounts can submit project briefs from the landing page" });
-    }
+  } catch {
+    res.status(503).json({
+      status: "degraded",
+      checks: { api: "operational", database: "down" },
+    });
+  }
+});
 
-    const category = await queryOne("SELECT id, type FROM categories WHERE id = $1", [inquiry.categoryId]);
-    if (!category) return res.status(400).json({ error: "Category not found" });
-    if (category.type !== inquiry.type) {
-      return res.status(400).json({ error: "Category type does not match inquiry type" });
-    }
-
-    const row = await queryOne(
-      `INSERT INTO inquiries (
-         client_id, category_id, title, description, type, urgency,
-         target_start_date, target_end_date, estimated_quantity, status
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending')
-       RETURNING *`,
-      [
-        profile.id, inquiry.categoryId, inquiry.title, inquiry.description, inquiry.type,
-        inquiry.urgency, inquiry.targetStartDate, inquiry.targetEndDate, inquiry.estimatedQuantity,
-      ]
+router.post("/contact", async (req, res) => {
+  const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
+  const email = typeof req.body?.email === "string" ? req.body.email.trim() : "";
+  const company = typeof req.body?.company === "string" ? req.body.company.trim() : "";
+  const subject = typeof req.body?.subject === "string" ? req.body.subject.trim() : "Workspace question";
+  const message = typeof req.body?.message === "string" ? req.body.message.trim() : "";
+  if (name.length < 2) return res.status(400).json({ error: "Name is required" });
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: "A valid email is required" });
+  if (message.length < 10) return res.status(400).json({ error: "Message must be at least 10 characters" });
+  try {
+    await execute(
+      `INSERT INTO contact_messages (name, email, company, subject, message)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [name, email, company || null, subject, message]
     );
-    row.categories = { id: category.id, name: null, type: category.type };
-    res.status(201).json({ inquiry: toInquiryResponse(row) });
+    const inbox = process.env.CONTACT_INBOX || "hello@co-helper.com";
+    await sendEmail({
+      to: inbox,
+      subject: `[Co-Helper] ${subject}`,
+      text: `${name} <${email}> ${company}\n\n${message}`,
+      html: `<p><strong>${name}</strong> &lt;${email}&gt;<br>${company}</p><p>${message.replace(/\n/g, "<br>")}</p>`,
+    });
+    res.status(201).json({ success: true });
   } catch (err) {
-    console.error("[inquiry-submission]", err);
+    console.error("[contact]", err);
     res.status(500).json({ error: err.message });
   }
 });

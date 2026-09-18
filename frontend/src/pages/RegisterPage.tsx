@@ -1,17 +1,19 @@
 import { useEffect, useState } from "react"
 import { useNavigate, useSearchParams, Link } from "react-router-dom"
-import { Box, Button, Text, VStack } from "@chakra-ui/react"
+import { Box, Text, VStack } from "@chakra-ui/react"
 import { useForm } from "react-hook-form"
 import { Field } from "@/components/ui/field"
 import { PasswordInput } from "@/components/ui/password-input"
 import { FormInput, formInvalidBorder } from "@/components/ui/form-controls"
 import { AuthShell } from "@/components/auth/AuthShell"
 import { AuthDivider, SocialAuthButtons } from "@/components/auth/SocialAuthButtons"
-import { authFieldLabel, authInputProps, authPrimaryButtonProps } from "@/components/auth/authStyles"
+import { authFieldLabel, authInputProps } from "@/components/auth/authStyles"
 import { useAuthContext } from "../components/auth/AuthContext"
 import { updateMe } from "../api/users"
 import { acceptInvite, getInvitePreview } from "@/api/workspace"
 import loginPng from "@/assets/login.png"
+import { AppButton } from "@/components/ui/AppButton"
+
 
 type RegisterFields = {
   username: string
@@ -53,7 +55,7 @@ export default function RegisterPage() {
       if (invite) {
         try { await acceptInvite(invite) } catch { /* invite may already be accepted */ }
       }
-      navigate("/app/board", { replace: true })
+      navigate("/app", { replace: true })
     } catch (err: unknown) {
       setError("root", {
         message: err instanceof Error ? err.message : "Registration failed",
@@ -67,7 +69,7 @@ export default function RegisterPage() {
       if (invite) {
         try { await acceptInvite(invite) } catch { /* invite may already be accepted */ }
       }
-      navigate("/app/board", { replace: true })
+      navigate("/app", { replace: true })
     } catch (err: unknown) {
       setError("root", {
         message: err instanceof Error ? err.message : "Google sign-up failed",
@@ -160,9 +162,9 @@ export default function RegisterPage() {
           />
         </Field>
 
-        <Button type="submit" loading={isSubmitting} mt={1} {...authPrimaryButtonProps}>
+        <AppButton type="submit" size="lg" loading={isSubmitting} w="full">
           Create Account
-        </Button>
+        </AppButton>
       </VStack>
 
       <AuthDivider />
