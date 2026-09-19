@@ -58,21 +58,3 @@ export async function markAllRead(userId) {
     [userId]
   );
 }
-
-/** Notify the other party on a job (client or workspace owner). */
-export async function notifyInquiryCounterpart({ inquiryId, actorId, type, title, body, payload = {} }) {
-  const inq = await queryOne(
-    `SELECT i.client_id, w.owner_id
-     FROM inquiries i
-     LEFT JOIN workspaces w ON w.id = i.workspace_id
-     WHERE i.id = $1`,
-    [inquiryId]
-  );
-  if (!inq) return;
-  const targets = [inq.client_id, inq.owner_id].filter((id) => id && id !== actorId);
-  await Promise.all(
-    [...new Set(targets)].map((userId) =>
-      createNotification({ userId, type, title, body, payload: { inquiryId, ...payload } })
-    )
-  );
-}

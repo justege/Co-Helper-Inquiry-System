@@ -1,5 +1,4 @@
 import { api } from "../lib/api";
-import type { Category } from "./categories";
 
 export type Role = "superadmin" | "admin" | "client" | "expert";
 
@@ -15,7 +14,6 @@ export interface User {
   phone?: string | null;
   contactPref?: string;
   role: Role;
-  categories: Category[];
   createdAt: string;
 }
 
@@ -32,5 +30,3 @@ export const updateMe = (data: {
 export const getUsers = () => api.get<User[]>("/api/users");
 export const updateUserRole = (userId: string, role: Role) =>
   api.put<User>(`/api/users/${userId}/role`, { role });
-export const updateUserCategories = (userId: string, categoryIds: string[]) =>
-  api.put<User>(`/api/users/${userId}/categories`, { categoryIds });

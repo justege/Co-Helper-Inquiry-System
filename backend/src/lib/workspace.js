@@ -1,9 +1,5 @@
 import { query, queryOne, execute } from "../db.js";
 
-/**
- * Get-or-create the single workspace owned by a freelancer (expert) user.
- * Also ensures the owner has a `workspace_members` row with role 'owner'.
- */
 export async function ensureWorkspaceForOwner(ownerId, name) {
   let workspace = await queryOne("SELECT * FROM workspaces WHERE owner_id = $1", [ownerId]);
 
@@ -19,17 +15,13 @@ export async function ensureWorkspaceForOwner(ownerId, name) {
   await execute(
     `INSERT INTO workspace_members (workspace_id, user_id, role)
      VALUES ($1, $2, 'owner')
-     ON CONFLICT (workspace_id, user_id) DO NOTHING`,
+     ON CONFLICT (workspace_id, user_id) DO UPDATE SET role = 'owner'`,
     [workspace.id, ownerId]
   );
 
   return workspace;
 }
 
-/**
- * Let a signed-in person start their own workspace (one-person business).
- * Invited-company accounts are promoted to expert; platform admins cannot.
- */
 export async function startWorkspaceForUser(user, name) {
   if (!user?.id) {
     const err = new Error("User profile not found");
@@ -46,13 +38,6 @@ export async function startWorkspaceForUser(user, name) {
     await execute("UPDATE users SET role = 'expert' WHERE id = $1", [user.id]);
   }
 
-  await execute(
-    `INSERT INTO expert_profiles (user_id, location_city, is_available, updated_at)
-     VALUES ($1, 'Remote', TRUE, NOW())
-     ON CONFLICT (user_id) DO NOTHING`,
-    [user.id]
-  );
-
   return ensureWorkspaceForOwner(
     user.id,
     name?.trim() || user.company_name || user.username || "My workspace"
@@ -67,10 +52,6 @@ export async function getWorkspaceById(workspaceId) {
   return queryOne("SELECT * FROM workspaces WHERE id = $1", [workspaceId]);
 }
 
-/**
- * All workspaces a user belongs to (as owner or invited client), with the
- * freelancer's brief profile attached.
- */
 export async function getMembershipsForUser(userId) {
   const rows = await query(
     `SELECT wm.role,
@@ -96,90 +77,6 @@ export async function getMembershipsForUser(userId) {
   return rows;
 }
 
-export async function isWorkspaceMember(workspaceId, userId) {
-  if (!workspaceId || !userId) return false;
-  const row = await queryOne(
-    `SELECT role FROM workspace_members
-     WHERE workspace_id = $1 AND user_id = $2`,
-    [workspaceId, userId]
-  );
-  return Boolean(row);
-}
-
-export function canAccessInquiry(inquiry, userId) {
-  if (!inquiry) return false;
-  if (inquiry.client_id === userId) return true;
-  if (inquiry.workspace_owner_id && inquiry.workspace_owner_id === userId) return true;
-  return false;
-}
-
-export async function logActivity({ workspaceId = null, inquiryId = null, actorId = null, type, payload = {} }) {
-  await execute(
-    `INSERT INTO activity_events (workspace_id, inquiry_id, actor_id, type, payload)
-     VALUES ($1, $2, $3, $4, $5::jsonb)`,
-    [workspaceId, inquiryId, actorId, type, JSON.stringify(payload ?? {})]
-  );
-}
-
-export async function checkInquiryAccess(inquiryId, userId, userRole) {
-  const isAdmin = ["admin", "superadmin"].includes(userRole);
-  const inq = await queryOne(
-    `SELECT i.client_id, i.workspace_id, i.status, w.owner_id AS workspace_owner_id
-     FROM inquiries i
-     LEFT JOIN workspaces w ON w.id = i.workspace_id
-     WHERE i.id = $1`,
-    [inquiryId]
-  );
-  if (!inq) return { ok: false, inquiry: null };
-  const isOwner = inq.client_id === userId;
-  const isWorkspaceOwner = inq.workspace_owner_id === userId;
-  return {
-    ok: isOwner || isWorkspaceOwner || isAdmin,
-    inquiry: inq,
-    isOwner,
-    isWorkspaceOwner,
-    isAdmin,
-  };
-}
-
-export async function resolveWorkspaceProject(workspaceId, projectId) {
-  if (projectId == null || projectId === "") return null;
-  if (typeof projectId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectId)) {
-    const err = new Error("projectId must be a valid UUID");
-    err.status = 400;
-    throw err;
-  }
-  if (!workspaceId) {
-    const err = new Error("A workspace is required to attach a project");
-    err.status = 400;
-    throw err;
-  }
-  const row = await queryOne(
-    `SELECT id, name FROM projects WHERE id = $1 AND workspace_id = $2`,
-    [projectId, workspaceId]
-  );
-  if (!row) {
-    const err = new Error("That project is not in this workspace");
-    err.status = 400;
-    throw err;
-  }
-  return row;
-}
-
-export function mapProject(row) {
-  if (!row) return null;
-  return {
-    id: row.id,
-    name: row.name,
-    description: row.description ?? null,
-    sortOrder: row.sort_order,
-    trelloListId: row.trello_list_id ?? null,
-    trelloBoardId: row.trello_board_id ?? null,
-    inquiryCount: row.inquiry_count ?? 0,
-    createdAt: row.created_at,
-  };
-}
-
 export function mapUserBrief(u) {
   if (!u) return null;
   return {
@@ -190,4 +87,123 @@ export function mapUserBrief(u) {
     username: u.username ?? null,
     companyName: u.company_name ?? u.companyName ?? null,
   };
+}
+
+export function mapClient(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    workspaceId: row.workspace_id,
+    userId: row.user_id ?? null,
+    email: row.email,
+    firstName: row.first_name ?? null,
+    lastName: row.last_name ?? null,
+    companyName: row.company_name ?? null,
+    phone: row.phone ?? null,
+    notes: row.notes ?? null,
+    projectCount: row.project_count ?? 0,
+    createdAt: row.created_at,
+  };
+}
+
+export function mapProject(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    workspaceId: row.workspace_id,
+    clientId: row.client_id,
+    name: row.name,
+    description: row.description ?? null,
+    createdAt: row.created_at,
+    client: row.client ? mapClient(row.client) : row.client_email
+      ? {
+          id: row.client_id,
+          email: row.client_email,
+          firstName: row.client_first_name ?? null,
+          lastName: row.client_last_name ?? null,
+          companyName: row.client_company_name ?? null,
+        }
+      : null,
+    collaboratorCount: row.collaborator_count ?? 0,
+  };
+}
+
+const PROJECT_ACCESS_SQL = `
+  SELECT p.*,
+         w.owner_id,
+         c.user_id AS client_user_id,
+         c.email AS client_email,
+         c.first_name AS client_first_name,
+         c.last_name AS client_last_name,
+         c.company_name AS client_company_name
+  FROM projects p
+  JOIN workspaces w ON w.id = p.workspace_id
+  JOIN clients c ON c.id = p.client_id
+  WHERE p.id = $1
+`;
+
+export async function getProjectAccess(projectId, user) {
+  const project = await queryOne(PROJECT_ACCESS_SQL, [projectId]);
+  if (!project) return null;
+  if (project.owner_id === user.id) return { project, role: "owner" };
+  if (["admin", "superadmin"].includes(user.role)) return { project, role: "admin" };
+  if (project.client_user_id === user.id) return { project, role: "client" };
+  const member = await queryOne(
+    `SELECT id FROM project_members WHERE project_id = $1 AND user_id = $2`,
+    [projectId, user.id]
+  );
+  if (member) return { project, role: "collaborator" };
+  return null;
+}
+
+export async function listProjectsForUser(user) {
+  if (user.role === "expert") {
+    const ws = await getWorkspaceByOwner(user.id);
+    if (!ws) return [];
+    return query(
+      `SELECT p.*,
+              c.email AS client_email,
+              c.first_name AS client_first_name,
+              c.last_name AS client_last_name,
+              c.company_name AS client_company_name,
+              (SELECT COUNT(*)::int FROM project_members pm WHERE pm.project_id = p.id) AS collaborator_count
+       FROM projects p
+       JOIN clients c ON c.id = p.client_id
+       WHERE p.workspace_id = $1
+       ORDER BY p.created_at DESC`,
+      [ws.id]
+    );
+  }
+
+  return query(
+    `SELECT p.*,
+            c.email AS client_email,
+            c.first_name AS client_first_name,
+            c.last_name AS client_last_name,
+            c.company_name AS client_company_name,
+            (SELECT COUNT(*)::int FROM project_members pm WHERE pm.project_id = p.id) AS collaborator_count
+     FROM projects p
+     JOIN clients c ON c.id = p.client_id
+     WHERE c.user_id = $1
+        OR EXISTS (
+          SELECT 1 FROM project_members pm
+          WHERE pm.project_id = p.id AND pm.user_id = $1
+        )
+     ORDER BY p.created_at DESC`,
+    [user.id]
+  );
+}
+
+export async function upsertWorkspaceMember(workspaceId, userId, role) {
+  await execute(
+    `INSERT INTO workspace_members (workspace_id, user_id, role)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (workspace_id, user_id) DO UPDATE SET
+       role = CASE
+         WHEN workspace_members.role = 'owner' THEN 'owner'
+         WHEN workspace_members.role = 'client' OR EXCLUDED.role = 'client' THEN 'client'
+         ELSE EXCLUDED.role
+       END`,
+    [workspaceId, userId, role]
+  );
 }

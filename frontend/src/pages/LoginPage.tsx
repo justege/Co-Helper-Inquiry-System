@@ -56,7 +56,7 @@ export default function LoginPage() {
   return (
     <AuthShell
       title="Sign in"
-      subtitle="See your jobs, agreed rates, and payments — all in one workspace."
+      subtitle="See the projects you share with the one-person business you work with."
       promo={{
         tagline: "You were invited here — every job, rate, and payment, in one place.",
         imageSrc: loginPng,

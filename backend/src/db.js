@@ -73,4 +73,31 @@ export function buildSet(fields, start = 1) {
   return { set, values: entries.map(([, v]) => v), next: start + entries.length };
 }
 
-export default { pool, query, queryOne, execute, buildSet };
+export async function withTransaction(fn) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const q = async (text, params = []) => {
+      const result = await client.query(text, params);
+      return result.rows;
+    };
+    const qOne = async (text, params = []) => {
+      const rows = await q(text, params);
+      return rows[0] ?? null;
+    };
+    const result = await fn({ query: q, queryOne: qOne, client });
+    await client.query("COMMIT");
+    return result;
+  } catch (err) {
+    try {
+      await client.query("ROLLBACK");
+    } catch {
+      /* ignore */
+    }
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+export default { pool, query, queryOne, execute, buildSet, withTransaction };

@@ -4,37 +4,13 @@ export function isClientRole(role) {
   return role === "client" || role === "member";
 }
 
-export async function fetchUserWithCategories(whereSql, params) {
-  return queryOne(
-    `SELECT u.*,
-       COALESCE(
-         (
-           SELECT json_agg(json_build_object(
-             'category_id', uc.category_id,
-             'categories', json_build_object(
-               'id', c.id,
-               'name', c.name,
-               'slug', c.slug,
-               'type', c.type,
-               'description', c.description
-             )
-           ))
-           FROM user_categories uc
-           JOIN categories c ON c.id = uc.category_id
-           WHERE uc.user_id = u.id
-         ),
-         '[]'::json
-       ) AS user_categories
-     FROM users u
-     WHERE ${whereSql}`,
-    params
-  );
+export async function fetchUser(whereSql, params) {
+  return queryOne(`SELECT * FROM users u WHERE ${whereSql}`, params);
 }
 
-/**
- * Find or create the Postgres user row for a Firebase account.
- * Handles concurrent inserts (GET /users/me vs landing inquiry submission).
- */
+/** @deprecated use fetchUser */
+export const fetchUserWithCategories = fetchUser;
+
 export async function ensureUserByFirebaseUid({
   firebaseUid,
   email = "",

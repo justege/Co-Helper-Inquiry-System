@@ -26,13 +26,14 @@ import {
 } from "@/components/ui/appUi"
 import { AppButton } from "@/components/ui/AppButton"
 import {
+  createWorkspaceClient,
   getMyWorkspace,
   getWorkspaceInvitations,
-  inviteClient,
   revokeInvitation,
   type FreelancerWorkspaceMe,
   type WorkspaceInvitation,
 } from "@/api/workspace"
+import { displayName } from "@/lib/people"
 
 function inviteUrl(token: string) {
   return `${window.location.origin}/invite/${token}`
@@ -52,14 +53,16 @@ export default function ClientsPage() {
     reset,
     setError,
     formState: { errors, isSubmitting },
-  } = useForm<{ email: string }>({ defaultValues: { email: "" } })
+  } = useForm<{ email: string; firstName: string; lastName: string; companyName: string }>({
+    defaultValues: { email: "", firstName: "", lastName: "", companyName: "" },
+  })
 
   const load = useCallback(() => {
     setLoading(true)
     Promise.all([getMyWorkspace(), getWorkspaceInvitations()])
       .then(([me, inv]) => {
         if (me.role === "owner") setData(me)
-        setInvitations(inv)
+        setInvitations(inv.filter((i) => i.kind !== "collaborator"))
       })
       .catch(() => null)
       .finally(() => setLoading(false))
@@ -67,14 +70,20 @@ export default function ClientsPage() {
 
   useEffect(() => { load() }, [load])
 
-  async function onInvite(values: { email: string }) {
+  async function onCreate(values: { email: string; firstName: string; lastName: string; companyName: string }) {
     try {
-      const created = await inviteClient(values.email.trim())
-      setInviteSent(created)
+      const created = await createWorkspaceClient({
+        email: values.email.trim(),
+        firstName: values.firstName.trim() || undefined,
+        lastName: values.lastName.trim() || undefined,
+        companyName: values.companyName.trim() || undefined,
+        invite: true,
+      })
+      setInviteSent(created.invitation)
       reset()
       load()
     } catch (e: unknown) {
-      setError("email", { message: e instanceof Error ? e.message : "Failed to send invite" })
+      setError("email", { message: e instanceof Error ? e.message : "Failed to add client" })
     }
   }
 
@@ -89,10 +98,10 @@ export default function ClientsPage() {
     <PageShell
       eyebrow="Workspace"
       title="Clients"
-      subtitle="Invite the companies you already work with. They only see the jobs you share."
+      subtitle="People you work for. Attach them to projects, then invite collaborators on each project."
       action={
         <AppButton size="sm" onClick={() => { setInviteSent(null); setInviteOpen(true) }}>
-          <LuPlus size={14} /> Invite client
+          <LuPlus size={14} /> Add client
         </AppButton>
       }
     >
@@ -107,27 +116,27 @@ export default function ClientsPage() {
             <Box px={5} py={3.5} borderBottom={`1px solid ${APP_BORDER}`} bg={APP_BG_SUBTLE}
               display="flex" alignItems="center" gap={2.5}>
               <Box color={APP_ACCENT}><LuUsers size={16} /></Box>
-              <Text fontSize="0.875rem" fontWeight="700" color={APP_INK}>Active clients</Text>
+              <Text fontSize="0.875rem" fontWeight="700" color={APP_INK}>Clients</Text>
             </Box>
             <Box p={5}>
               {(data?.clients.length ?? 0) === 0 ? (
                 <Text fontSize="0.875rem" color={APP_MUTED}>
-                  No clients in this workspace yet. Send an invite and share the link if email delivery is not set up.
+                  No clients yet. Add someone by email — they can join when you send the invite.
                 </Text>
               ) : (
                 <Stack gap={3}>
                   {(data?.clients ?? []).map((c) => (
                     <Link key={c.id} to={`/app/clients/${c.id}`} style={{ textDecoration: "none" }}>
-                    <Box display="flex" alignItems="center" justifyContent="space-between" gap={3}
-                      px={4} py={3} bg={APP_BG_SUBTLE} borderRadius="10px" border={`1px solid ${APP_BORDER}`}>
-                      <Box>
-                        <Text fontSize="0.875rem" fontWeight="600" color={APP_INK}>
-                          {[c.firstName, c.lastName].filter(Boolean).join(" ") || c.email}
+                      <Box display="flex" alignItems="center" justifyContent="space-between" gap={3}
+                        px={4} py={3} bg={APP_BG_SUBTLE} borderRadius="10px" border={`1px solid ${APP_BORDER}`}>
+                        <Box>
+                          <Text fontSize="0.875rem" fontWeight="600" color={APP_INK}>{displayName(c)}</Text>
+                          <Text fontSize="0.75rem" color={APP_LABEL}>{c.email}</Text>
+                        </Box>
+                        <Text fontSize="0.75rem" fontWeight="600" color={APP_MUTED}>
+                          {c.projectCount ?? 0} project{(c.projectCount ?? 0) === 1 ? "" : "s"}
                         </Text>
-                        <Text fontSize="0.75rem" color={APP_LABEL}>{c.email}</Text>
                       </Box>
-                      <Text fontSize="0.75rem" fontWeight="600" color={APP_MUTED}>Client</Text>
-                    </Box>
                     </Link>
                   ))}
                 </Stack>
@@ -178,15 +187,15 @@ export default function ClientsPage() {
         <DialogContent style={{ borderRadius: "16px", border: "1px solid #D8DCE8", overflow: "hidden", boxShadow: "0 20px 60px rgba(11,21,40,0.18)" }}>
           <Box bg="#0B1A15" px={6} py={4} display="flex" alignItems="center" justifyContent="space-between">
             <DialogTitle style={{ color: "white", fontWeight: 700, fontSize: "0.9375rem", margin: 0 }}>
-              Invite Client
+              Add client
             </DialogTitle>
             <DialogCloseTrigger style={{ color: "rgba(255,255,255,0.5)" }} />
           </Box>
           <DialogHeader display="none" />
-          <Box as="form" onSubmit={handleSubmit(onInvite)}>
+          <Box as="form" onSubmit={handleSubmit(onCreate)}>
             <DialogBody px={6} py={5}>
               <Text fontSize="0.875rem" color={APP_MUTED} mb={4}>
-                They&rsquo;ll join <strong style={{ color: APP_INK }}>{data?.workspace.name ?? "your workspace"}</strong> and only see jobs you share.
+                They&rsquo;ll be invited to <strong style={{ color: APP_INK }}>{data?.workspace.name ?? "your workspace"}</strong> and only see projects you attach them to.
               </Text>
               <Field label="Email address" invalid={!!errors.email} errorText={errors.email?.message}>
                 <FormInput
@@ -197,6 +206,15 @@ export default function ClientsPage() {
                     pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "Enter a valid email" },
                   })}
                 />
+              </Field>
+              <Field label="First name">
+                <FormInput mt={3} {...register("firstName")} />
+              </Field>
+              <Field label="Last name">
+                <FormInput mt={3} {...register("lastName")} />
+              </Field>
+              <Field label="Company">
+                <FormInput mt={3} {...register("companyName")} />
               </Field>
               {inviteSent && (
                 <Box mt={3} p={3} bg={APP_BG_SUBTLE} borderRadius="8px">
@@ -211,7 +229,7 @@ export default function ClientsPage() {
             </DialogBody>
             <DialogFooter px={6} pb={5} pt={0} display="flex" gap={2}>
               <AppButton type="submit" loading={isSubmitting} flex={1}>
-                Create invitation
+                Add and invite
               </AppButton>
               <AppButton variant="ghost" color={APP_MUTED} onClick={() => setInviteOpen(false)}>Cancel</AppButton>
             </DialogFooter>

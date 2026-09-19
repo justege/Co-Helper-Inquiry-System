@@ -80,7 +80,7 @@ export default function RegisterPage() {
   return (
     <AuthShell
       title="Create your account"
-      subtitle="You were invited to Co-Helper — set up your account to see the job."
+      subtitle="You were invited to Co-Helper — set up your account to join the workspace."
       promo={{
         tagline: "One shared workspace with the one-person business you work with — jobs, rates, and payments in one place.",
         imageSrc: loginPng,
@@ -102,7 +102,7 @@ export default function RegisterPage() {
         <Box bg="#F0FAF5" border="1px solid #A7D7C5" rounded="xl" px={4} py={3} mb={5}>
           <Text fontSize="0.8125rem" color="#0F6E56" fontWeight="600">
             {freelancerLabel ? `${freelancerLabel} invited you` : "You were invited"} — create your
-            account to see the job.
+            account to join.
           </Text>
         </Box>
       )}

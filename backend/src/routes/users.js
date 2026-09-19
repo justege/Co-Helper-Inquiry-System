@@ -2,14 +2,13 @@ import { Router } from "express";
 import { query, queryOne, execute, buildSet } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { isSuperadmin, isAdminOrAbove } from "../middleware/requireRole.js";
-import { ensureUserByFirebaseUid, fetchUserWithCategories } from "../lib/userProfile.js";
+import { ensureUserByFirebaseUid, fetchUser } from "../lib/userProfile.js";
 import { ensureWorkspaceForOwner } from "../lib/workspace.js";
 
 const router = Router();
 
 export function toUser(row) {
   if (!row) return null;
-  const cats = Array.isArray(row.user_categories) ? row.user_categories : [];
   return {
     id: row.id,
     firebaseUid: row.firebase_uid,
@@ -22,7 +21,6 @@ export function toUser(row) {
     phone: row.phone ?? null,
     contactPref: row.contact_pref ?? "email",
     role: row.role ?? "client",
-    categories: cats.map((uc) => uc.categories).filter(Boolean),
     createdAt: row.created_at,
   };
 }
@@ -34,7 +32,7 @@ router.get("/me", requireAuth, async (req, res) => {
       email: req.firebaseUser.email ?? "",
     });
 
-    const data = await fetchUserWithCategories("u.firebase_uid = $1", [req.uid]);
+    const data = await fetchUser("u.firebase_uid = $1", [req.uid]);
     if (!data) return res.status(404).json({ error: "User not found" });
 
     if (data.role === "expert") {
@@ -85,7 +83,7 @@ router.put("/me", requireAuth, async (req, res) => {
       await execute(`UPDATE users SET ${set} WHERE firebase_uid = $${next}`, [...values, req.uid]);
     }
 
-    const data = await fetchUserWithCategories("u.firebase_uid = $1", [req.uid]);
+    const data = await fetchUser("u.firebase_uid = $1", [req.uid]);
     res.json(toUser(data));
   } catch (err) {
     console.error(err);
@@ -93,22 +91,9 @@ router.put("/me", requireAuth, async (req, res) => {
   }
 });
 
-router.get("/", requireAuth, ...isAdminOrAbove, async (req, res) => {
+router.get("/", requireAuth, ...isAdminOrAbove, async (_req, res) => {
   try {
-    const rows = await query(
-      `SELECT u.*,
-         COALESCE((
-           SELECT json_agg(json_build_object(
-             'category_id', uc.category_id,
-             'categories', json_build_object('id', c.id, 'name', c.name, 'slug', c.slug, 'type', c.type, 'description', c.description)
-           ))
-           FROM user_categories uc
-           JOIN categories c ON c.id = uc.category_id
-           WHERE uc.user_id = u.id
-         ), '[]'::json) AS user_categories
-       FROM users u
-       ORDER BY u.created_at DESC`
-    );
+    const rows = await query(`SELECT * FROM users ORDER BY created_at DESC`);
     res.json(rows.map(toUser));
   } catch (err) {
     console.error(err);
@@ -127,24 +112,6 @@ router.put("/:id/role", requireAuth, ...isSuperadmin, async (req, res) => {
     if (role === "expert") {
       await ensureWorkspaceForOwner(data.id, data.company_name || data.username);
     }
-    res.json(toUser(data));
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.put("/:id/categories", requireAuth, ...isAdminOrAbove, async (req, res) => {
-  const { categoryIds = [] } = req.body ?? {};
-  try {
-    await execute("DELETE FROM user_categories WHERE user_id = $1", [req.params.id]);
-    for (const cid of categoryIds) {
-      await execute(
-        "INSERT INTO user_categories (user_id, category_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-        [req.params.id, cid]
-      );
-    }
-    const data = await fetchUserWithCategories("u.id = $1", [req.params.id]);
     res.json(toUser(data));
   } catch (err) {
     console.error(err);

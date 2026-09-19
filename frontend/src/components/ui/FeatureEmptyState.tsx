@@ -320,7 +320,7 @@ export function AdminInquiryMockup() {
 // ── Pre-wired empty states for each page ──────────────────────────────────────
 
 export function StartWorkspaceButton({
-  redirectTo = "/app/board",
+  redirectTo = "/app/projects",
   size = "md",
 }: {
   redirectTo?: string
@@ -368,13 +368,13 @@ export function StartWorkspaceEmptyState() {
       bullets={[
         "Create a workspace for your one-person business in one click",
         "Invite the companies you work with — they join at no extra fee",
-        "Open jobs, track hours, and keep payment logs in one place",
+        "Create projects and invite collaborators onto each one",
       ]}
       cta={
         <Box>
           <StartWorkspaceButton />
           <Text mt={4} fontSize="0.8125rem" color={APP_MUTED} maxW="420px" lineHeight="1.5">
-            Working with a one-person business instead? Ask them for an invite link — you can open jobs here once you join.
+            Working with a one-person business instead? Ask them for an invite link — you can see shared projects once you join.
           </Text>
         </Box>
       }
@@ -386,16 +386,16 @@ export function StartWorkspaceEmptyState() {
 export function ClientJobsEmptyState() {
   return (
     <FeatureEmptyState
-      title="Jobs you share with your partner land here"
+      title="Projects shared with you land here"
       bullets={[
-        "Open a job in the workspace you were invited to",
-        "Agree rates, follow to-dos, and see what’s been paid",
-        "Use Edit with AI to clarify the brief and chat",
+        "Join a workspace with an invite from the person you work with",
+        "See the projects you’re the client on, or invited to as a collaborator",
+        "Keep everyone on one project instead of scattered email threads",
       ]}
       cta={
-        <Link to="/app/inquiries/new" style={{ textDecoration: "none" }}>
+        <Link to="/app/projects" style={{ textDecoration: "none" }}>
           <AppButton size="md" h="42px" px={6} fontSize="0.9375rem" display="inline-flex" alignItems="center" gap={2}>
-            + Open a job
+            View projects
           </AppButton>
         </Link>
       }

@@ -12,7 +12,8 @@
     "build": "npm run build:frontend",
     "build:frontend": "npm --prefix frontend run build",
     "start": "npm --prefix backend start",
-    "db:setup": "npm --prefix backend run db:setup --"
+    "db:setup": "npm --prefix backend run db:setup --",
+    "db:reset": "npm --prefix backend run db:reset --"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

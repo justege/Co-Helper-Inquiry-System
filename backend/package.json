@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "/bin/sh src/scripts/run-node.sh --watch src/index.js",
     "start": "/bin/sh src/scripts/run-node.sh src/index.js",
-    "db:setup": "/bin/sh src/scripts/db-setup.sh"
+    "db:setup": "/bin/sh src/scripts/db-setup.sh",
+    "db:reset": "/bin/sh src/scripts/db-setup.sh --reset"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.901.0",
@@ -16,6 +17,8 @@
     "express": "^4.21.2",
     "firebase-admin": "^13.10.0",
     "jose": "^6.2.3",
+    "node-cron": "^4.6.0",
+    "nodemailer": "^10.0.10",
     "pdfkit": "^0.20.2",
     "pg": "^8.16.3",
     "stripe": "^22.6.2"

@@ -5,29 +5,22 @@ import { GREEN, INK, MUTED, RULE, SURFACE } from "@/theme/tokens"
 import { AppButton } from "@/components/ui/AppButton"
 
 export function OnboardingChecklist({
-  isSolo,
+  isOwner,
   hasWorkspace,
   hasClients,
   hasProjects,
-  hasJobs,
 }: {
-  isSolo: boolean
+  isOwner: boolean
   hasWorkspace: boolean
   hasClients: boolean
   hasProjects: boolean
-  hasJobs: boolean
 }) {
-  if (!isSolo && hasJobs) return null
-  const items = isSolo
-    ? [
-        { done: hasWorkspace, label: "Create your workspace", to: "/app/settings" },
-        { done: hasClients, label: "Invite your first client", to: "/app/clients" },
-        { done: hasProjects, label: "Add a project folder", to: "/app/projects" },
-        { done: hasJobs, label: "Open the first job", to: "/app/inquiries/new" },
-      ]
-    : [
-        { done: hasJobs, label: "Create your first job", to: "/app/inquiries/new" },
-      ]
+  if (!isOwner) return null
+  const items = [
+    { done: hasWorkspace, label: "Create your workspace", to: "/app/settings" },
+    { done: hasClients, label: "Add your first client", to: "/app/clients" },
+    { done: hasProjects, label: "Create a project", to: "/app/projects" },
+  ]
   if (items.every((i) => i.done)) return null
 
   return (
@@ -36,9 +29,7 @@ export function OnboardingChecklist({
         Get set up
       </Text>
       <Text fontSize="0.875rem" color={MUTED} mb={4}>
-        {isSolo
-          ? "Four steps to a professional workspace with your clients."
-          : "Share a brief so work has a home besides email."}
+        A workspace, a client, then a project they can join with collaborators.
       </Text>
       <Box display="flex" flexDir="column" gap={2}>
         {items.map((item) => (
@@ -50,10 +41,10 @@ export function OnboardingChecklist({
           </Link>
         ))}
       </Box>
-      {isSolo && !hasJobs && (
+      {!hasClients && (
         <Box mt={4}>
-          <Link to="/app/inquiries/new">
-            <AppButton variant="accent">New job</AppButton>
+          <Link to="/app/clients">
+            <AppButton variant="accent">Add a client</AppButton>
           </Link>
         </Box>
       )}

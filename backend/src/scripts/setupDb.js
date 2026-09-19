@@ -4,8 +4,9 @@
  *   cd backend
  *   npm run db:setup
  *
- * Optional: apply a different file (e.g. an incremental migration):
- *   node src/scripts/setupDb.js sql/013_freelancer_workspace.sql
+ * Optional:
+ *   node src/scripts/setupDb.js --reset          drop public schema, then apply
+ *   node src/scripts/setupDb.js sql/other.sql    apply a different file
  */
 import fs from "fs";
 import path from "path";
@@ -20,7 +21,9 @@ const backendRoot = path.resolve(__dirname, "../..");
 const envPath = path.join(backendRoot, ".env");
 dotenv.config({ path: envPath, override: true });
 
-const schemaArg = process.argv[2];
+const argv = process.argv.slice(2);
+const reset = argv.includes("--reset");
+const schemaArg = argv.find((a) => a !== "--reset");
 const schemaPath = path.resolve(
   backendRoot,
   schemaArg || "sql/schema.sql"
@@ -163,11 +166,18 @@ const target = process.env.DATABASE_URL
 
 console.log(`Applying ${path.relative(backendRoot, schemaPath)} (${statements.length} statements)`);
 console.log(`Target: ${target}`);
+if (reset) console.log("Reset: DROP SCHEMA public CASCADE");
 
 const client = new Client(config);
 
 try {
   await client.connect();
+  if (reset) {
+    await client.query("DROP SCHEMA public CASCADE");
+    await client.query("CREATE SCHEMA public");
+    await client.query("GRANT ALL ON SCHEMA public TO public");
+    await client.query("GRANT ALL ON SCHEMA public TO CURRENT_USER");
+  }
   for (let i = 0; i < statements.length; i++) {
     try {
       await client.query(statements[i]);

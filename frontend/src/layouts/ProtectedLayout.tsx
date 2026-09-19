@@ -4,13 +4,8 @@ import { useAuthContext } from "../components/auth/AuthContext"
 import { getMe, type User } from "../api/users"
 import { useEffect, useRef, useState } from "react"
 import {
-  LuColumns3,
-  LuPenLine,
-  LuInbox,
-  LuUser,
   LuSettings,
   LuLogOut,
-  LuWallet,
   LuFolderKanban,
   LuUsers,
   LuHouse,
@@ -29,33 +24,19 @@ interface NavItem {
   to: string
   icon: IconType
   label: string
-  partnerOnly?: boolean
-  clientHide?: boolean
 }
 
-const soloNav: NavItem[] = [
+const ownerNav: NavItem[] = [
   { to: "/app", icon: LuHouse, label: "Home" },
-  { to: "/app/board", icon: LuColumns3, label: "Board" },
-  { to: "/app/inquiries", icon: LuInbox, label: "Jobs" },
   { to: "/app/projects", icon: LuFolderKanban, label: "Projects" },
   { to: "/app/clients", icon: LuUsers, label: "Clients" },
-  { to: "/app/finance", icon: LuWallet, label: "Finance" },
   { to: "/app/settings", icon: LuSettings, label: "Settings" },
 ]
 
-const clientNav: NavItem[] = [
+const memberNav: NavItem[] = [
   { to: "/app", icon: LuHouse, label: "Home" },
-  { to: "/app/board", icon: LuColumns3, label: "Board" },
-  { to: "/app/inquiries", icon: LuInbox, label: "Jobs" },
-  { to: "/app/finance", icon: LuWallet, label: "Finance" },
+  { to: "/app/projects", icon: LuFolderKanban, label: "Projects" },
   { to: "/app/settings", icon: LuSettings, label: "Settings" },
-]
-
-const mobilePrimary: NavItem[] = [
-  { to: "/app", icon: LuHouse, label: "Home" },
-  { to: "/app/board", icon: LuColumns3, label: "Board" },
-  { to: "/app/inquiries/new", icon: LuPenLine, label: "New" },
-  { to: "/app/inquiries", icon: LuInbox, label: "Jobs" },
 ]
 
 export default function ProtectedLayout() {
@@ -101,13 +82,12 @@ export default function ProtectedLayout() {
 
   if (!user) return <Navigate to="/login" replace />
 
-  const isPartner = profile?.role === "expert"
-  const isAdmin = profile?.role === "superadmin" || profile?.role === "admin"
-  const nav = isPartner ? soloNav : clientNav
+  const isOwner = profile?.role === "expert"
+  const nav = isOwner ? ownerNav : memberNav
 
   async function handleLogout() {
     await logout()
-    navigate(isPartner ? "/partner/login" : "/login", { replace: true })
+    navigate(isOwner ? "/partner/login" : "/login", { replace: true })
   }
 
   return (
@@ -159,7 +139,6 @@ export default function ProtectedLayout() {
           {nav.map((item) => (
             <SidebarItem key={item.to} item={item} />
           ))}
-          {isAdmin && <SidebarItem item={{ to: "/app/admin", icon: LuUser, label: "Admin" }} />}
         </Box>
 
         <Box px={4} py={4} borderTop={`1px solid ${RULE}`}>
@@ -221,8 +200,8 @@ export default function ProtectedLayout() {
         bg="rgba(255,255,255,0.94)"
         borderTop={`1px solid ${RULE}`}
       >
-        {mobilePrimary.map((item) => (
-          <MobileNavItem key={item.to} item={item} emphasis={item.to.endsWith("/new")} />
+        {nav.slice(0, 3).map((item) => (
+          <MobileNavItem key={item.to} item={item} />
         ))}
         <Box as="button" flex="1" display="flex" flexDir="column" alignItems="center" gap="3px" onClick={() => setMoreOpen(true)}>
           <LuEllipsis size={21} color={LABEL} />
@@ -234,16 +213,11 @@ export default function ProtectedLayout() {
         <Box position="fixed" inset={0} zIndex={200} bg="rgba(14,27,23,0.4)" onClick={() => setMoreOpen(false)}>
           <Box position="absolute" bottom={0} left={0} right={0} bg={SURFACE} borderTopRadius="18px" p={5} onClick={(e) => e.stopPropagation()}>
             <Text fontWeight="700" mb={3}>More</Text>
-            {(isPartner ? [
-              { to: "/app/projects", label: "Projects" },
+            {(isOwner ? [
               { to: "/app/clients", label: "Clients" },
-              { to: "/app/finance", label: "Finance" },
-              { to: "/app/trello", label: "Trello" },
-              { to: "/app/activity", label: "Activity" },
               { to: "/app/profile", label: "Profile" },
               { to: "/app/settings", label: "Settings" },
             ] : [
-              { to: "/app/finance", label: "Finance" },
               { to: "/app/profile", label: "Profile" },
               { to: "/app/settings", label: "Settings" },
             ]).map((item) => (
@@ -262,15 +236,9 @@ export default function ProtectedLayout() {
               <Text fontWeight="700">Search</Text>
               <Box as="button" onClick={() => setSearchOpen(false)}><LuX /></Box>
             </Box>
-            <AppInput autoFocus placeholder="Jobs, projects, clients, messages…" value={query} onChange={(e) => setQuery(e.target.value)} />
+            <AppInput autoFocus placeholder="Projects and clients…" value={query} onChange={(e) => setQuery(e.target.value)} />
             {results && (
               <Box mt={4} display="flex" flexDir="column" gap={3}>
-                {results.jobs.map((j) => (
-                  <Link key={j.id} to={`/app/jobs/${j.id}`} onClick={() => setSearchOpen(false)} style={{ textDecoration: "none" }}>
-                    <Text fontWeight="600" color={INK}>{j.title}</Text>
-                    <Text fontSize="0.75rem" color={MUTED}>Job</Text>
-                  </Link>
-                ))}
                 {results.projects.map((p) => (
                   <Link key={p.id} to={`/app/projects/${p.id}`} onClick={() => setSearchOpen(false)} style={{ textDecoration: "none" }}>
                     <Text fontWeight="600" color={INK}>{p.name}</Text>
@@ -283,12 +251,9 @@ export default function ProtectedLayout() {
                     <Text fontSize="0.75rem" color={MUTED}>Client</Text>
                   </Link>
                 ))}
-                {results.messages.map((m) => (
-                  <Link key={m.id} to={`/app/jobs/${m.inquiryId}/messages`} onClick={() => setSearchOpen(false)} style={{ textDecoration: "none" }}>
-                    <Text fontWeight="600" color={INK}>{m.title}</Text>
-                    <Text fontSize="0.75rem" color={MUTED}>{m.body}</Text>
-                  </Link>
-                ))}
+                {results.projects.length === 0 && results.clients.length === 0 && (
+                  <Text fontSize="0.875rem" color={MUTED}>No matches.</Text>
+                )}
               </Box>
             )}
           </Box>
@@ -329,8 +294,8 @@ export default function ProtectedLayout() {
                     markNotificationRead(n.id).catch(() => null)
                     setNotes((prev) => prev.map((x) => x.id === n.id ? { ...x, readAt: x.readAt ?? new Date().toISOString() } : x))
                     setUnread((u) => Math.max(0, u - (n.readAt ? 0 : 1)))
-                    const jobId = n.payload?.inquiryId
-                    if (typeof jobId === "string") navigate(`/app/jobs/${jobId}`)
+                    const projectId = n.payload?.projectId
+                    if (typeof projectId === "string") navigate(`/app/projects/${projectId}`)
                     setBellOpen(false)
                   }}
                 >
@@ -348,7 +313,7 @@ export default function ProtectedLayout() {
 
 function SidebarItem({ item }: { item: NavItem }) {
   const Icon = item.icon
-  const end = item.to === "/app" || item.to === "/app/inquiries" || item.to === "/app/board"
+  const end = item.to === "/app"
   return (
     <NavLink to={item.to} end={end}>
       {({ isActive }: { isActive: boolean }) => (
@@ -375,22 +340,14 @@ function SidebarItem({ item }: { item: NavItem }) {
   )
 }
 
-function MobileNavItem({ item, emphasis }: { item: NavItem; emphasis?: boolean }) {
+function MobileNavItem({ item }: { item: NavItem }) {
   const Icon = item.icon
   return (
     <NavLink to={item.to} end={item.to === "/app"} style={{ flex: 1 }}>
       {({ isActive }: { isActive: boolean }) => (
         <Box as="span" display="flex" flexDir="column" alignItems="center" gap="3px">
-          {emphasis ? (
-            <Box w="44px" h="44px" rounded="full" bg={GREEN} color="white" display="flex" alignItems="center" justifyContent="center" transform="translateY(-6px)">
-              <Icon size={17} />
-            </Box>
-          ) : (
-            <>
-              <Icon size={21} color={isActive ? GREEN : LABEL} />
-              <Text fontSize="0.6rem" fontWeight={isActive ? "700" : "500"} color={isActive ? GREEN : LABEL}>{item.label}</Text>
-            </>
-          )}
+          <Icon size={21} color={isActive ? GREEN : LABEL} />
+          <Text fontSize="0.6rem" fontWeight={isActive ? "700" : "500"} color={isActive ? GREEN : LABEL}>{item.label}</Text>
         </Box>
       )}
     </NavLink>

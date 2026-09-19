@@ -1,66 +1,19 @@
 import { Router } from "express";
-import { query, queryOne, execute } from "../db.js";
+import { queryOne, execute } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { registerPartner } from "../lib/partnerRegistration.js";
 import { sendEmail } from "../lib/email.js";
 
 const router = Router();
-const VALID_TYPES = ["service", "tool_sourcing"];
-
-function toCategoryService(row) {
-  return {
-    id: row.id,
-    categoryId: row.category_id,
-    name: row.name,
-    slug: row.slug,
-    description: row.description ?? null,
-    isLive: row.is_live,
-    sortOrder: row.sort_order,
-  };
-}
-
-router.get("/categories", async (req, res) => {
-  const { type } = req.query;
-  try {
-    const data = type && VALID_TYPES.includes(type)
-      ? await query("SELECT id, name, slug, type, description FROM categories WHERE type = $1 ORDER BY name", [type])
-      : await query("SELECT id, name, slug, type, description FROM categories ORDER BY name");
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.get("/category-services", async (req, res) => {
-  const { categoryId } = req.query;
-  try {
-    const data = categoryId
-      ? await query(
-          `SELECT id, category_id, name, slug, description, is_live, sort_order
-           FROM category_services WHERE category_id = $1 ORDER BY sort_order`,
-          [categoryId]
-        )
-      : await query(
-          `SELECT id, category_id, name, slug, description, is_live, sort_order
-           FROM category_services ORDER BY sort_order`
-        );
-    res.json(data.map(toCategoryService));
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 router.post("/partner-registration", requireAuth, async (req, res) => {
-  const { username, companyName, bio, locationCity, categoryIds = [] } = req.body ?? {};
+  const { username, companyName } = req.body ?? {};
   try {
     const result = await registerPartner({
       firebaseUid: req.uid,
       email: req.firebaseUser.email ?? "",
       username,
       companyName,
-      bio,
-      locationCity,
-      categoryIds,
     });
     if (result.error) return res.status(result.status).json({ error: result.error });
     res.status(201).json({ success: true });
@@ -75,10 +28,7 @@ router.get("/health-status", async (_req, res) => {
     await queryOne("SELECT 1 AS ok");
     res.json({
       status: "operational",
-      checks: {
-        api: "operational",
-        database: "operational",
-      },
+      checks: { api: "operational", database: "operational" },
     });
   } catch {
     res.status(503).json({

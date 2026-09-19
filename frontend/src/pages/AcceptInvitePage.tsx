@@ -76,7 +76,7 @@ export default function AcceptInvitePage() {
               {freelancerName(preview.freelancer)} invited you to Co-Helper
             </Heading>
             <Text fontSize="0.875rem" color={MUTED} lineHeight="1.65" mb={7}>
-              Accept the invite to see your jobs, agreed rates, and payments — all in one shared workspace.
+              Accept the invite to join the workspace and see the projects shared with you.
             </Text>
 
             <Box

@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import { Box, Grid, Spinner, Stack, Text } from "@chakra-ui/react"
-import { LuFolderKanban, LuPencil, LuPlus, LuTrash2 } from "react-icons/lu"
+import { LuFolderKanban, LuPencil, LuTrash2 } from "react-icons/lu"
 import { PageShell } from "@/components/ui/PageShell"
 import { Field } from "@/components/ui/field"
-import { FormInput } from "@/components/ui/form-controls"
+import { FormInput, FormNativeSelect } from "@/components/ui/form-controls"
 import {
   DialogRoot,
   DialogContent,
@@ -30,11 +30,14 @@ import {
   getMyWorkspace,
   getWorkspaceProjects,
   updateWorkspaceProject,
+  type WorkspaceClient,
   type WorkspaceProject,
 } from "@/api/workspace"
+import { displayName } from "@/lib/people"
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<WorkspaceProject[]>([])
+  const [clients, setClients] = useState<WorkspaceClient[]>([])
   const [canManage, setCanManage] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -42,6 +45,7 @@ export default function ProjectsPage() {
   const [active, setActive] = useState<WorkspaceProject | null>(null)
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
+  const [clientId, setClientId] = useState("")
   const [view, setView] = useState<"list" | "cards">("list")
   const [busy, setBusy] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -52,6 +56,7 @@ export default function ProjectsPage() {
     try {
       const [ws, data] = await Promise.all([getMyWorkspace(), getWorkspaceProjects()])
       setCanManage(ws.role === "owner")
+      if (ws.role === "owner") setClients(ws.clients)
       setProjects(data.projects)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load projects")
@@ -66,6 +71,7 @@ export default function ProjectsPage() {
     setActive(null)
     setName("")
     setDescription("")
+    setClientId(clients[0]?.id ?? "")
     setFormError(null)
     setDialog("create")
   }
@@ -74,6 +80,7 @@ export default function ProjectsPage() {
     setActive(project)
     setName(project.name)
     setDescription(project.description || "")
+    setClientId(project.clientId)
     setFormError(null)
     setDialog("rename")
   }
@@ -90,15 +97,19 @@ export default function ProjectsPage() {
       setFormError("Give the project a name")
       return
     }
+    if (!clientId) {
+      setFormError("Pick a client for this project")
+      return
+    }
     setBusy(true)
     setFormError(null)
     try {
       if (dialog === "rename" && active) {
-        const updated = await updateWorkspaceProject(active.id, next, description)
+        const updated = await updateWorkspaceProject(active.id, { name: next, description, clientId })
         setProjects((prev) => prev.map((item) => (item.id === updated.id ? { ...item, ...updated } : item)))
       } else {
-        const created = await createWorkspaceProject(next, description)
-        setProjects((prev) => [...prev, created])
+        const created = await createWorkspaceProject(next, clientId, description)
+        setProjects((prev) => [created, ...prev])
       }
       setDialog(null)
     } catch (err) {
@@ -127,22 +138,29 @@ export default function ProjectsPage() {
     <PageShell
       eyebrow="Workspace"
       title="Projects"
-      subtitle="Group related jobs. A project is a folder — the board still shows Requested, Doing, Waiting, and Done."
+      subtitle="Each project belongs to one client. Invite collaborators on the project page."
       action={
-          <Box display="flex" gap={2} alignItems="center">
-            <AppButton size="sm" variant={view === "list" ? "primary" : "secondary"} onClick={() => setView("list")}>List</AppButton>
-            <AppButton size="sm" variant={view === "cards" ? "primary" : "secondary"} onClick={() => setView("cards")}>Cards</AppButton>
-            {canManage ? (
-              <AppButton size="sm" onClick={openCreate}>
-                <LuPlus size={14} /> New project
-              </AppButton>
-            ) : undefined}
-          </Box>
+        <Box display="flex" gap={2} alignItems="center">
+          <AppButton size="sm" variant={view === "list" ? "primary" : "secondary"} onClick={() => setView("list")}>List</AppButton>
+          <AppButton size="sm" variant={view === "cards" ? "primary" : "secondary"} onClick={() => setView("cards")}>Cards</AppButton>
+          {canManage ? (
+            <AppButton size="sm" onClick={openCreate} disabled={clients.length === 0}>New project</AppButton>
+          ) : undefined}
+        </Box>
       }
     >
       {error && (
         <Box mb={3} bg="#FEF2F2" border="1px solid #FECACA" borderRadius="10px" px={4} py={3}>
           <Text fontSize="0.8125rem" color="#991B1B">{error}</Text>
+        </Box>
+      )}
+
+      {canManage && clients.length === 0 && !loading && (
+        <Box mb={4} bg="#FFF8E8" border="1px solid #F6E05E" borderRadius="12px" px={4} py={3}>
+          <Text fontSize="0.875rem" color="#92400E">
+            Add a client first, then create a project for them.{" "}
+            <Link to="/app/clients" style={{ fontWeight: 700 }}>Go to clients</Link>
+          </Text>
         </Box>
       )}
 
@@ -161,7 +179,7 @@ export default function ProjectsPage() {
           <Box p={5}>
             {projects.length === 0 ? (
               <Text fontSize="0.875rem" color={APP_MUTED} lineHeight="1.6">
-                No projects yet. Create one, then attach jobs from the board or a job page. Trello columns also land here when you import.
+                No projects yet. Create one for a client, then invite collaborators.
               </Text>
             ) : view === "cards" ? (
               <Grid templateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={3}>
@@ -171,13 +189,10 @@ export default function ProjectsPage() {
                       <Text fontSize="1rem" fontWeight="700" color={APP_INK} mb={1}>{project.name}</Text>
                     </Link>
                     {project.description && <Text fontSize="0.8125rem" color={APP_MUTED} mb={2}>{project.description}</Text>}
-                    <Text fontSize="0.75rem" color={APP_LABEL} mb={3}>
-                      {project.inquiryCount} job{project.inquiryCount === 1 ? "" : "s"}
-                      {project.trelloListId ? " · From Trello" : ""}
+                    <Text fontSize="0.75rem" color={APP_LABEL}>
+                      {displayName(project.client)}
+                      {project.collaboratorCount ? ` · ${project.collaboratorCount} collaborator${project.collaboratorCount === 1 ? "" : "s"}` : ""}
                     </Text>
-                    <Link to={`/app/board?project=${project.id}`} style={{ textDecoration: "none" }}>
-                      <Text fontSize="0.75rem" fontWeight="600" color={APP_ACCENT}>Open on board</Text>
-                    </Link>
                   </Box>
                 ))}
               </Grid>
@@ -188,32 +203,27 @@ export default function ProjectsPage() {
                     px={4} py={3} bg={APP_BG_SUBTLE} borderRadius="10px" border={`1px solid ${APP_BORDER}`} flexWrap="wrap">
                     <Box minW={0}>
                       <Link to={`/app/projects/${project.id}`} style={{ textDecoration: "none" }}>
-                      <Text fontSize="0.875rem" fontWeight="600" color={APP_INK}>{project.name}</Text>
+                        <Text fontSize="0.875rem" fontWeight="600" color={APP_INK}>{project.name}</Text>
                       </Link>
                       <Text fontSize="0.75rem" color={APP_LABEL}>
-                        {project.inquiryCount} job{project.inquiryCount === 1 ? "" : "s"}
-                        {project.trelloListId ? " · From Trello" : ""}
+                        {displayName(project.client)}
+                        {project.collaboratorCount ? ` · ${project.collaboratorCount} collaborator${project.collaboratorCount === 1 ? "" : "s"}` : ""}
                       </Text>
                     </Box>
-                    <Box display="flex" gap={3} alignItems="center">
-                      <Link to={`/app/board?project=${project.id}`} style={{ textDecoration: "none" }}>
-                        <Text fontSize="0.75rem" fontWeight="600" color={APP_ACCENT}>Open on board</Text>
-                      </Link>
-                      {canManage && (
-                        <>
-                          <Box as="button" onClick={() => openRename(project)}
-                            display="inline-flex" alignItems="center" gap={1}
-                            color={APP_ACCENT} fontSize="0.75rem" fontWeight="600" cursor="pointer">
-                            <LuPencil size={12} /> Rename
-                          </Box>
-                          <Box as="button" onClick={() => openDelete(project)}
-                            display="inline-flex" alignItems="center" gap={1}
-                            color="#B91C1C" fontSize="0.75rem" fontWeight="600" cursor="pointer">
-                            <LuTrash2 size={12} /> Delete
-                          </Box>
-                        </>
-                      )}
-                    </Box>
+                    {canManage && (
+                      <Box display="flex" gap={3} alignItems="center">
+                        <Box as="button" onClick={() => openRename(project)}
+                          display="inline-flex" alignItems="center" gap={1}
+                          color={APP_ACCENT} fontSize="0.75rem" fontWeight="600" cursor="pointer">
+                          <LuPencil size={12} /> Edit
+                        </Box>
+                        <Box as="button" onClick={() => openDelete(project)}
+                          display="inline-flex" alignItems="center" gap={1}
+                          color="#B91C1C" fontSize="0.75rem" fontWeight="600" cursor="pointer">
+                          <LuTrash2 size={12} /> Delete
+                        </Box>
+                      </Box>
+                    )}
                   </Box>
                 ))}
               </Stack>
@@ -230,7 +240,7 @@ export default function ProjectsPage() {
         <DialogContent style={{ borderRadius: "16px", border: "1px solid #D8DCE8", overflow: "hidden", boxShadow: "0 20px 60px rgba(11,21,40,0.18)" }}>
           <Box bg="#0B1A15" px={6} py={4} display="flex" alignItems="center" justifyContent="space-between">
             <DialogTitle style={{ color: "white", fontWeight: 700, fontSize: "0.9375rem", margin: 0 }}>
-              {dialog === "rename" ? "Rename project" : "New project"}
+              {dialog === "rename" ? "Edit project" : "New project"}
             </DialogTitle>
             <DialogCloseTrigger style={{ color: "rgba(255,255,255,0.5)" }} />
           </Box>
@@ -245,6 +255,14 @@ export default function ProjectsPage() {
                   placeholder="Website rebuild"
                   maxLength={80}
                 />
+              </Field>
+              <Field label="Client" required>
+                <FormNativeSelect value={clientId} onChange={(e) => setClientId(e.target.value)} mt={4}>
+                  <option value="">Select a client</option>
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.id}>{displayName(c)}</option>
+                  ))}
+                </FormNativeSelect>
               </Field>
               <Field label="Notes">
                 <FormInput
@@ -276,7 +294,7 @@ export default function ProjectsPage() {
           <DialogHeader display="none" />
           <DialogBody px={6} py={5}>
             <Text fontSize="0.875rem" color={APP_MUTED} lineHeight="1.6">
-              Remove <strong style={{ color: APP_INK }}>{active?.name}</strong>? Jobs stay on the board; they just leave this project.
+              Remove <strong style={{ color: APP_INK }}>{active?.name}</strong>? This cannot be undone.
             </Text>
             {formError && <Text fontSize="0.8125rem" color="#B91C1C" mt={3}>{formError}</Text>}
           </DialogBody>

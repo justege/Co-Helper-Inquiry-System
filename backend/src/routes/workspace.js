@@ -7,52 +7,143 @@ import {
   startWorkspaceForUser,
   getWorkspaceByOwner,
   getMembershipsForUser,
-  logActivity,
   mapUserBrief,
+  mapClient,
   mapProject,
+  getProjectAccess,
+  listProjectsForUser,
+  upsertWorkspaceMember,
 } from "../lib/workspace.js";
-import { sendEmail, appUrl, inviteEmail } from "../lib/email.js";
+import { sendEmail, appUrl, inviteEmail, sendTestEmail } from "../lib/email.js";
+import { encryptSecret } from "../lib/secret.js";
 import { createNotification } from "../lib/notifications.js";
 import { clientLimitForWorkspace } from "../lib/stripe.js";
 
 const router = Router();
 
-async function ownerWorkspacePayload(ws) {
-  const members = await query(
-    `SELECT wm.created_at,
-            json_build_object(
-              'id', u.id,
-              'email', u.email,
-              'first_name', u.first_name,
-              'last_name', u.last_name,
-              'username', u.username,
-              'company_name', u.company_name
-            ) AS users
-     FROM workspace_members wm
-     JOIN users u ON u.id = wm.user_id
-     WHERE wm.workspace_id = $1 AND wm.role = 'client'
-     ORDER BY wm.created_at DESC`,
-    [ws.id]
-  );
+function requireOwner(req, res) {
+  if (req.userRole !== "expert") {
+    res.status(403).json({ error: "Only workspace owners can do that" });
+    return false;
+  }
+  return true;
+}
 
+function parseEmail(value) {
+  const email = typeof value === "string" ? value.trim().toLowerCase() : "";
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null;
+  return email;
+}
+
+function workspaceSettings(ws) {
   return {
-    role: "owner",
-    workspace: {
-      id: ws.id,
-      name: ws.name,
-      currency: ws.currency || "EUR",
-      timezone: ws.timezone || "UTC",
-      logoUrl: ws.logo_url ?? null,
-      createdAt: ws.created_at,
-    },
-    clients: members.map((m) => ({
-      ...mapUserBrief(m.users),
-      memberSince: m.created_at,
-    })),
+    id: ws.id,
+    name: ws.name,
+    currency: ws.currency || "EUR",
+    timezone: ws.timezone || "Europe/Istanbul",
+    logoUrl: ws.logo_url ?? null,
+    emailMode: ws.email_mode || "platform",
+    smtpHost: ws.smtp_host ?? null,
+    smtpPort: ws.smtp_port ?? null,
+    smtpUser: ws.smtp_user ?? null,
+    smtpFrom: ws.smtp_from ?? null,
+    smtpConfigured: Boolean(ws.smtp_password_enc),
+    createdAt: ws.created_at,
   };
 }
 
-// POST /api/workspace — start (or return) the signed-in user's own workspace
+async function listClients(workspaceId) {
+  return query(
+    `SELECT c.*,
+            (SELECT COUNT(*)::int FROM projects p WHERE p.client_id = c.id) AS project_count
+     FROM clients c
+     WHERE c.workspace_id = $1
+     ORDER BY c.created_at DESC`,
+    [workspaceId]
+  );
+}
+
+async function ownerWorkspacePayload(ws) {
+  const clients = await listClients(ws.id);
+  return {
+    role: "owner",
+    workspace: workspaceSettings(ws),
+    clients: clients.map(mapClient),
+  };
+}
+
+async function ensureOwnerWorkspace(req) {
+  return ensureWorkspaceForOwner(
+    req.dbUser.id,
+    req.dbUser.company_name || req.dbUser.username
+  );
+}
+
+function freelancerLabel(user) {
+  return (
+    user.company_name ||
+    [user.first_name, user.last_name].filter(Boolean).join(" ") ||
+    user.username ||
+    "A solo business"
+  );
+}
+
+function mapInvitation(inv) {
+  return {
+    id: inv.id,
+    email: inv.invited_email,
+    token: inv.token,
+    kind: inv.kind,
+    projectId: inv.project_id ?? null,
+    clientId: inv.client_id ?? null,
+    status: inv.status,
+    createdAt: inv.created_at,
+  };
+}
+
+async function sendInvite(ws, user, inv) {
+  const inviteUrl = appUrl(`/invite/${inv.token}`);
+  await sendEmail({
+    workspace: ws,
+    ...inviteEmail({
+      workspaceName: ws.name,
+      freelancerName: freelancerLabel(user),
+      inviteUrl,
+      email: inv.invited_email,
+      kind: inv.kind,
+    }),
+  });
+}
+
+async function createInvitation({ ws, user, email, kind, projectId = null, clientId = null }) {
+  const existing = await queryOne(
+    `SELECT id FROM workspace_invitations
+     WHERE workspace_id = $1 AND invited_email = $2 AND kind = $3
+       AND COALESCE(project_id::text, '') = COALESCE($4::text, '')
+       AND status = 'pending'`,
+    [ws.id, email, kind, projectId]
+  );
+  if (existing) {
+    const inv = await queryOne(`SELECT * FROM workspace_invitations WHERE id = $1`, [existing.id]);
+    return inv;
+  }
+  const inv = await queryOne(
+    `INSERT INTO workspace_invitations
+       (workspace_id, inviter_id, invited_email, kind, project_id, client_id)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     RETURNING *`,
+    [ws.id, user.id, email, kind, projectId, clientId]
+  );
+  await sendInvite(ws, user, inv);
+  return inv;
+}
+
+const CLIENT_SELECT = `
+  SELECT c.*,
+         (SELECT COUNT(*)::int FROM projects p WHERE p.client_id = c.id) AS project_count
+  FROM clients c
+`;
+
 router.post("/", requireAuth, attachRole, async (req, res) => {
   try {
     const ws = await startWorkspaceForUser(req.dbUser, req.body?.name);
@@ -64,15 +155,10 @@ router.post("/", requireAuth, attachRole, async (req, res) => {
   }
 });
 
-// GET /api/workspace/me — the freelancer's own workspace + clients,
-// or the list of workspaces a client belongs to.
 router.get("/me", requireAuth, attachRole, async (req, res) => {
   try {
     if (req.userRole === "expert") {
-      const ws = await ensureWorkspaceForOwner(
-        req.dbUser.id,
-        req.dbUser.company_name || req.dbUser.username
-      );
+      const ws = await ensureOwnerWorkspace(req);
       return res.json(await ownerWorkspacePayload(ws));
     }
 
@@ -93,66 +179,186 @@ router.get("/me", requireAuth, attachRole, async (req, res) => {
   }
 });
 
-const PROJECT_LIST_SQL = `
-  SELECT p.id, p.name, p.description, p.sort_order, p.trello_list_id, p.trello_board_id, p.created_at,
-         COUNT(i.id)::int AS inquiry_count
-  FROM projects p
-  LEFT JOIN inquiries i ON i.project_id = p.id
-`;
+router.get("/clients", requireAuth, attachRole, async (req, res) => {
+  if (!requireOwner(req, res)) return;
+  try {
+    const ws = await ensureOwnerWorkspace(req);
+    const clients = await listClients(ws.id);
+    res.json({ clients: clients.map(mapClient) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/clients", requireAuth, attachRole, async (req, res) => {
+  if (!requireOwner(req, res)) return;
+  const email = parseEmail(req.body?.email);
+  if (!email) return res.status(400).json({ error: "A valid email is required" });
+  try {
+    const ws = await ensureOwnerWorkspace(req);
+    const existing = await queryOne(
+      `SELECT id FROM clients WHERE workspace_id = $1 AND email = $2`,
+      [ws.id, email]
+    );
+    if (existing) return res.status(409).json({ error: "This client is already in your workspace" });
+
+    const limit = await clientLimitForWorkspace(ws.id);
+    const count = await queryOne(
+      `SELECT COUNT(*)::int AS count FROM clients WHERE workspace_id = $1`,
+      [ws.id]
+    );
+    if (Number.isFinite(limit) && count.count >= limit) {
+      return res.status(402).json({
+        error: `Your plan allows ${limit} clients. Upgrade in Settings to add more.`,
+      });
+    }
+
+    const row = await queryOne(
+      `INSERT INTO clients (workspace_id, email, first_name, last_name, company_name, phone, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING *`,
+      [
+        ws.id,
+        email,
+        typeof req.body?.firstName === "string" ? req.body.firstName.trim().slice(0, 80) || null : null,
+        typeof req.body?.lastName === "string" ? req.body.lastName.trim().slice(0, 80) || null : null,
+        typeof req.body?.companyName === "string" ? req.body.companyName.trim().slice(0, 120) || null : null,
+        typeof req.body?.phone === "string" ? req.body.phone.trim().slice(0, 40) || null : null,
+        typeof req.body?.notes === "string" ? req.body.notes.trim().slice(0, 2000) || null : null,
+      ]
+    );
+
+    let invitation = null;
+    if (req.body?.invite !== false) {
+      invitation = await createInvitation({
+        ws,
+        user: req.dbUser,
+        email,
+        kind: "client",
+        clientId: row.id,
+      });
+    }
+
+    res.status(201).json({
+      client: mapClient({ ...row, project_count: 0 }),
+      invitation: invitation ? mapInvitation(invitation) : null,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get("/clients/:id", requireAuth, attachRole, async (req, res) => {
+  if (!requireOwner(req, res)) return;
+  try {
+    const ws = await ensureOwnerWorkspace(req);
+    const row = await queryOne(
+      `${CLIENT_SELECT} WHERE c.id = $1 AND c.workspace_id = $2`,
+      [req.params.id, ws.id]
+    );
+    if (!row) return res.status(404).json({ error: "Client not found" });
+    const projects = await query(
+      `SELECT p.*,
+              (SELECT COUNT(*)::int FROM project_members pm WHERE pm.project_id = p.id) AS collaborator_count
+       FROM projects p
+       WHERE p.client_id = $1
+       ORDER BY p.created_at DESC`,
+      [row.id]
+    );
+    res.json({
+      client: mapClient(row),
+      projects: projects.map((p) => mapProject({ ...p, client_id: row.id, client: row })),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.patch("/clients/:id", requireAuth, attachRole, async (req, res) => {
+  if (!requireOwner(req, res)) return;
+  try {
+    const ws = await ensureOwnerWorkspace(req);
+    const existing = await queryOne(
+      `SELECT * FROM clients WHERE id = $1 AND workspace_id = $2`,
+      [req.params.id, ws.id]
+    );
+    if (!existing) return res.status(404).json({ error: "Client not found" });
+
+    const email = req.body?.email != null ? parseEmail(req.body.email) : existing.email;
+    if (!email) return res.status(400).json({ error: "A valid email is required" });
+
+    const row = await queryOne(
+      `UPDATE clients SET
+         email = $1,
+         first_name = COALESCE($2, first_name),
+         last_name = COALESCE($3, last_name),
+         company_name = COALESCE($4, company_name),
+         phone = COALESCE($5, phone),
+         notes = COALESCE($6, notes)
+       WHERE id = $7
+       RETURNING *`,
+      [
+        email,
+        req.body?.firstName !== undefined ? String(req.body.firstName).trim().slice(0, 80) || null : null,
+        req.body?.lastName !== undefined ? String(req.body.lastName).trim().slice(0, 80) || null : null,
+        req.body?.companyName !== undefined ? String(req.body.companyName).trim().slice(0, 120) || null : null,
+        req.body?.phone !== undefined ? String(req.body.phone).trim().slice(0, 40) || null : null,
+        req.body?.notes !== undefined ? String(req.body.notes).trim().slice(0, 2000) || null : null,
+        existing.id,
+      ]
+    );
+    const counted = await queryOne(
+      `${CLIENT_SELECT} WHERE c.id = $1`,
+      [row.id]
+    );
+    res.json(mapClient(counted));
+  } catch (err) {
+    if (err.code === "23505") return res.status(409).json({ error: "Another client already uses that email" });
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/clients/:id/invite", requireAuth, attachRole, async (req, res) => {
+  if (!requireOwner(req, res)) return;
+  try {
+    const ws = await ensureOwnerWorkspace(req);
+    const client = await queryOne(
+      `SELECT * FROM clients WHERE id = $1 AND workspace_id = $2`,
+      [req.params.id, ws.id]
+    );
+    if (!client) return res.status(404).json({ error: "Client not found" });
+    if (client.user_id) return res.status(409).json({ error: "This client already has an account" });
+    const inv = await createInvitation({
+      ws,
+      user: req.dbUser,
+      email: client.email,
+      kind: "client",
+      clientId: client.id,
+    });
+    res.status(201).json(mapInvitation(inv));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 function parseProjectName(body) {
   const name = typeof body?.name === "string" ? body.name.trim() : "";
   if (name.length < 1 || name.length > 80) {
     return { error: "name must be 1–80 characters" };
   }
-  return { name };
-}
-
-function parseProjectBody(body) {
-  const parsed = parseProjectName(body);
-  if (parsed.error) return parsed;
   const description =
     body?.description == null ? undefined : String(body.description).trim().slice(0, 2000);
-  return { ...parsed, description };
+  return { name, description };
 }
 
-async function ownerProject(req, id) {
-  const ws = await getWorkspaceByOwner(req.dbUser.id);
-  if (!ws) return { error: { status: 404, message: "Workspace not found" } };
-  const row = await queryOne(
-    `${PROJECT_LIST_SQL} WHERE p.id = $1 AND p.workspace_id = $2 GROUP BY p.id`,
-    [id, ws.id]
-  );
-  if (!row) return { error: { status: 404, message: "Project not found" } };
-  return { ws, row };
-}
-
-// GET /api/workspace/projects — workspace projects (created here or imported from Trello)
 router.get("/projects", requireAuth, attachRole, async (req, res) => {
   try {
-    let rows;
-    if (req.userRole === "expert") {
-      const ws = await ensureWorkspaceForOwner(
-        req.dbUser.id,
-        req.dbUser.company_name || req.dbUser.username
-      );
-      rows = await query(
-        `${PROJECT_LIST_SQL} WHERE p.workspace_id = $1
-         GROUP BY p.id
-         ORDER BY p.sort_order ASC, p.created_at ASC`,
-        [ws.id]
-      );
-    } else {
-      rows = await query(
-        `${PROJECT_LIST_SQL}
-         WHERE p.workspace_id IN (
-           SELECT workspace_id FROM workspace_members WHERE user_id = $1
-         )
-         GROUP BY p.id
-         ORDER BY p.sort_order ASC, p.created_at ASC`,
-        [req.dbUser.id]
-      );
-    }
+    const rows = await listProjectsForUser(req.dbUser);
     res.json({ projects: rows.map(mapProject) });
   } catch (err) {
     console.error(err);
@@ -160,38 +366,81 @@ router.get("/projects", requireAuth, attachRole, async (req, res) => {
   }
 });
 
-// GET /api/workspace/projects/:id
+router.post("/projects", requireAuth, attachRole, async (req, res) => {
+  if (!requireOwner(req, res)) return;
+  const parsed = parseProjectName(req.body);
+  if (parsed.error) return res.status(400).json({ error: parsed.error });
+  const clientId = req.body?.clientId;
+  if (typeof clientId !== "string") {
+    return res.status(400).json({ error: "clientId is required" });
+  }
+  try {
+    const ws = await ensureOwnerWorkspace(req);
+    const client = await queryOne(
+      `SELECT * FROM clients WHERE id = $1 AND workspace_id = $2`,
+      [clientId, ws.id]
+    );
+    if (!client) return res.status(400).json({ error: "That client is not in this workspace" });
+    const row = await queryOne(
+      `INSERT INTO projects (workspace_id, client_id, name, description)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [ws.id, client.id, parsed.name, parsed.description || null]
+    );
+    res.status(201).json(mapProject({
+      ...row,
+      client_email: client.email,
+      client_first_name: client.first_name,
+      client_last_name: client.last_name,
+      client_company_name: client.company_name,
+      collaborator_count: 0,
+    }));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get("/projects/:id", requireAuth, attachRole, async (req, res) => {
   try {
-    let row;
-    if (req.userRole === "expert") {
-      const found = await ownerProject(req, req.params.id);
-      if (found.error) return res.status(found.error.status).json({ error: found.error.message });
-      row = found.row;
-    } else {
-      row = await queryOne(
-        `${PROJECT_LIST_SQL}
-         WHERE p.id = $1 AND p.workspace_id IN (
-           SELECT workspace_id FROM workspace_members WHERE user_id = $2
-         )
-         GROUP BY p.id`,
-        [req.params.id, req.dbUser.id]
-      );
-      if (!row) return res.status(404).json({ error: "Project not found" });
-    }
-    const jobs = await query(
-      `SELECT id, title, status, urgency, created_at FROM inquiries WHERE project_id = $1 ORDER BY created_at DESC`,
-      [row.id]
+    const access = await getProjectAccess(req.params.id, req.dbUser);
+    if (!access) return res.status(404).json({ error: "Project not found" });
+    const { project } = access;
+    const client = await queryOne(`${CLIENT_SELECT} WHERE c.id = $1`, [project.client_id]);
+    const collaborators = await query(
+      `SELECT pm.created_at,
+              json_build_object(
+                'id', u.id,
+                'email', u.email,
+                'first_name', u.first_name,
+                'last_name', u.last_name,
+                'username', u.username,
+                'company_name', u.company_name
+              ) AS users
+       FROM project_members pm
+       JOIN users u ON u.id = pm.user_id
+       WHERE pm.project_id = $1
+       ORDER BY pm.created_at ASC`,
+      [project.id]
+    );
+    const pending = await query(
+      `SELECT * FROM workspace_invitations
+       WHERE project_id = $1 AND kind = 'collaborator' AND status = 'pending'
+       ORDER BY created_at DESC`,
+      [project.id]
     );
     res.json({
-      project: mapProject(row),
-      jobs: jobs.map((j) => ({
-        id: j.id,
-        title: j.title,
-        status: j.status,
-        urgency: j.urgency,
-        createdAt: j.created_at,
+      project: mapProject({
+        ...project,
+        collaborator_count: collaborators.length,
+      }),
+      client: mapClient(client),
+      collaborators: collaborators.map((m) => ({
+        ...mapUserBrief(m.users),
+        memberSince: m.created_at,
       })),
+      pendingInvites: pending.map(mapInvitation),
+      role: access.role,
     });
   } catch (err) {
     console.error(err);
@@ -199,65 +448,47 @@ router.get("/projects/:id", requireAuth, attachRole, async (req, res) => {
   }
 });
 
-// POST /api/workspace/projects — create a project folder for grouping jobs
-router.post("/projects", requireAuth, attachRole, async (req, res) => {
-  if (req.userRole !== "expert") {
-    return res.status(403).json({ error: "Only freelancers can create projects" });
-  }
-  const parsed = parseProjectBody(req.body);
-  if (parsed.error) return res.status(400).json({ error: parsed.error });
-  try {
-    const ws = await ensureWorkspaceForOwner(
-      req.dbUser.id,
-      req.dbUser.company_name || req.dbUser.username
-    );
-    const row = await queryOne(
-      `INSERT INTO projects (workspace_id, name, description, sort_order)
-       VALUES (
-         $1, $2, $3,
-         (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM projects WHERE workspace_id = $1)
-       )
-       RETURNING id, name, description, sort_order, trello_list_id, trello_board_id, created_at`,
-      [ws.id, parsed.name, parsed.description || null]
-    );
-    res.status(201).json({ ...mapProject(row), inquiryCount: 0 });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// PATCH /api/workspace/projects/:id — rename
 router.patch("/projects/:id", requireAuth, attachRole, async (req, res) => {
-  if (req.userRole !== "expert") {
-    return res.status(403).json({ error: "Only freelancers can edit projects" });
-  }
-  const parsed = parseProjectBody(req.body);
+  if (!requireOwner(req, res)) return;
+  const parsed = parseProjectName(req.body);
   if (parsed.error) return res.status(400).json({ error: parsed.error });
   try {
-    const found = await ownerProject(req, req.params.id);
-    if (found.error) return res.status(found.error.status).json({ error: found.error.message });
+    const access = await getProjectAccess(req.params.id, req.dbUser);
+    if (!access || access.role === "collaborator" || access.role === "client") {
+      return res.status(404).json({ error: "Project not found" });
+    }
+    const ws = await ensureOwnerWorkspace(req);
+    let clientId = access.project.client_id;
+    if (req.body?.clientId) {
+      const client = await queryOne(
+        `SELECT id FROM clients WHERE id = $1 AND workspace_id = $2`,
+        [req.body.clientId, ws.id]
+      );
+      if (!client) return res.status(400).json({ error: "That client is not in this workspace" });
+      clientId = client.id;
+    }
     const row = await queryOne(
-      `UPDATE projects SET name = $1, description = COALESCE($2, description) WHERE id = $3
-       RETURNING id, name, description, sort_order, trello_list_id, trello_board_id, created_at`,
-      [parsed.name, parsed.description ?? null, found.row.id]
+      `UPDATE projects SET name = $1, description = COALESCE($2, description), client_id = $3
+       WHERE id = $4
+       RETURNING *`,
+      [parsed.name, parsed.description ?? null, clientId, access.project.id]
     );
-    res.json({ ...mapProject(row), inquiryCount: found.row.inquiry_count });
+    const full = (await listProjectsForUser(req.dbUser)).find((p) => p.id === row.id);
+    res.json(mapProject(full || row));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// DELETE /api/workspace/projects/:id — jobs keep running; they just leave the project
 router.delete("/projects/:id", requireAuth, attachRole, async (req, res) => {
-  if (req.userRole !== "expert") {
-    return res.status(403).json({ error: "Only freelancers can delete projects" });
-  }
+  if (!requireOwner(req, res)) return;
   try {
-    const found = await ownerProject(req, req.params.id);
-    if (found.error) return res.status(found.error.status).json({ error: found.error.message });
-    await execute(`DELETE FROM projects WHERE id = $1`, [found.row.id]);
+    const access = await getProjectAccess(req.params.id, req.dbUser);
+    if (!access || access.project.owner_id !== req.dbUser.id) {
+      return res.status(404).json({ error: "Project not found" });
+    }
+    await execute(`DELETE FROM projects WHERE id = $1`, [access.project.id]);
     res.status(204).send();
   } catch (err) {
     console.error(err);
@@ -265,125 +496,137 @@ router.delete("/projects/:id", requireAuth, attachRole, async (req, res) => {
   }
 });
 
-// GET /api/workspace/invitations — freelancer's pending invitations
-router.get("/invitations", requireAuth, attachRole, async (req, res) => {
-  if (req.userRole !== "expert") {
-    return res.status(403).json({ error: "Only freelancers manage invitations" });
-  }
+router.post("/projects/:id/collaborators", requireAuth, attachRole, async (req, res) => {
+  if (!requireOwner(req, res)) return;
+  const email = parseEmail(req.body?.email);
+  if (!email) return res.status(400).json({ error: "A valid email is required" });
   try {
-    const ws = await ensureWorkspaceForOwner(
-      req.dbUser.id,
-      req.dbUser.company_name || req.dbUser.username
+    const access = await getProjectAccess(req.params.id, req.dbUser);
+    if (!access || access.project.owner_id !== req.dbUser.id) {
+      return res.status(404).json({ error: "Project not found" });
+    }
+    const ws = await getWorkspaceByIdOrOwner(req, access.project.workspace_id);
+    if (!ws) return res.status(404).json({ error: "Workspace not found" });
+    if (email === req.dbUser.email) {
+      return res.status(400).json({ error: "You already own this project" });
+    }
+    const client = await queryOne(`SELECT email FROM clients WHERE id = $1`, [access.project.client_id]);
+    if (client?.email === email) {
+      return res.status(400).json({ error: "That person is the client on this project" });
+    }
+    const existingUser = await queryOne(`SELECT id FROM users WHERE lower(email) = $1`, [email]);
+    if (existingUser) {
+      const already = await queryOne(
+        `SELECT id FROM project_members WHERE project_id = $1 AND user_id = $2`,
+        [access.project.id, existingUser.id]
+      );
+      if (already) return res.status(409).json({ error: "Already a collaborator" });
+    }
+    const inv = await createInvitation({
+      ws,
+      user: req.dbUser,
+      email,
+      kind: "collaborator",
+      projectId: access.project.id,
+    });
+    res.status(201).json(mapInvitation(inv));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+async function getWorkspaceByIdOrOwner(req, workspaceId) {
+  const ws = await queryOne(`SELECT * FROM workspaces WHERE id = $1 AND owner_id = $2`, [
+    workspaceId,
+    req.dbUser.id,
+  ]);
+  return ws;
+}
+
+router.delete("/projects/:id/collaborators/:userId", requireAuth, attachRole, async (req, res) => {
+  if (!requireOwner(req, res)) return;
+  try {
+    const access = await getProjectAccess(req.params.id, req.dbUser);
+    if (!access || access.project.owner_id !== req.dbUser.id) {
+      return res.status(404).json({ error: "Project not found" });
+    }
+    await execute(
+      `DELETE FROM project_members WHERE project_id = $1 AND user_id = $2`,
+      [access.project.id, req.params.userId]
     );
+    res.status(204).send();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get("/invitations", requireAuth, attachRole, async (req, res) => {
+  if (!requireOwner(req, res)) return;
+  try {
+    const ws = await ensureOwnerWorkspace(req);
     const data = await query(
       `SELECT * FROM workspace_invitations
        WHERE workspace_id = $1 AND status = 'pending'
        ORDER BY created_at DESC`,
       [ws.id]
     );
-    res.json(data.map((inv) => ({
-      id: inv.id,
-      email: inv.invited_email,
-      token: inv.token,
-      status: inv.status,
-      createdAt: inv.created_at,
-    })));
+    res.json(data.map(mapInvitation));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// POST /api/workspace/invitations — invite a client by email
 router.post("/invitations", requireAuth, attachRole, async (req, res) => {
-  if (req.userRole !== "expert") {
-    return res.status(403).json({ error: "Only freelancers can invite clients" });
-  }
-  const email = req.body?.email?.trim().toLowerCase();
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return res.status(400).json({ error: "A valid email is required" });
-  }
+  if (!requireOwner(req, res)) return;
+  const email = parseEmail(req.body?.email);
+  if (!email) return res.status(400).json({ error: "A valid email is required" });
   try {
-    const ws = await ensureWorkspaceForOwner(
-      req.dbUser.id,
-      req.dbUser.company_name || req.dbUser.username
-    );
-
-    const existingMember = await queryOne(
-      `SELECT wm.id
-       FROM workspace_members wm
-       JOIN users u ON u.id = wm.user_id
-       WHERE wm.workspace_id = $1 AND u.email = $2`,
+    const ws = await ensureOwnerWorkspace(req);
+    let client = await queryOne(
+      `SELECT * FROM clients WHERE workspace_id = $1 AND email = $2`,
       [ws.id, email]
     );
-    if (existingMember) {
+    if (!client) {
+      const limit = await clientLimitForWorkspace(ws.id);
+      const count = await queryOne(
+        `SELECT COUNT(*)::int AS count FROM clients WHERE workspace_id = $1`,
+        [ws.id]
+      );
+      if (Number.isFinite(limit) && count.count >= limit) {
+        return res.status(402).json({
+          error: `Your plan allows ${limit} clients. Upgrade in Settings to invite more.`,
+        });
+      }
+      client = await queryOne(
+        `INSERT INTO clients (workspace_id, email) VALUES ($1, $2) RETURNING *`,
+        [ws.id, email]
+      );
+    }
+    if (client.user_id) {
       return res.status(409).json({ error: "This client is already in your workspace" });
     }
-
-    const memberCount = await queryOne(
-      `SELECT COUNT(*)::int AS count FROM workspace_members WHERE workspace_id = $1 AND role = 'client'`,
-      [ws.id]
-    );
-    const pendingCount = await queryOne(
-      `SELECT COUNT(*)::int AS count FROM workspace_invitations WHERE workspace_id = $1 AND status = 'pending'`,
-      [ws.id]
-    );
-    const limit = await clientLimitForWorkspace(ws.id);
-    if (Number.isFinite(limit) && (memberCount.count + pendingCount.count) >= limit) {
-      return res.status(402).json({
-        error: `Your plan allows ${limit} clients. Upgrade in Settings to invite more.`,
-      });
-    }
-
-    const data = await queryOne(
-      `INSERT INTO workspace_invitations (workspace_id, inviter_id, invited_email)
-       VALUES ($1, $2, $3)
-       RETURNING *`,
-      [ws.id, req.dbUser.id, email]
-    );
-
-    await logActivity({
-      workspaceId: ws.id,
-      actorId: req.dbUser.id,
-      type: "invitation.sent",
-      payload: { email },
-    });
-
-    const freelancerName =
-      req.dbUser.company_name ||
-      [req.dbUser.first_name, req.dbUser.last_name].filter(Boolean).join(" ") ||
-      req.dbUser.username ||
-      "A solo business";
-    const inviteUrl = appUrl(`/invite/${data.token}`);
-    await sendEmail(inviteEmail({
-      workspaceName: ws.name,
-      freelancerName,
-      inviteUrl,
+    const inv = await createInvitation({
+      ws,
+      user: req.dbUser,
       email,
-    }));
-
-    res.status(201).json({
-      id: data.id,
-      email: data.invited_email,
-      token: data.token,
-      status: data.status,
-      createdAt: data.created_at,
+      kind: "client",
+      clientId: client.id,
     });
+    res.status(201).json(mapInvitation(inv));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// DELETE /api/workspace/invitations/:id — revoke a pending invitation
 router.delete("/invitations/:id", requireAuth, attachRole, async (req, res) => {
-  if (req.userRole !== "expert") {
-    return res.status(403).json({ error: "Only freelancers can manage invitations" });
-  }
+  if (!requireOwner(req, res)) return;
   try {
     const ws = await getWorkspaceByOwner(req.dbUser.id);
     if (!ws) return res.status(404).json({ error: "Workspace not found" });
-
     await execute(
       `UPDATE workspace_invitations SET status = 'revoked'
        WHERE id = $1 AND workspace_id = $2`,
@@ -396,18 +639,18 @@ router.delete("/invitations/:id", requireAuth, attachRole, async (req, res) => {
   }
 });
 
-// GET /api/workspace/invitations/token/:token — public preview, no auth required
 router.get("/invitations/token/:token", async (req, res) => {
   try {
     const data = await queryOne(
-      `SELECT inv.invited_email, inv.status,
+      `SELECT inv.invited_email, inv.status, inv.kind,
               json_build_object(
                 'name', w.name,
                 'owner', json_build_object(
                   'first_name', u.first_name,
                   'last_name', u.last_name,
                   'company_name', u.company_name,
-                  'username', u.username
+                  'username', u.username,
+                  'email', u.email
                 )
               ) AS workspace
        FROM workspace_invitations inv
@@ -421,6 +664,7 @@ router.get("/invitations/token/:token", async (req, res) => {
     }
     res.json({
       email: data.invited_email,
+      kind: data.kind,
       workspaceName: data.workspace?.name ?? null,
       freelancer: mapUserBrief(data.workspace?.owner),
     });
@@ -430,7 +674,6 @@ router.get("/invitations/token/:token", async (req, res) => {
   }
 });
 
-// POST /api/workspace/invitations/token/:token/accept — join the workspace
 router.post("/invitations/token/:token/accept", requireAuth, attachRole, async (req, res) => {
   try {
     const inv = await queryOne(
@@ -441,12 +684,32 @@ router.post("/invitations/token/:token/accept", requireAuth, attachRole, async (
       return res.status(404).json({ error: "Invitation not found or already used" });
     }
 
-    await execute(
-      `INSERT INTO workspace_members (workspace_id, user_id, role)
-       VALUES ($1, $2, 'client')
-       ON CONFLICT (workspace_id, user_id) DO UPDATE SET role = EXCLUDED.role`,
-      [inv.workspace_id, req.dbUser.id]
-    );
+    const memberRole = inv.kind === "collaborator" ? "collaborator" : "client";
+    await upsertWorkspaceMember(inv.workspace_id, req.dbUser.id, memberRole);
+
+    if (inv.kind === "client") {
+      if (inv.client_id) {
+        await execute(
+          `UPDATE clients SET user_id = $1 WHERE id = $2 AND workspace_id = $3`,
+          [req.dbUser.id, inv.client_id, inv.workspace_id]
+        );
+      } else {
+        await execute(
+          `UPDATE clients SET user_id = $1
+           WHERE workspace_id = $2 AND lower(email) = $3 AND user_id IS NULL`,
+          [req.dbUser.id, inv.workspace_id, inv.invited_email]
+        );
+      }
+    }
+
+    if (inv.kind === "collaborator" && inv.project_id) {
+      await execute(
+        `INSERT INTO project_members (project_id, user_id, role)
+         VALUES ($1, $2, 'collaborator')
+         ON CONFLICT (project_id, user_id) DO NOTHING`,
+        [inv.project_id, req.dbUser.id]
+      );
+    }
 
     await execute(
       `UPDATE workspace_invitations
@@ -455,161 +718,15 @@ router.post("/invitations/token/:token/accept", requireAuth, attachRole, async (
       [inv.id]
     );
 
-    await logActivity({
-      workspaceId: inv.workspace_id,
-      actorId: req.dbUser.id,
-      type: "invitation.accepted",
-      payload: {},
-    });
-
     await createNotification({
       userId: inv.inviter_id,
       type: "invitation.accepted",
       title: "Invite accepted",
       body: `${req.dbUser.email} joined your workspace`,
-      payload: { workspaceId: inv.workspace_id },
+      payload: { workspaceId: inv.workspace_id, projectId: inv.project_id, kind: inv.kind },
     });
 
-    res.json({ workspaceId: inv.workspace_id });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET /api/workspace/activity — recent workspace-wide activity (freelancer)
-router.get("/activity", requireAuth, attachRole, async (req, res) => {
-  if (req.userRole !== "expert") {
-    return res.status(403).json({ error: "Only freelancers can view workspace activity" });
-  }
-  try {
-    const ws = await ensureWorkspaceForOwner(
-      req.dbUser.id,
-      req.dbUser.company_name || req.dbUser.username
-    );
-    const data = await query(
-      `SELECT e.id, e.type, e.payload, e.created_at, e.inquiry_id, e.actor_id,
-              CASE WHEN u.id IS NULL THEN NULL
-                   ELSE json_build_object(
-                     'id', u.id, 'first_name', u.first_name, 'last_name', u.last_name,
-                     'company_name', u.company_name, 'email', u.email
-                   )
-              END AS users
-       FROM activity_events e
-       LEFT JOIN users u ON u.id = e.actor_id
-       WHERE e.workspace_id = $1
-       ORDER BY e.created_at DESC
-       LIMIT 50`,
-      [ws.id]
-    );
-    res.json(data.map((e) => ({
-      id: e.id,
-      type: e.type,
-      payload: e.payload,
-      createdAt: e.created_at,
-      inquiryId: e.inquiry_id,
-      actorId: e.actor_id,
-      actor: mapUserBrief(e.users),
-    })));
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-async function summarizeInquiries(inquiryIds) {
-  if (inquiryIds.length === 0) {
-    return { jobs: [], totals: { agreedValue: 0, paid: 0, outstanding: 0, remaining: 0, billableHours: 0 } };
-  }
-
-  const { computeJobFinance } = await import("../lib/finance.js");
-
-  const [inquiries, agreements, timeEntries, payments] = await Promise.all([
-    query(
-      `SELECT id, title, status, workspace_id FROM inquiries WHERE id = ANY($1::uuid[])`,
-      [inquiryIds]
-    ),
-    query(
-      `SELECT * FROM price_agreements WHERE inquiry_id = ANY($1::uuid[]) AND status = 'agreed'`,
-      [inquiryIds]
-    ),
-    query(
-      `SELECT * FROM time_entries WHERE inquiry_id = ANY($1::uuid[])`,
-      [inquiryIds]
-    ),
-    query(
-      `SELECT * FROM payments WHERE inquiry_id = ANY($1::uuid[])`,
-      [inquiryIds]
-    ),
-  ]);
-
-  const agreedByInquiry = new Map();
-  for (const a of agreements) {
-    const prev = agreedByInquiry.get(a.inquiry_id);
-    if (!prev || new Date(a.agreed_at) > new Date(prev.agreed_at)) {
-      agreedByInquiry.set(a.inquiry_id, a);
-    }
-  }
-
-  const jobs = inquiries.map((inq) => {
-    const snapshot = computeJobFinance({
-      agreement: agreedByInquiry.get(inq.id) ?? null,
-      timeEntries: timeEntries.filter((e) => e.inquiry_id === inq.id),
-      payments: payments.filter((p) => p.inquiry_id === inq.id),
-    });
-    return {
-      inquiryId: inq.id,
-      title: inq.title,
-      status: inq.status,
-      ...snapshot,
-    };
-  });
-
-  const totals = jobs.reduce(
-    (acc, job) => ({
-      agreedValue: acc.agreedValue + job.agreedValue,
-      paid: acc.paid + job.paid,
-      outstanding: acc.outstanding + job.outstanding,
-      remaining: acc.remaining + job.remaining,
-      billableHours: acc.billableHours + job.billableHours,
-    }),
-    { agreedValue: 0, paid: 0, outstanding: 0, remaining: 0, billableHours: 0 }
-  );
-
-  return { jobs, totals };
-}
-
-// GET /api/workspace/finance — freelancer totals across the workspace
-router.get("/finance", requireAuth, attachRole, async (req, res) => {
-  if (req.userRole !== "expert") {
-    return res.status(403).json({ error: "Only freelancers can view workspace finance" });
-  }
-  try {
-    const ws = await ensureWorkspaceForOwner(
-      req.dbUser.id,
-      req.dbUser.company_name || req.dbUser.username
-    );
-    const inquiries = await query(
-      `SELECT id FROM inquiries WHERE workspace_id = $1`,
-      [ws.id]
-    );
-    const summary = await summarizeInquiries(inquiries.map((i) => i.id));
-    res.json(summary);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET /api/workspace/finance/mine — client totals across jobs they're on
-router.get("/finance/mine", requireAuth, attachRole, async (req, res) => {
-  try {
-    const inquiries = await query(
-      `SELECT id FROM inquiries WHERE client_id = $1`,
-      [req.dbUser.id]
-    );
-    const summary = await summarizeInquiries(inquiries.map((i) => i.id));
-    res.json(summary);
+    res.json({ workspaceId: inv.workspace_id, projectId: inv.project_id, kind: inv.kind });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -618,72 +735,45 @@ router.get("/finance/mine", requireAuth, attachRole, async (req, res) => {
 
 router.get("/search", requireAuth, attachRole, async (req, res) => {
   const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
-  if (q.length < 2) return res.json({ jobs: [], projects: [], clients: [], messages: [] });
-  const like = `%${q.replace(/%/g, "")}%`;
+  if (q.length < 2) return res.json({ projects: [], clients: [] });
+  const like = `%${q.replace(/[%_]/g, "\\$&")}%`;
   try {
-    let workspaceIds = [];
     if (req.userRole === "expert") {
-      const ws = await getWorkspaceByOwner(req.dbUser.id);
-      if (ws) workspaceIds = [ws.id];
-    } else {
-      const rows = await query(
-        `SELECT workspace_id FROM workspace_members WHERE user_id = $1`,
-        [req.dbUser.id]
-      );
-      workspaceIds = rows.map((r) => r.workspace_id);
+      const ws = await ensureOwnerWorkspace(req);
+      const [projects, clients] = await Promise.all([
+        query(
+          `SELECT id, name FROM projects
+           WHERE workspace_id = $1 AND name ILIKE $2
+           ORDER BY created_at DESC LIMIT 8`,
+          [ws.id, like]
+        ),
+        query(
+          `SELECT id, email, first_name, last_name, company_name FROM clients
+           WHERE workspace_id = $1 AND (
+             email ILIKE $2 OR company_name ILIKE $2 OR first_name ILIKE $2 OR last_name ILIKE $2
+           )
+           ORDER BY created_at DESC LIMIT 8`,
+          [ws.id, like]
+        ),
+      ]);
+      return res.json({
+        projects: projects.map((p) => ({ id: p.id, name: p.name })),
+        clients: clients.map(mapClient),
+      });
     }
-    if (workspaceIds.length === 0) return res.json({ jobs: [], projects: [], clients: [], messages: [] });
-
-    const [jobs, projects, clients, messages] = await Promise.all([
-      query(
-        `SELECT id, title, status FROM inquiries
-         WHERE workspace_id = ANY($1::uuid[]) AND (title ILIKE $2 OR description ILIKE $2)
-         ORDER BY updated_at DESC LIMIT 8`,
-        [workspaceIds, like]
-      ),
-      query(
-        `SELECT id, name FROM projects
-         WHERE workspace_id = ANY($1::uuid[]) AND name ILIKE $2
-         LIMIT 8`,
-        [workspaceIds, like]
-      ),
-      req.userRole === "expert"
-        ? query(
-            `SELECT u.id, u.email, u.first_name, u.last_name, u.company_name
-             FROM workspace_members wm
-             JOIN users u ON u.id = wm.user_id
-             WHERE wm.workspace_id = ANY($1::uuid[]) AND wm.role = 'client'
-               AND (u.email ILIKE $2 OR u.company_name ILIKE $2 OR u.first_name ILIKE $2 OR u.last_name ILIKE $2)
-             LIMIT 8`,
-            [workspaceIds, like]
-          )
-        : Promise.resolve([]),
-      query(
-        `SELECT m.id, m.body, m.inquiry_id, i.title
-         FROM inquiry_messages m
-         JOIN inquiries i ON i.id = m.inquiry_id
-         WHERE i.workspace_id = ANY($1::uuid[]) AND m.body ILIKE $2
-         ORDER BY m.created_at DESC LIMIT 6`,
-        [workspaceIds, like]
-      ),
-    ]);
-
+    const projects = await query(
+      `SELECT p.id, p.name
+       FROM projects p
+       JOIN clients c ON c.id = p.client_id
+       WHERE (c.user_id = $1 OR EXISTS (
+         SELECT 1 FROM project_members pm WHERE pm.project_id = p.id AND pm.user_id = $1
+       )) AND p.name ILIKE $2
+       ORDER BY p.created_at DESC LIMIT 8`,
+      [req.dbUser.id, like]
+    );
     res.json({
-      jobs: jobs.map((j) => ({ id: j.id, title: j.title, status: j.status })),
       projects: projects.map((p) => ({ id: p.id, name: p.name })),
-      clients: clients.map((c) => ({
-        id: c.id,
-        email: c.email,
-        firstName: c.first_name,
-        lastName: c.last_name,
-        companyName: c.company_name,
-      })),
-      messages: messages.map((m) => ({
-        id: m.id,
-        body: m.body.slice(0, 140),
-        inquiryId: m.inquiry_id,
-        title: m.title,
-      })),
+      clients: [],
     });
   } catch (err) {
     console.error(err);
@@ -692,12 +782,9 @@ router.get("/search", requireAuth, attachRole, async (req, res) => {
 });
 
 router.patch("/settings", requireAuth, attachRole, async (req, res) => {
-  if (req.userRole !== "expert") {
-    return res.status(403).json({ error: "Only workspace owners can update settings" });
-  }
+  if (!requireOwner(req, res)) return;
   try {
-    const ws = await getWorkspaceByOwner(req.dbUser.id);
-    if (!ws) return res.status(404).json({ error: "Workspace not found" });
+    const ws = await ensureOwnerWorkspace(req);
     const fields = [];
     const values = [];
     let i = 1;
@@ -705,28 +792,61 @@ router.patch("/settings", requireAuth, attachRole, async (req, res) => {
       fields.push(`name = $${i++}`);
       values.push(req.body.name.trim().slice(0, 80));
     }
-    if (typeof req.body?.currency === "string" && /^[A-Z]{3}$/.test(req.body.currency)) {
+    if (typeof req.body?.currency === "string" && req.body.currency.trim()) {
       fields.push(`currency = $${i++}`);
-      values.push(req.body.currency);
+      values.push(req.body.currency.trim().slice(0, 8).toUpperCase());
     }
     if (typeof req.body?.timezone === "string" && req.body.timezone.trim()) {
       fields.push(`timezone = $${i++}`);
       values.push(req.body.timezone.trim().slice(0, 64));
     }
-    if (fields.length === 0) return res.status(400).json({ error: "Nothing to update" });
+    if (req.body?.emailMode === "platform" || req.body?.emailMode === "smtp") {
+      fields.push(`email_mode = $${i++}`);
+      values.push(req.body.emailMode);
+    }
+    if (req.body?.smtpHost !== undefined) {
+      fields.push(`smtp_host = $${i++}`);
+      values.push(req.body.smtpHost ? String(req.body.smtpHost).trim() : null);
+    }
+    if (req.body?.smtpPort !== undefined) {
+      fields.push(`smtp_port = $${i++}`);
+      values.push(req.body.smtpPort ? Number(req.body.smtpPort) : null);
+    }
+    if (req.body?.smtpUser !== undefined) {
+      fields.push(`smtp_user = $${i++}`);
+      values.push(req.body.smtpUser ? String(req.body.smtpUser).trim() : null);
+    }
+    if (req.body?.smtpFrom !== undefined) {
+      fields.push(`smtp_from = $${i++}`);
+      values.push(req.body.smtpFrom ? String(req.body.smtpFrom).trim() : null);
+    }
+    if (typeof req.body?.smtpPassword === "string" && req.body.smtpPassword.trim()) {
+      fields.push(`smtp_password_enc = $${i++}`);
+      values.push(encryptSecret(req.body.smtpPassword.trim()));
+    }
+    if (!fields.length) return res.json(workspaceSettings(ws));
     values.push(ws.id);
     const row = await queryOne(
       `UPDATE workspaces SET ${fields.join(", ")} WHERE id = $${i} RETURNING *`,
       values
     );
-    res.json({
-      id: row.id,
-      name: row.name,
-      currency: row.currency,
-      timezone: row.timezone,
-      logoUrl: row.logo_url,
-    });
+    res.json(workspaceSettings(row));
   } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/settings/test-email", requireAuth, attachRole, async (req, res) => {
+  if (!requireOwner(req, res)) return;
+  try {
+    const ws = await ensureOwnerWorkspace(req);
+    const to = parseEmail(req.body?.to) || req.dbUser.email;
+    const result = await sendTestEmail(ws, to);
+    if (result.error) return res.status(400).json({ error: result.error });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 });

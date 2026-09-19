@@ -46,7 +46,7 @@ export default function PartnerLoginPage() {
   return (
     <AuthShell
       title="Workspace sign in"
-      subtitle="Access your workspace — jobs, clients, rates, hours, and payments."
+      subtitle="Access your workspace — clients, projects, and collaborators."
       promo={{
         tagline: "Your workspace, your clients — every job, rate, and payment tracked in one place.",
         imageSrc: loginPng,
