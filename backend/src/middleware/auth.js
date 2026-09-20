@@ -1,10 +1,10 @@
 import { initializeApp, getApps } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 
-const PROJECT_ID = process.env.FIREBASE_PROJECT_ID;
+const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID;
 
 if (!PROJECT_ID) {
-  throw new Error("Missing FIREBASE_PROJECT_ID in backend/.env");
+  throw new Error("Missing FIREBASE_PROJECT_ID (or VITE_FIREBASE_PROJECT_ID) in the environment");
 }
 
 // Initialize firebase-admin once — only the projectId is needed to verify tokens.

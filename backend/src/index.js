@@ -16,7 +16,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isProduction = process.env.NODE_ENV === "production";
 
 const app = express();
-const PORT = process.env.PORT ?? 8000;
+const PORT = Number(process.env.PORT) || 8000;
 
 const PRODUCTION_APP_ORIGIN = "https://co-helper-inquiry-system-production.up.railway.app";
 
@@ -74,8 +74,14 @@ if (isProduction) {
   });
 }
 
-ensureStorageBuckets().finally(() => {
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server listening on port ${PORT}`);
-  });
+const server = app.listen(PORT, () => {
+  console.log(`Server listening on port ${PORT}`);
+});
+server.on("error", (err) => {
+  console.error("[listen]", err);
+  process.exit(1);
+});
+
+ensureStorageBuckets().catch((err) => {
+  console.error("[storage]", err);
 });
