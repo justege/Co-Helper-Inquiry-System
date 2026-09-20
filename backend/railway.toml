@@ -1,5 +1,5 @@
-# If Railway Root Directory is /backend, this file is ignored — see backend/railway.toml.
-# If Root Directory is empty (repo root), this Dockerfile is used.
+# Railway service Root Directory must be /backend for this file to be used.
+# dockerfilePath is relative to that root directory.
 
 [build]
 builder = "DOCKERFILE"
