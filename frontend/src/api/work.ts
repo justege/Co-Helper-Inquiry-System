@@ -66,6 +66,7 @@ export interface TimeEntry {
   entryDate: string
   createdAt: string
   todoTitle?: string | null
+  user?: PersonBrief | null
 }
 
 export interface WorkProject {
@@ -109,6 +110,9 @@ export interface WorkProject {
   finished: boolean
   lastWorkedAt: string | null
   unbilledHours?: number
+  invoicedTotal?: number
+  paidTotal?: number
+  draftTotal?: number
   weeklyHours: number
   canWork?: boolean
   todos: WorkTodo[]

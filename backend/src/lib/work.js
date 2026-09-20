@@ -184,6 +184,17 @@ export function mapTimeEntry(row) {
     invoiceId: row.invoice_id ?? null,
     entryDate: row.entry_date,
     createdAt: row.created_at,
+    todoTitle: row.todo_title ?? null,
+    user: row.user_email
+      ? mapUserBrief({
+          id: row.user_id,
+          email: row.user_email,
+          first_name: row.user_first_name,
+          last_name: row.user_last_name,
+          username: row.user_username,
+          company_name: row.user_company_name,
+        })
+      : null,
   };
 }
 
@@ -838,16 +849,34 @@ export async function getProjectWork(projectId, user) {
   );
   const tz = project.workspace_timezone || "Europe/Istanbul";
   const weekStart = weekStartDate(tz);
-  const [todos, entries, agg, nowInWorkspace] = await Promise.all([
+  const [todos, entries, agg, nowInWorkspace, billing] = await Promise.all([
     query(`${TODO_WITH_HOURS} WHERE t.project_id = $1`, [projectId]),
     query(
-      `SELECT * FROM time_entries WHERE project_id = $1 ORDER BY entry_date DESC, created_at DESC LIMIT 80`,
+      `SELECT te.*,
+              u.email AS user_email,
+              u.first_name AS user_first_name,
+              u.last_name AS user_last_name,
+              u.username AS user_username,
+              u.company_name AS user_company_name
+       FROM time_entries te
+       JOIN users u ON u.id = te.user_id
+       WHERE te.project_id = $1
+       ORDER BY te.entry_date DESC, te.created_at DESC
+       LIMIT 500`,
       [projectId]
     ),
     aggregatesForProjects([projectId], weekStart),
     queryOne(
       `${TODO_WITH_HOURS} WHERE t.workspace_id = $1 AND t.status = 'in_progress'`,
       [project.workspace_id]
+    ),
+    queryOne(
+      `SELECT
+         COALESCE(SUM(total) FILTER (WHERE status = 'paid'), 0)::float AS paid,
+         COALESCE(SUM(total) FILTER (WHERE status IN ('sent', 'paid')), 0)::float AS invoiced,
+         COALESCE(SUM(total) FILTER (WHERE status = 'draft'), 0)::float AS draft
+       FROM invoices WHERE project_id = $1`,
+      [projectId]
     ),
   ]);
   const weekAll = await queryOne(
@@ -870,6 +899,9 @@ export async function getProjectWork(projectId, user) {
     canWork: access.role !== "client",
   });
   const nowBelongs = nowInWorkspace?.project_id === projectId;
+  summary.paidTotal = asNumber(billing?.paid);
+  summary.invoicedTotal = asNumber(billing?.invoiced);
+  if (access.role !== "client") summary.draftTotal = asNumber(billing?.draft);
   return {
     role: access.role,
     nowElsewhere: Boolean(nowInWorkspace && !nowBelongs && access.role === "client"),

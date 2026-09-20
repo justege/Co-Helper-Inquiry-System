@@ -219,7 +219,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS todos_one_now_per_workspace
 CREATE TABLE IF NOT EXISTS invoices (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id  UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  project_id    UUID NOT NULL REFERENCES projects(id) ON DELETE RESTRICT,
+  project_id    UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   client_id     UUID NOT NULL REFERENCES clients(id) ON DELETE RESTRICT,
   number        TEXT NOT NULL,
   status        TEXT NOT NULL DEFAULT 'draft'
@@ -492,3 +492,10 @@ CREATE TABLE IF NOT EXISTS todo_dependencies (
 );
 
 CREATE INDEX IF NOT EXISTS todo_dependencies_on_idx ON todo_dependencies (depends_on_id);
+
+-- Existing databases created invoices.project_id with ON DELETE RESTRICT, which
+-- blocked deleting (or cascading updates to) a project that had any invoice.
+ALTER TABLE invoices DROP CONSTRAINT IF EXISTS invoices_project_id_fkey;
+ALTER TABLE invoices
+  ADD CONSTRAINT invoices_project_id_fkey
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE;

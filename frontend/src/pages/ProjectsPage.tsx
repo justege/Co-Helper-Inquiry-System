@@ -370,7 +370,7 @@ export default function ProjectsPage() {
           <DialogHeader display="none" />
           <DialogBody px={6} py={5}>
             <Text fontSize="0.875rem" color={APP_MUTED} lineHeight="1.6">
-              Remove <strong style={{ color: APP_INK }}>{active?.name}</strong>? This cannot be undone.
+              Remove <strong style={{ color: APP_INK }}>{active?.name}</strong>? To-dos, hours, files, and invoices for this project will be removed. This cannot be undone.
             </Text>
             {formError && <Text fontSize="0.8125rem" color="#B91C1C" mt={3}>{formError}</Text>}
           </DialogBody>

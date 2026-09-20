@@ -179,12 +179,14 @@ export default function ProjectDetailPage() {
               todos={work.project.todos}
               canEdit={canEdit}
               canManage={canManage}
+              currency={work.currency}
               onChanged={load}
               onOpenPlan={() => setTab("plan")}
               onOpenView={setTab}
               onOpenTodo={openTodo}
               unbilledHours={work.project.unbilledHours}
               onCreateInvoice={() => setInvoiceOpen(true)}
+              onInvite={() => { setInviteError(null); setInviteEmails([...EMPTY_INVITE_EMAILS]); setInviteOpen(true) }}
             />
           )}
 
@@ -212,6 +214,8 @@ export default function ProjectDetailPage() {
               canEdit={canEdit}
               onOpen={(todoId) => openTodo(todoId)}
               onChanged={load}
+              timeEntries={work.timeEntries}
+              people={data.people ?? []}
             />
           )}
 
@@ -491,7 +495,7 @@ function PricingCard({
         )}
         <Box>
           <Text fontSize="0.75rem" color={APP_MUTED} mb={1}>Project estimate (hours)</Text>
-          <FormInput value={estimate} onChange={(e) => setEstimate(e.target.value)} type="number" step="0.5" />
+          <FormInput value={estimate} onChange={(e) => setEstimate(e.target.value)} type="number" step="0.25" min="0.25" placeholder="1, 2, or 0.25" />
         </Box>
         <Box>
           <Text fontSize="0.75rem" color={APP_MUTED} mb={1}>Hours / week this project</Text>

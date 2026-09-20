@@ -1,7 +1,8 @@
 export function formatHours(n: number | null | undefined): string {
   if (n == null || Number.isNaN(Number(n))) return "—"
-  const v = Math.round(Number(n) * 10) / 10
-  return Number.isInteger(v) ? `${v}h` : `${v.toFixed(1)}h`
+  const v = Math.round(Number(n) * 100) / 100
+  if (Number.isInteger(v)) return `${v}h`
+  return `${v}h`
 }
 
 export function formatMoney(amount: number | null | undefined, currency = "EUR"): string {

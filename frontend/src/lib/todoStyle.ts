@@ -55,7 +55,7 @@ export function startOfMonday(value: string): string {
   return d.toISOString().slice(0, 10)
 }
 
-export function isoWeekLabel(iso: string): { week: number; month: string } {
+export function isoWeekLabel(iso: string): { week: number; year: number; month: string } {
   const d = new Date(`${iso.slice(0, 10)}T12:00:00`)
   const day = (d.getDay() + 6) % 7
   const thursday = new Date(d)

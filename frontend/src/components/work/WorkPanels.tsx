@@ -11,7 +11,7 @@ import {
   APP_SURFACE,
 } from "@/components/ui/appUi"
 import { AppButton } from "@/components/ui/AppButton"
-import { FormInput } from "@/components/ui/form-controls"
+import { HoursField } from "./HoursField"
 import { displayName, formatPeopleList, peopleOnTodo } from "@/lib/people"
 import { formatEta, formatHours, TODO_STATUS_LABEL } from "@/lib/hours"
 import {
@@ -103,20 +103,12 @@ export function NowCard({
           </Text>
           <CardCounts todo={todo} light />
           {canWork && (
-            <Box display="flex" gap={2} flexWrap="wrap" alignItems="center" mt={3}>
-              <FormInput
-                value={hours}
-                onChange={(e) => setHours(e.target.value)}
-                type="number"
-                step="0.5"
-                min="0.25"
-                max="24"
-                w="88px"
-                bg="white"
-                color={APP_INK}
-              />
-              <AppButton size="sm" loading={busy} onClick={() => void log(false)}>Log hours</AppButton>
-              <AppButton size="sm" variant="secondary" loading={busy} onClick={() => void log(true)}>Done</AppButton>
+            <Box mt={3}>
+              <HoursField value={hours} onChange={setHours} bg="white" color={APP_INK} />
+              <Box display="flex" gap={2} mt={2}>
+                <AppButton size="sm" loading={busy} onClick={() => void log(false)}>Log hours</AppButton>
+                <AppButton size="sm" variant="secondary" loading={busy} onClick={() => void log(true)}>Done</AppButton>
+              </Box>
             </Box>
           )}
         </>

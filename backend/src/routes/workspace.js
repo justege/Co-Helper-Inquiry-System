@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { query, queryOne, execute } from "../db.js";
+import { query, queryOne, execute, withTransaction } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { attachRole } from "../middleware/requireRole.js";
 import {
@@ -736,10 +736,18 @@ router.delete("/projects/:id", requireAuth, attachRole, async (req, res) => {
       return res.status(404).json({ error: "Project not found" });
     }
     await removeProjectFiles(access.project.id);
-    await execute(`DELETE FROM projects WHERE id = $1`, [access.project.id]);
+    await withTransaction(async (tx) => {
+      await tx.query(`DELETE FROM invoices WHERE project_id = $1`, [access.project.id]);
+      await tx.query(`DELETE FROM projects WHERE id = $1`, [access.project.id]);
+    });
     res.status(204).send();
   } catch (err) {
     console.error(err);
+    if (err.code === "23503") {
+      return res.status(409).json({
+        error: "This project cannot be deleted because other records still depend on it.",
+      });
+    }
     res.status(500).json({ error: err.message });
   }
 });

@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog"
 import { Field } from "@/components/ui/field"
 import { FormInput } from "@/components/ui/form-controls"
+import { HoursField, HOUR_STEP, LOG_HOUR_MIN } from "./HoursField"
 import { createTodo, logTime, type WorkTodo } from "@/api/work"
 import { addDaysIso, isoToday } from "@/lib/todoStyle"
 
@@ -113,9 +114,9 @@ export function AddTodoDialog({
               <FormInput
                 mt={4}
                 type="number"
-                step="0.5"
-                min="0.25"
-                placeholder="Optional"
+                step={HOUR_STEP}
+                min={LOG_HOUR_MIN}
+                placeholder="Optional — 1, 2, or 0.25"
                 value={estimate}
                 onChange={(e) => setEstimate(e.target.value)}
               />
@@ -200,14 +201,12 @@ export function LogHoursDialog({
         <Box as="form" onSubmit={(e) => { e.preventDefault(); void submit() }}>
           <DialogBody px={6} py={5}>
             <Field label="Hours" required invalid={Boolean(error)} errorText={error ?? undefined}>
-              <FormInput
+              <HoursField
                 autoFocus
-                type="number"
-                step="0.5"
-                min="0.25"
-                max="24"
                 value={hours}
-                onChange={(e) => setHours(e.target.value)}
+                onChange={setHours}
+                w="100%"
+                h="44px"
               />
             </Field>
           </DialogBody>

@@ -13,6 +13,7 @@ import {
   DIALOG_PANEL_STYLE,
 } from "@/components/ui/dialog"
 import { FormInput, FormNativeSelect, FormTextarea } from "@/components/ui/form-controls"
+import { HoursField, HOUR_STEP, LOG_HOUR_MIN } from "./HoursField"
 import { APP_ACCENT, APP_BG_SUBTLE, APP_BORDER, APP_INK, APP_MUTED } from "@/components/ui/appUi"
 import { displayName, peopleOnTodo } from "@/lib/people"
 import { formatHours, formatWhen, TODO_STATUS_LABEL } from "@/lib/hours"
@@ -394,8 +395,8 @@ export function TodoCardDialog({
                     {canEditMeta && !locked && (
                       <FormInput
                         type="number"
-                        step="0.5"
-                        min="0.25"
+                        step={HOUR_STEP}
+                        min={LOG_HOUR_MIN}
                         placeholder="Estimate hours"
                         defaultValue={todo.estimatedHours ?? ""}
                         h="36px"
@@ -407,9 +408,9 @@ export function TodoCardDialog({
                       />
                     )}
                     {canWork && !locked && (
-                      <Box display="flex" gap={2}>
-                        <FormInput type="number" step="0.5" min="0.25" max="24" value={hours} onChange={(e) => setHours(e.target.value)} w="88px" h="36px" />
-                        <AppButton size="sm" onClick={() => {
+                      <Box>
+                        <HoursField value={hours} onChange={setHours} />
+                        <AppButton size="sm" mt={2} onClick={() => {
                           const n = Number(hours)
                           if (!Number.isFinite(n) || n <= 0) return
                           logTime(todoId, { hours: n }).then(load)

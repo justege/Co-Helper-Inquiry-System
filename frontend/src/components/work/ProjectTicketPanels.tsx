@@ -16,8 +16,9 @@ import {
   APP_SHADOW_CARD,
   APP_SURFACE,
   AppCard,
+  AppStatCard,
 } from "@/components/ui/appUi"
-import { displayName, formatPeopleList, peopleOnTodo } from "@/lib/people"
+import { displayName, formatPeopleList, initials, peopleOnTodo } from "@/lib/people"
 import { isOverdue } from "@/lib/todoStyle"
 import { AvatarStack, DueChip } from "./todoUi"
 import {
@@ -25,6 +26,7 @@ import {
   formatDate,
   formatEta,
   formatHours,
+  formatMoney,
   PROJECT_PRIORITY_LABEL,
   PROJECT_STATUS_LABEL,
   TODO_STATUS_LABEL,
@@ -54,6 +56,7 @@ import {
   type ProjectMilestone,
   type ProjectTicket,
   type WorkspaceProject,
+  type WorkspaceUserBrief,
 } from "@/api/workspace"
 import { updateTodo, type WorkProject, type WorkTodo } from "@/api/work"
 import { useTodoCard } from "./TodoCardContext"
@@ -376,10 +379,6 @@ type OverviewAction = {
   onAction: () => void
 }
 
-function scrollToProjectSection(id: string) {
-  document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "nearest" })
-}
-
 function overviewActionTone(tone: OverviewAction["tone"]) {
   if (tone === "danger") return { bg: "rgba(185,28,28,0.06)", border: "rgba(185,28,28,0.2)", icon: "#B91C1C" }
   if (tone === "amber") return { bg: "rgba(180,83,9,0.08)", border: "rgba(180,83,9,0.22)", icon: "#B45309" }
@@ -474,7 +473,6 @@ function buildOverviewActions({
   const actions: OverviewAction[] = []
   const openBlockers = (data.blockers ?? []).filter((b) => b.status === "open")
   const lateMilestones = data.milestones.filter((m) => m.late && !m.done)
-  const doneGoals = data.goals.filter((g) => g.done).length
   const hasDates = Boolean(data.project.startAt && data.project.dueAt)
 
   for (const milestone of lateMilestones) {
@@ -552,39 +550,6 @@ function buildOverviewActions({
       detail: "Pick a current milestone so the team knows the focus",
       actionLabel: "Open plan",
       onAction: onOpenPlan,
-    })
-  }
-
-  if (canEdit && data.goals.length === 0) {
-    actions.push({
-      id: "add-goals",
-      tone: "accent",
-      title: "Define what done looks like",
-      detail: "Add goals — outcomes this project should hit",
-      actionLabel: "Add goals",
-      onAction: () => scrollToProjectSection("project-goals"),
-    })
-  }
-
-  if (canEdit && data.goals.length > 0 && doneGoals < data.goals.length) {
-    actions.push({
-      id: "open-goals",
-      tone: "accent",
-      title: `${data.goals.length - doneGoals} goal${data.goals.length - doneGoals === 1 ? "" : "s"} still open`,
-      detail: `${doneGoals}/${data.goals.length} complete`,
-      actionLabel: "Review goals",
-      onAction: () => scrollToProjectSection("project-goals"),
-    })
-  }
-
-  if (canEdit && !data.project.description?.trim()) {
-    actions.push({
-      id: "add-description",
-      tone: "accent",
-      title: "Add a project description",
-      detail: "Scope, constraints, and context the client should see",
-      actionLabel: "Add description",
-      onAction: () => scrollToProjectSection("project-about"),
     })
   }
 
@@ -728,16 +693,142 @@ function OverviewTodoRow({
   )
 }
 
-function OverviewMetric({ label, value, hint }: { label: string; value: string; hint?: string }) {
+type OverviewPerson = WorkspaceUserBrief & { role?: string; memberSince?: string }
+
+function OverviewAvatar({
+  person,
+  size = 36,
+}: {
+  person?: OverviewPerson | null
+  size?: number
+}) {
   return (
-    <Box>
-      <Text fontSize="0.6875rem" fontWeight="600" color="rgba(255,255,255,0.55)" letterSpacing="0.04em" textTransform="uppercase">
-        {label}
-      </Text>
-      <Text fontSize="1rem" fontWeight="700" color="white" mt={1}>{value}</Text>
-      {hint ? <Text fontSize="0.75rem" color="rgba(255,255,255,0.5)" mt="2px">{hint}</Text> : null}
+    <Box
+      w={`${size}px`}
+      h={`${size}px`}
+      borderRadius="999px"
+      bg={person ? APP_ACCENT : APP_BG_SUBTLE}
+      color={person ? "white" : APP_MUTED}
+      fontSize={size > 28 ? "0.75rem" : "0.62rem"}
+      fontWeight="700"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      flexShrink={0}
+      border={`1px solid ${person ? "transparent" : APP_BORDER}`}
+    >
+      {person ? initials(person) : "?"}
     </Box>
   )
+}
+
+function OverviewTeamSlot({
+  label,
+  person,
+  people,
+  pending,
+  empty,
+  onOpen,
+}: {
+  label: string
+  person?: OverviewPerson | null
+  people?: OverviewPerson[]
+  pending?: number
+  empty?: string
+  onOpen: () => void
+}) {
+  const extras = people?.slice(1) ?? []
+  return (
+    <Box
+      as="button"
+      textAlign="left"
+      w="100%"
+      p={3}
+      borderRadius="14px"
+      border={`1px solid ${APP_BORDER}`}
+      bg={APP_BG_SUBTLE}
+      onClick={onOpen}
+    >
+      <Text fontSize="0.6875rem" fontWeight="600" color={APP_MUTED} letterSpacing="0.04em" textTransform="uppercase" mb={2}>
+        {label}
+      </Text>
+      {person ? (
+        <Box display="flex" alignItems="center" gap={2.5} minW={0}>
+          <Box display="flex" alignItems="center">
+            <OverviewAvatar person={person} />
+            {extras.slice(0, 2).map((extra, index) => (
+              <Box key={extra.id} ml="-8px" zIndex={2 - index}>
+                <OverviewAvatar person={extra} size={28} />
+              </Box>
+            ))}
+          </Box>
+          <Box minW={0}>
+            <Text fontWeight="600" fontSize="0.875rem" color={APP_INK} lineClamp={1}>
+              {people && people.length > 1
+                ? `${displayName(person)} +${people.length - 1}`
+                : displayName(person)}
+            </Text>
+            <Text fontSize="0.75rem" color={APP_MUTED} lineClamp={1}>
+              {pending ? `${pending} invite${pending === 1 ? "" : "s"} pending` : extras.length ? `${people?.length} on the project` : person.email}
+            </Text>
+          </Box>
+        </Box>
+      ) : (
+        <Box>
+          <Text fontWeight="600" fontSize="0.875rem" color={APP_INK}>{empty || "None yet"}</Text>
+          {pending ? (
+            <Text fontSize="0.75rem" color="#B45309" mt="2px">
+              {pending} invite{pending === 1 ? "" : "s"} pending
+            </Text>
+          ) : (
+            <Text fontSize="0.75rem" color={APP_MUTED} mt="2px">Add people on the People tab</Text>
+          )}
+        </Box>
+      )}
+    </Box>
+  )
+}
+
+function MiniProgress({ value, max }: { value: number; max: number }) {
+  const pct = max <= 0 ? 0 : Math.min(100, Math.round((value / max) * 100))
+  return (
+    <Box mt={3} h="6px" bg={APP_BG_SUBTLE} borderRadius="999px" overflow="hidden">
+      <Box h="100%" w={`${pct}%`} bg={APP_ACCENT} borderRadius="999px" />
+    </Box>
+  )
+}
+
+function spendSummary(work: WorkProject, currency: string, canManage: boolean) {
+  const rate = work.hourlyRate
+  const invoiced = work.invoicedTotal ?? 0
+  const paid = work.paidTotal ?? 0
+  const draft = work.draftTotal ?? 0
+  const unbilledValue = canManage && rate != null ? (work.unbilledHours ?? 0) * rate : 0
+  const loggedValue = rate != null ? work.loggedHours * rate : 0
+  const spent = invoiced + unbilledValue
+  const amount = spent > 0 ? spent : loggedValue
+
+  if (amount <= 0 && work.fixedPrice) {
+    return { value: formatMoney(0, currency), hint: `${formatMoney(work.fixedPrice, currency)} fixed price` }
+  }
+  if (amount <= 0) {
+    return {
+      value: formatMoney(0, currency),
+      hint: draft > 0
+        ? `${formatMoney(draft, currency)} in draft`
+        : rate || work.fixedPrice
+          ? "No spend yet"
+          : "Set a rate to track value",
+    }
+  }
+
+  const bits: string[] = []
+  if (paid > 0) bits.push(`${formatMoney(paid, currency)} paid`)
+  if (invoiced > paid) bits.push(`${formatMoney(invoiced - paid, currency)} sent`)
+  if (unbilledValue > 0) bits.push(`${formatMoney(unbilledValue, currency)} unbilled`)
+  if (!bits.length && loggedValue > 0) bits.push("From hours logged")
+
+  return { value: formatMoney(amount, currency), hint: bits.join(" · ") }
 }
 
 export function OverviewPanel({
@@ -746,24 +837,26 @@ export function OverviewPanel({
   todos,
   canEdit,
   canManage,
+  currency = "EUR",
   onChanged,
   onOpenPlan,
   onOpenView,
   onOpenTodo,
-  unbilledHours,
-  onCreateInvoice,
+  onInvite,
 }: {
   data: ProjectTicket
   work: WorkProject
   todos: WorkTodo[]
   canEdit: boolean
   canManage: boolean
+  currency?: string
   onChanged: () => void
   onOpenPlan: () => void
   onOpenView: (view: string) => void
   onOpenTodo: (id: string) => void
   unbilledHours?: number | null
   onCreateInvoice?: () => void
+  onInvite?: () => void
 }) {
   const [description, setDescription] = useState(data.project.description ?? "")
   const [goalTitle, setGoalTitle] = useState("")
@@ -774,23 +867,23 @@ export function OverviewPanel({
   const doneGoals = data.goals.filter((g) => g.done).length
   const currentMilestone = data.milestones.find((m) => m.id === data.project.currentMilestoneId)
   const openTodos = todos.filter((t) => t.status !== "done" && t.status !== "invoiced")
+  const finishedTodos = todos.filter((t) => t.status === "done" || t.status === "invoiced")
   const inProgressTodos = openTodos.filter((t) => t.status === "in_progress")
   const waitingTodos = openTodos.filter((t) => t.status === "waiting_on_client")
   const overdueTodos = openTodos.filter((t) => isOverdue(t.dueAt, t.status))
   const backlogTodos = openTodos.filter((t) => t.status === "backlog").slice(0, 5)
   const hasDates = Boolean(data.project.startAt || data.project.dueAt)
-  const eta = formatEta(work.remainingHours, work.weeklyPace)
-
-  const narrative = buildOverviewNarrative({
-    data,
-    work,
-    openTodos,
-    inProgressTodos,
-    waitingTodos,
-    currentMilestone,
-  })
-
-  const actions = buildOverviewActions({
+  const eta = work.loggedHours > 0 ? formatEta(work.remainingHours, work.weeklyPace) : null
+  const spend = spendSummary(work, currency, canManage)
+  const people = data.people?.length
+    ? data.people
+    : [
+        ...data.collaborators.map((person) => ({ ...person, role: "collaborator" })),
+      ]
+  const owner = people.find((person) => person.role === "owner") ?? null
+  const clientPerson = people.find((person) => person.role === "client") ?? null
+  const collaborators = people.filter((person) => person.role === "collaborator")
+  const attention = buildOverviewActions({
     data,
     work,
     canEdit,
@@ -809,6 +902,18 @@ export function OverviewPanel({
       void updateWorkspaceProject(data.project.id, { status: "in_progress" }).then(onChanged)
     },
   })
+  const urgent = attention.filter((item) => item.tone === "danger" || item.tone === "amber")
+  const setup = attention.filter((item) => item.tone === "accent")
+  const shownActions = [...urgent, ...setup].slice(0, 4)
+
+  const narrative = buildOverviewNarrative({
+    data,
+    work,
+    openTodos,
+    inProgressTodos,
+    waitingTodos,
+    currentMilestone,
+  })
 
   useEffect(() => {
     setDescription(data.project.description ?? "")
@@ -825,6 +930,15 @@ export function OverviewPanel({
       setBusy(false)
     }
   }
+
+  const todoHint = todos.length
+    ? `${finishedTodos.length} finished · ${openTodos.length} open${inProgressTodos.length ? ` · ${inProgressTodos.length} in progress` : ""}`
+    : "No to-dos yet"
+  const timeHint = [
+    work.thisWeekHours > 0 ? `${formatHours(work.thisWeekHours)} this week` : null,
+    work.weeklyPace != null && work.loggedHours > 0 ? `~${formatHours(work.weeklyPace)}/wk` : null,
+    eta,
+  ].filter(Boolean).join(" · ") || "No hours logged yet"
 
   return (
     <Box display="grid" gap={4} minW={0}>
@@ -848,43 +962,131 @@ export function OverviewPanel({
             <Text fontSize="0.8125rem" color="rgba(255,255,255,0.6)" fontWeight="500">
               {PROJECT_PRIORITY_LABEL[data.project.priority || "medium"]} priority
             </Text>
-            <Text fontSize="0.8125rem" color="rgba(255,255,255,0.35)">·</Text>
-            <Text fontSize="0.8125rem" color="rgba(255,255,255,0.6)" fontWeight="500">
-              {displayName(data.client)}
-            </Text>
+            {currentMilestone ? (
+              <>
+                <Text fontSize="0.8125rem" color="rgba(255,255,255,0.35)">·</Text>
+                <Text fontSize="0.8125rem" color="rgba(255,255,255,0.6)" fontWeight="500">
+                  Now: {currentMilestone.title}
+                </Text>
+              </>
+            ) : null}
           </Box>
-          <Text fontSize={{ base: "1rem", md: "1.0625rem" }} fontWeight="500" color="white" lineHeight="1.55" mb={4} letterSpacing="-0.01em">
+          <Text fontSize={{ base: "1rem", md: "1.125rem" }} fontWeight="500" color="white" lineHeight="1.55" letterSpacing="-0.015em">
             {narrative}
           </Text>
-          <Box display="grid" gridTemplateColumns={{ base: "1fr 1fr", md: "repeat(4, 1fr)" }} gap={4}>
-            <OverviewMetric
-              label="Schedule"
-              value={hasDates ? `${formatDate(data.project.startAt)} → ${formatDate(data.project.dueAt)}` : "Not set"}
-              hint={currentMilestone ? `Now: ${currentMilestone.title}` : data.milestones.length ? `${data.milestones.length} milestone${data.milestones.length === 1 ? "" : "s"}` : "No plan yet"}
-            />
-            <OverviewMetric
-              label="Work"
-              value={`${openTodos.length} open`}
-              hint={inProgressTodos.length ? `${inProgressTodos.length} in progress` : waitingTodos.length ? `${waitingTodos.length} waiting on client` : "Nothing active"}
-            />
-            <OverviewMetric
-              label="Time"
-              value={formatHours(work.loggedHours)}
-              hint={`${formatHours(work.thisWeekHours)} this week${work.weeklyPace != null ? ` · ~${formatHours(work.weeklyPace)}/wk` : ""}${eta ? ` · ${eta}` : ""}`}
-            />
-            <OverviewMetric
-              label="Goals"
-              value={data.goals.length ? `${doneGoals}/${data.goals.length}` : "None yet"}
-              hint={data.goals.length ? (doneGoals === data.goals.length ? "All complete" : `${data.goals.length - doneGoals} open`) : "Define done"}
-            />
-          </Box>
           </Box>
         </Box>
 
-        {actions.length > 0 && (
-          <AppCard label="Needs attention">
+        <Box display="grid" gridTemplateColumns={{ base: "1fr 1fr", lg: "repeat(4, 1fr)" }} gap={3}>
+          <Box
+            {...APP_CARD}
+            p={{ base: 4, md: 5 }}
+            cursor="pointer"
+            onClick={() => onOpenView("work")}
+            _hover={{ borderColor: APP_ACCENT }}
+          >
+            <Text fontSize="0.6875rem" fontWeight="500" color={APP_MUTED} textTransform="uppercase" letterSpacing="0.05em">
+              To-dos
+            </Text>
+            <Text fontSize={{ base: "1.5rem", md: "1.75rem" }} fontWeight="700" color={APP_INK} letterSpacing="-0.03em" lineHeight="1" mt={2}>
+              {todos.length}
+            </Text>
+            <Text fontSize="0.75rem" color={APP_MUTED} mt={2}>{todoHint}</Text>
+            <MiniProgress value={finishedTodos.length} max={Math.max(todos.length, 1)} />
+          </Box>
+          <AppStatCard
+            label="Finished"
+            value={`${finishedTodos.length}/${todos.length || 0}`}
+            hint={todos.length ? `${Math.round((finishedTodos.length / todos.length) * 100)}% complete` : "Nothing finished yet"}
+            onClick={() => onOpenView("work")}
+          />
+          <AppStatCard
+            label="Spent"
+            value={spend.value}
+            hint={spend.hint}
+            onClick={() => onOpenView("finance")}
+          />
+          <AppStatCard
+            label="Time"
+            value={formatHours(work.loggedHours)}
+            hint={timeHint}
+            onClick={() => onOpenView("finance")}
+          />
+        </Box>
+
+        <AppCard
+          label="Team"
+          action={
+            <Box display="flex" alignItems="center" gap={3}>
+              {canManage ? (
+                <Box as="button" fontSize="0.75rem" fontWeight="600" color={APP_ACCENT} onClick={() => (onInvite ? onInvite() : onOpenView("people"))}>
+                  Invite
+                </Box>
+              ) : (
+                <Box as="button" fontSize="0.75rem" fontWeight="600" color={APP_ACCENT} onClick={() => onOpenView("people")}>
+                  View people
+                </Box>
+              )}
+            </Box>
+          }
+        >
+          <Box display="grid" gridTemplateColumns={{ base: "1fr", md: "1fr 1fr 1fr" }} gap={3}>
+            <OverviewTeamSlot
+              label="One-person business"
+              person={owner}
+              empty="Owner not listed"
+              onOpen={() => onOpenView("people")}
+            />
+            <OverviewTeamSlot
+              label="Client"
+              person={clientPerson ?? {
+                id: data.client.id,
+                email: data.client.email,
+                firstName: data.client.firstName,
+                lastName: data.client.lastName,
+                username: null,
+                companyName: data.client.companyName,
+                role: "client",
+              }}
+              onOpen={() => onOpenView("people")}
+            />
+            <OverviewTeamSlot
+              label="Collaborators"
+              person={collaborators[0] ?? null}
+              people={collaborators}
+              pending={data.pendingInvites.length}
+              empty={data.pendingInvites.length ? data.pendingInvites[0].email : "None yet"}
+              onOpen={() => onOpenView("people")}
+            />
+          </Box>
+        </AppCard>
+
+        <Box display="grid" gridTemplateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={3}>
+          <AppStatCard
+            label="Schedule"
+            value={hasDates ? `${formatDate(data.project.startAt)} → ${formatDate(data.project.dueAt)}` : "Not set"}
+            hint={currentMilestone ? `Current: ${currentMilestone.title}` : data.milestones.length ? `${data.milestones.length} milestone${data.milestones.length === 1 ? "" : "s"}` : "No plan yet"}
+            onClick={onOpenPlan}
+          />
+          <AppStatCard
+            label="Goals"
+            value={data.goals.length ? `${doneGoals}/${data.goals.length}` : "None yet"}
+            hint={data.goals.length ? (doneGoals === data.goals.length ? "All complete" : `${data.goals.length - doneGoals} still open`) : "Define what done looks like"}
+            onClick={() => document.getElementById("project-goals")?.scrollIntoView({ behavior: "smooth", block: "nearest" })}
+          />
+        </Box>
+
+        {shownActions.length > 0 && (
+          <AppCard
+            label={urgent.length ? "Needs attention" : "Next steps"}
+            action={
+              shownActions.length < attention.length ? (
+                <Text fontSize="0.75rem" color={APP_MUTED}>{attention.length} items</Text>
+              ) : undefined
+            }
+          >
             <Box display="grid" gap={2}>
-              {actions.slice(0, 6).map((item) => (
+              {shownActions.map((item) => (
                 <OverviewActionRow key={item.id} item={item} onOpenTodo={onOpenTodo} />
               ))}
             </Box>

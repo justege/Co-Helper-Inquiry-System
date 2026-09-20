@@ -16,8 +16,8 @@ import {
   LuSearch,
   LuTarget,
 } from "react-icons/lu"
-import { updateTodo, type WorkTodo } from "@/api/work"
-import type { ProjectMilestone } from "@/api/workspace"
+import { updateTodo, type TimeEntry, type WorkTodo } from "@/api/work"
+import type { ProjectMilestone, WorkspaceUserBrief } from "@/api/workspace"
 import {
   APP_BORDER,
   APP_INK,
@@ -45,6 +45,7 @@ import {
 } from "@/lib/todoStyle"
 import { AddTodoDialog } from "./WorkDialogs"
 import { AvatarStack } from "./todoUi"
+import { HoursByPerson, type HoursScale } from "./HoursByPerson"
 
 const BAR_H = 26
 const ROW_H = 44
@@ -52,8 +53,7 @@ const HEAD_H = 58
 const LABEL_W = 240
 const HEADER_ROW_H = 30
 const DEFAULT_SPAN = 3
-const ZOOM_DAY_W = { compact: 32, normal: 44, wide: 60 } as const
-type ZoomLevel = keyof typeof ZOOM_DAY_W
+const DAY_W = 44
 
 type Bar = {
   todo: WorkTodo
@@ -271,6 +271,8 @@ export function WorkTimeline({
   canEdit,
   onOpen,
   onChanged,
+  timeEntries = [],
+  people = [],
 }: {
   todos: WorkTodo[]
   projectId: string
@@ -281,10 +283,12 @@ export function WorkTimeline({
   canEdit: boolean
   onOpen: (id: string) => void
   onChanged: () => void
+  timeEntries?: TimeEntry[]
+  people?: (WorkspaceUserBrief & { role?: string })[]
 }) {
   const [weekShift, setWeekShift] = useState(0)
   const [rangeMode, setRangeMode] = useState<"auto" | "fit">("auto")
-  const [zoom, setZoom] = useState<ZoomLevel>("normal")
+  const [scale, setScale] = useState<HoursScale>("week")
   const [search, setSearch] = useState("")
   const [milestoneFilter, setMilestoneFilter] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "done">("all")
@@ -299,7 +303,7 @@ export function WorkTimeline({
   const scrollRef = useRef<HTMLDivElement>(null)
   const movedRef = useRef(false)
   const today = isoToday()
-  const dayW = ZOOM_DAY_W[zoom]
+  const dayW = DAY_W
 
   const milestoneById = useMemo(
     () => Object.fromEntries(milestones.map((m) => [m.id, m])),
@@ -853,7 +857,7 @@ export function WorkTimeline({
                 color={APP_MUTED}
                 onClick={() => {
                   setRangeMode("auto")
-                  setWeekShift((n) => n - 1)
+                  setWeekShift((n) => n - (scale === "month" ? 4 : 1))
                 }}
                 _hover={{ bg: APP_PAPER, color: APP_INK }}
               >
@@ -880,7 +884,7 @@ export function WorkTimeline({
                 color={APP_MUTED}
                 onClick={() => {
                   setRangeMode("auto")
-                  setWeekShift((n) => n + 1)
+                  setWeekShift((n) => n + (scale === "month" ? 4 : 1))
                 }}
                 _hover={{ bg: APP_PAPER, color: APP_INK }}
               >
@@ -948,16 +952,18 @@ export function WorkTimeline({
             </ToolbarBtn>
           )}
           <Segmented
-            value={zoom}
-            onChange={setZoom}
+            value={scale}
+            onChange={setScale}
             options={[
-              { value: "compact", label: "Compact" },
-              { value: "normal", label: "Comfort" },
-              { value: "wide", label: "Wide" },
+              { value: "day", label: "Day" },
+              { value: "week", label: "Week" },
+              { value: "month", label: "Month" },
             ]}
           />
         </Box>
       </Box>
+
+      <HoursByPerson people={people} entries={timeEntries} days={days} scale={scale} />
 
       {unscheduled.length > 0 && (
         <Box px={4} py={3} borderBottom={`1px solid ${APP_BORDER}`}>
