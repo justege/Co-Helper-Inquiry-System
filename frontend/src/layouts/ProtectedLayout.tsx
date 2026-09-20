@@ -14,6 +14,7 @@ import {
   LuSearch,
   LuUser,
   LuReceipt,
+  LuClock,
 } from "react-icons/lu"
 import type { IconType } from "react-icons"
 import { GREEN, INK, MUTED, PAPER, RULE, SURFACE } from "@/theme/tokens"
@@ -53,6 +54,7 @@ function navGroups(isOwner: boolean): NavGroup[] {
       label: "Workspace",
       items: [
         { to: "/app/projects", icon: LuFolderKanban, label: "Projects" },
+        { to: "/app/hours", icon: LuClock, label: "Hours" },
         { to: "/app/invoices", icon: LuReceipt, label: "Invoices" },
         ...(isOwner ? [{ to: "/app/clients", icon: LuUsers, label: "Clients" }] : []),
       ],

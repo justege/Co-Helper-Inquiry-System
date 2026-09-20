@@ -66,6 +66,7 @@ export interface TimeEntry {
   entryDate: string
   createdAt: string
   todoTitle?: string | null
+  projectName?: string | null
   user?: PersonBrief | null
 }
 
@@ -197,6 +198,7 @@ export interface InvoiceLine {
   invoiceId: string
   todoId: string | null
   timeEntryId: string | null
+  expenseAllocationId?: string | null
   description: string
   hours: number
   rate: number
@@ -267,7 +269,57 @@ export const logTime = (
   data: { hours: number; note?: string; billable?: boolean; entryDate?: string }
 ) => api.post<TimeEntry>(`/api/workspace/todos/${todoId}/time`, data)
 
+export const createTimeEntry = (data: {
+  projectId: string
+  todoId?: string | null
+  hours: number
+  entryDate: string
+  note?: string
+  billable?: boolean
+}) => api.post<TimeEntry>("/api/workspace/time-entries", data)
+
+export const updateTimeEntry = (
+  id: string,
+  data: Partial<{
+    projectId: string
+    todoId: string | null
+    hours: number
+    entryDate: string
+    note: string | null
+    billable: boolean
+  }>
+) => api.patch<TimeEntry>(`/api/workspace/time-entries/${id}`, data)
+
 export const deleteTimeEntry = (id: string) => api.delete<void>(`/api/workspace/time-entries/${id}`)
+
+export interface TimesheetProject {
+  id: string
+  name: string
+  clientId: string
+  clientName: string | null
+}
+
+export interface TimesheetTodo {
+  id: string
+  projectId: string
+  title: string
+  status: TodoStatus
+}
+
+export interface Timesheet {
+  role: "owner" | "admin" | "client" | "collaborator"
+  canEdit: boolean
+  workspace: { id: string; name: string; currency: string; timezone: string } | null
+  entries: TimeEntry[]
+  projects: TimesheetProject[]
+  todos: TimesheetTodo[]
+}
+
+export const getTimesheet = (params: { from: string; to: string; projectId?: string }) => {
+  const query = new URLSearchParams({ from: params.from, to: params.to })
+  if (params.projectId) query.set("projectId", params.projectId)
+  return api.get<Timesheet>(`/api/workspace/timesheet?${query}`)
+}
 
 export interface TodoComment {
   id: string

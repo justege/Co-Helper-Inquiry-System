@@ -5,6 +5,46 @@ export function formatHours(n: number | null | undefined): string {
   return `${v}h`
 }
 
+export function formatSheetHours(n: number | null | undefined): string {
+  if (n == null || Number.isNaN(Number(n)) || n === 0) return ""
+  return new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(n))
+}
+
+export function parseDecimal(value: string | number | null | undefined): number | null {
+  if (value == null || value === "") return null
+  const n = Number(String(value).trim().replace(/\s/g, "").replace("€", "").replace(",", "."))
+  return Number.isFinite(n) ? Math.round(n * 100) / 100 : null
+}
+
+export function formatSheetDate(value: string | null | undefined): string {
+  if (!value) return ""
+  const iso = value.length >= 10 ? value.slice(0, 10) : value
+  const [y, m, d] = iso.split("-")
+  if (!y || !m || !d) return iso
+  return `${d}.${m}.${y}`
+}
+
+export function parseLocalDate(value: string): Date | null {
+  const iso = value.length >= 10 ? value.slice(0, 10) : value
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso)
+  if (!match) return null
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+}
+
+export function isWeekend(value: string): boolean {
+  const d = parseLocalDate(value)
+  if (!d) return false
+  const day = d.getDay()
+  return day === 0 || day === 6
+}
+
+export function monthRange(year: number, monthIndex: number): { from: string; to: string; days: string[] } {
+  const pad = (n: number) => String(n).padStart(2, "0")
+  const last = new Date(year, monthIndex + 1, 0).getDate()
+  const days = Array.from({ length: last }, (_, i) => `${year}-${pad(monthIndex + 1)}-${pad(i + 1)}`)
+  return { from: days[0], to: days[days.length - 1], days }
+}
+
 export function formatMoney(amount: number | null | undefined, currency = "EUR"): string {
   if (amount == null || Number.isNaN(Number(amount))) return "—"
   try {

@@ -19,6 +19,7 @@ import ClientDetailPage from "./pages/ClientDetailPage";
 import ProjectsPage from "./pages/ProjectsPage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
 import InvoicesPage from "./pages/InvoicesPage";
+import HoursPage from "./pages/HoursPage";
 import InvoiceDetailPage from "./pages/InvoiceDetailPage";
 import TodoDetailPage from "./pages/TodoDetailPage";
 
@@ -78,6 +79,7 @@ export default function App() {
             <Route path="todos/:id" element={<TodoDetailPage />} />
             <Route path="invoices" element={<InvoicesPage />} />
             <Route path="invoices/:id" element={<InvoiceDetailPage />} />
+            <Route path="hours" element={<HoursPage />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>

@@ -29,6 +29,9 @@ import {
   loadInvoiceDetail,
   cancelInvoice,
   unbilledEntries,
+  listTimesheet,
+  createTimeEntryDirect,
+  updateTimeEntry,
 } from "../lib/work.js";
 import {
   addChecklistItem,
@@ -430,6 +433,58 @@ router.post("/todos/:id/time", requireAuth, attachRole, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+router.get("/timesheet", requireAuth, attachRole, async (req, res) => {
+  try {
+    res.json(
+      await listTimesheet(req.dbUser, {
+        from: req.query.from,
+        to: req.query.to,
+        projectId: typeof req.query.projectId === "string" ? req.query.projectId : null,
+      })
+    );
+  } catch (err) {
+    console.error(err);
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+router.post("/time-entries", requireAuth, attachRole, async (req, res) => {
+  try {
+    const row = await createTimeEntryDirect({
+      user: req.dbUser,
+      projectId: req.body?.projectId,
+      todoId: req.body?.todoId,
+      hours: req.body?.hours,
+      entryDate: req.body?.entryDate,
+      note: req.body?.note,
+      billable: req.body?.billable,
+    });
+    res.status(201).json(mapTimeEntry(row));
+  } catch (err) {
+    console.error(err);
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+router.patch("/time-entries/:id", requireAuth, attachRole, async (req, res) => {
+  try {
+    const row = await updateTimeEntry({
+      user: req.dbUser,
+      entryId: req.params.id,
+      projectId: req.body?.projectId,
+      todoId: req.body?.todoId,
+      hours: req.body?.hours,
+      entryDate: req.body?.entryDate,
+      note: req.body?.note,
+      billable: req.body?.billable,
+    });
+    res.json(mapTimeEntry(row));
+  } catch (err) {
+    console.error(err);
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 

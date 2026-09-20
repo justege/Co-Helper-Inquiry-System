@@ -57,9 +57,12 @@ export function buildInvoicePdf({ invoice, workspace, client, project, lines, fr
 
     const startY = doc.y;
     doc.font("Helvetica-Bold").fontSize(9).fillColor("#6B7280");
-    doc.text("Description", 50, startY, { width: 250 });
-    doc.text("Hours", 300, startY, { width: 70, align: "right" });
-    doc.text("Rate", 380, startY, { width: 70, align: "right" });
+    const hasHours = lines.some((line) => Number(line.hours) > 0);
+    doc.text("Description", 50, startY, { width: hasHours ? 250 : 360 });
+    if (hasHours) {
+      doc.text("Hours", 300, startY, { width: 70, align: "right" });
+      doc.text("Rate", 380, startY, { width: 70, align: "right" });
+    }
     doc.text("Amount", 460, startY, { width: 85, align: "right" });
     doc.moveTo(50, startY + 16).lineTo(545, startY + 16).strokeColor("#E5E7EB").stroke();
 
@@ -70,9 +73,11 @@ export function buildInvoicePdf({ invoice, workspace, client, project, lines, fr
         doc.addPage();
         y = 50;
       }
-      doc.text(line.description, 50, y, { width: 250 });
-      doc.text(hours(line.hours), 300, y, { width: 70, align: "right" });
-      doc.text(money(line.rate, currency), 380, y, { width: 70, align: "right" });
+      doc.text(line.description, 50, y, { width: hasHours ? 250 : 360 });
+      if (hasHours) {
+        doc.text(Number(line.hours) > 0 ? hours(line.hours) : "—", 300, y, { width: 70, align: "right" });
+        doc.text(Number(line.hours) > 0 ? money(line.rate, currency) : "—", 380, y, { width: 70, align: "right" });
+      }
       doc.text(money(line.amount, currency), 460, y, { width: 85, align: "right" });
       y += 22;
     }

@@ -82,7 +82,11 @@ export default function InvoiceDetailPage() {
           <Box key={line.id} px={5} py={3} borderBottom={`1px solid ${APP_BORDER}`} display="flex" justifyContent="space-between" gap={3}>
             <Box>
               <Text fontWeight="600" color={APP_INK}>{line.description}</Text>
-              <Text fontSize="0.75rem" color={APP_MUTED}>{formatHours(line.hours)} · {formatMoney(line.rate, invoice.currency)}/h</Text>
+              <Text fontSize="0.75rem" color={APP_MUTED}>
+                {line.hours > 0
+                  ? `${formatHours(line.hours)} · ${formatMoney(line.rate, invoice.currency)}/h`
+                  : "Pass-through cost"}
+              </Text>
             </Box>
             <Text fontWeight="700">{formatMoney(line.amount, invoice.currency)}</Text>
           </Box>

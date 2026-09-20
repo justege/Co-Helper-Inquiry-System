@@ -499,3 +499,65 @@ ALTER TABLE invoices DROP CONSTRAINT IF EXISTS invoices_project_id_fkey;
 ALTER TABLE invoices
   ADD CONSTRAINT invoices_project_id_fkey
   FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE;
+
+-- Pass-through expenses (Supabase, Railway, …) split across projects and invoiced to clients.
+CREATE TABLE IF NOT EXISTS expense_vendors (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id  UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  name          TEXT NOT NULL CHECK (char_length(name) BETWEEN 1 AND 120),
+  note          TEXT,
+  kind          TEXT NOT NULL DEFAULT 'split'
+                CHECK (kind IN ('split', 'columns')),
+  sort_order    INTEGER NOT NULL DEFAULT 0,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS expense_vendors_workspace_idx
+  ON expense_vendors (workspace_id, sort_order, created_at);
+
+CREATE TABLE IF NOT EXISTS expense_vendor_splits (
+  vendor_id   UUID NOT NULL REFERENCES expense_vendors(id) ON DELETE CASCADE,
+  project_id  UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  percent     NUMERIC(6, 2) CHECK (percent IS NULL OR (percent >= 0 AND percent <= 100)),
+  sort_order  INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (vendor_id, project_id)
+);
+
+CREATE INDEX IF NOT EXISTS expense_vendor_splits_project_idx
+  ON expense_vendor_splits (project_id);
+
+CREATE TABLE IF NOT EXISTS expenses (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id  UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  vendor_id     UUID NOT NULL REFERENCES expense_vendors(id) ON DELETE CASCADE,
+  incurred_at   DATE NOT NULL,
+  amount        NUMERIC(12, 2) NOT NULL DEFAULT 0 CHECK (amount >= 0),
+  currency      TEXT NOT NULL DEFAULT 'EUR',
+  reference     TEXT,
+  note          TEXT,
+  created_by    UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS expenses_vendor_idx ON expenses (vendor_id, incurred_at DESC);
+CREATE INDEX IF NOT EXISTS expenses_workspace_idx ON expenses (workspace_id, incurred_at DESC);
+
+CREATE TABLE IF NOT EXISTS expense_allocations (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  expense_id  UUID NOT NULL REFERENCES expenses(id) ON DELETE CASCADE,
+  project_id  UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  amount      NUMERIC(12, 2) NOT NULL DEFAULT 0 CHECK (amount >= 0),
+  invoice_id  UUID REFERENCES invoices(id) ON DELETE SET NULL,
+  UNIQUE (expense_id, project_id)
+);
+
+CREATE INDEX IF NOT EXISTS expense_allocations_project_idx
+  ON expense_allocations (project_id, invoice_id);
+CREATE INDEX IF NOT EXISTS expense_allocations_invoice_idx
+  ON expense_allocations (invoice_id) WHERE invoice_id IS NOT NULL;
+
+ALTER TABLE invoice_lines
+  ADD COLUMN IF NOT EXISTS expense_allocation_id UUID REFERENCES expense_allocations(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS invoice_lines_expense_idx
+  ON invoice_lines (expense_allocation_id) WHERE expense_allocation_id IS NOT NULL;

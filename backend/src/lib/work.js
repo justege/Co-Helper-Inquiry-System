@@ -182,9 +182,10 @@ export function mapTimeEntry(row) {
     note: row.note ?? null,
     billable: Boolean(row.billable),
     invoiceId: row.invoice_id ?? null,
-    entryDate: row.entry_date,
+    entryDate: mapSqlDate(row.entry_date),
     createdAt: row.created_at,
     todoTitle: row.todo_title ?? null,
+    projectName: row.project_name ?? null,
     user: row.user_email
       ? mapUserBrief({
           id: row.user_id,
@@ -227,6 +228,7 @@ export function mapInvoiceLine(row) {
     invoiceId: row.invoice_id,
     todoId: row.todo_id,
     timeEntryId: row.time_entry_id,
+    expenseAllocationId: row.expense_allocation_id ?? null,
     description: row.description,
     hours: asNumber(row.hours),
     rate: asNumber(row.rate),
@@ -1359,6 +1361,10 @@ export async function cancelInvoice(invoice) {
       [invoice.id]
     );
     await tx.query(
+      `UPDATE expense_allocations SET invoice_id = NULL WHERE invoice_id = $1`,
+      [invoice.id]
+    );
+    await tx.query(
       `UPDATE todos SET status = 'done', updated_at = NOW()
        WHERE status = 'invoiced' AND id IN (
          SELECT todo_id FROM invoice_lines WHERE invoice_id = $1 AND todo_id IS NOT NULL
@@ -1370,4 +1376,220 @@ export async function cancelInvoice(invoice) {
       [invoice.id]
     );
   });
+}
+
+function fail(status, message) {
+  const err = new Error(message);
+  err.status = status;
+  throw err;
+}
+
+const TIME_ENTRY_DETAIL_SQL = `
+  SELECT te.*,
+         t.title AS todo_title,
+         p.name AS project_name,
+         u.email AS user_email,
+         u.first_name AS user_first_name,
+         u.last_name AS user_last_name,
+         u.username AS user_username,
+         u.company_name AS user_company_name
+  FROM time_entries te
+  JOIN projects p ON p.id = te.project_id
+  LEFT JOIN todos t ON t.id = te.todo_id
+  LEFT JOIN users u ON u.id = te.user_id
+`;
+
+export async function getTimeEntryById(id) {
+  return queryOne(`${TIME_ENTRY_DETAIL_SQL} WHERE te.id = $1`, [id]);
+}
+
+function timesheetRole(user, projects) {
+  if (user.role === "expert") return "owner";
+  if (["admin", "superadmin"].includes(user.role)) return "admin";
+  if (projects.length && projects.every((p) => p.client_user_id === user.id)) return "client";
+  return "collaborator";
+}
+
+export async function listTimesheet(user, { from, to, projectId } = {}) {
+  const fromDate = parseDateInput(from);
+  const toDate = parseDateInput(to);
+  if (fromDate.error || !fromDate.value) fail(400, "Start date must be YYYY-MM-DD");
+  if (toDate.error || !toDate.value) fail(400, "End date must be YYYY-MM-DD");
+  if (fromDate.value > toDate.value) fail(400, "Start date must be on or before the end date");
+
+  const loaded = await loadProjectsForWorkbench(user);
+  const projects = (loaded.projects || []).filter((p) => !projectId || p.id === projectId);
+  const role = timesheetRole(user, loaded.projects || []);
+  const workspace = loaded.workspace || (projects[0]
+    ? {
+        id: projects[0].workspace_id,
+        currency: projects[0].workspace_currency,
+        timezone: projects[0].workspace_timezone,
+        name: projects[0].workspace_name,
+      }
+    : null);
+  const ids = projects.map((p) => p.id);
+  if (!ids.length) {
+    return {
+      role,
+      canEdit: role === "owner" || role === "admin" || role === "collaborator",
+      workspace: workspace
+        ? {
+            id: workspace.id,
+            name: workspace.name,
+            currency: workspace.currency || "EUR",
+            timezone: workspace.timezone || "Europe/Istanbul",
+          }
+        : null,
+      entries: [],
+      projects: [],
+      todos: [],
+    };
+  }
+
+  const [entries, todos] = await Promise.all([
+    query(
+      `${TIME_ENTRY_DETAIL_SQL}
+       WHERE te.project_id = ANY($1::uuid[])
+         AND te.entry_date >= $2
+         AND te.entry_date <= $3
+       ORDER BY te.entry_date ASC, te.created_at ASC`,
+      [ids, fromDate.value, toDate.value]
+    ),
+    query(
+      `SELECT id, project_id, title, status
+       FROM todos
+       WHERE project_id = ANY($1::uuid[])
+       ORDER BY sort_order ASC, created_at ASC`,
+      [ids]
+    ),
+  ]);
+
+  const visibleEntries = role === "client" ? entries.filter((e) => e.billable) : entries;
+  return {
+    role,
+    canEdit: role === "owner" || role === "admin" || role === "collaborator",
+    workspace: workspace
+      ? {
+          id: workspace.id,
+          name: workspace.name,
+          currency: workspace.currency || workspace.workspace_currency || "EUR",
+          timezone: workspace.timezone || workspace.workspace_timezone || "Europe/Istanbul",
+        }
+      : null,
+    entries: visibleEntries.map(mapTimeEntry),
+    projects: projects.map((p) => ({
+      id: p.id,
+      name: p.name,
+      clientId: p.client_id,
+      clientName: p.client_company_name || p.client_email || null,
+    })),
+    todos: todos.map((t) => ({
+      id: t.id,
+      projectId: t.project_id,
+      title: t.title,
+      status: t.status,
+    })),
+  };
+}
+
+async function assertTodoOnProject(todoId, projectId) {
+  if (!todoId) return null;
+  const todo = await getTodoById(todoId);
+  if (!todo || todo.project_id !== projectId) fail(400, "To-do does not belong to that project");
+  if (todo.status === "invoiced") fail(409, "Invoiced to-dos are locked");
+  return todo;
+}
+
+export async function createTimeEntryDirect({ user, projectId, todoId, hours, entryDate, note, billable }) {
+  if (!projectId) fail(400, "Pick a project");
+  const access = await getProjectAccess(projectId, user);
+  if (!access) fail(404, "Project not found");
+  if (access.role === "client") fail(403, "Clients cannot log time");
+  const parsedHours = parsePositiveHours(hours, { required: true, max: 24 });
+  if (parsedHours.error) fail(400, parsedHours.error);
+  const parsedDate = parseDateInput(entryDate);
+  if (parsedDate.error || !parsedDate.value) fail(400, "Date must be YYYY-MM-DD");
+  const todo = await assertTodoOnProject(todoId || null, access.project.id);
+  const row = await queryOne(
+    `INSERT INTO time_entries
+       (workspace_id, project_id, todo_id, user_id, hours, note, billable, entry_date)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     RETURNING id`,
+    [
+      access.project.workspace_id,
+      access.project.id,
+      todo?.id ?? null,
+      user.id,
+      parsedHours.value,
+      typeof note === "string" ? note.trim().slice(0, 500) || null : null,
+      billable === false ? false : true,
+      parsedDate.value,
+    ]
+  );
+  return getTimeEntryById(row.id);
+}
+
+export async function updateTimeEntry({ user, entryId, projectId, todoId, hours, entryDate, note, billable }) {
+  const existing = await queryOne(`SELECT * FROM time_entries WHERE id = $1`, [entryId]);
+  if (!existing) fail(404, "Time entry not found");
+  const access = await getProjectAccess(existing.project_id, user);
+  if (!access || access.role === "client") fail(404, "Time entry not found");
+  if (existing.invoice_id) fail(409, "Invoiced hours are locked");
+  if (access.role === "collaborator" && existing.user_id !== user.id) {
+    fail(403, "You can only edit your own hours");
+  }
+
+  const nextProjectId = projectId || existing.project_id;
+  if (nextProjectId !== existing.project_id) {
+    const nextAccess = await getProjectAccess(nextProjectId, user);
+    if (!nextAccess || nextAccess.role === "client") fail(404, "Project not found");
+    if (nextAccess.project.workspace_id !== existing.workspace_id) {
+      fail(400, "Hours must stay in the same workspace");
+    }
+  }
+
+  let nextTodoId = existing.todo_id;
+  if (todoId !== undefined) {
+    const todo = await assertTodoOnProject(todoId || null, nextProjectId);
+    nextTodoId = todo?.id ?? null;
+  } else if (nextProjectId !== existing.project_id && existing.todo_id) {
+    const todo = await getTodoById(existing.todo_id);
+    if (!todo || todo.project_id !== nextProjectId) nextTodoId = null;
+  }
+
+  let nextHours = asNumber(existing.hours);
+  if (hours !== undefined) {
+    const parsedHours = parsePositiveHours(hours, { required: true, max: 24 });
+    if (parsedHours.error) fail(400, parsedHours.error);
+    nextHours = parsedHours.value;
+  }
+
+  let nextDate = mapSqlDate(existing.entry_date);
+  if (entryDate !== undefined) {
+    const parsedDate = parseDateInput(entryDate);
+    if (parsedDate.error || !parsedDate.value) fail(400, "Date must be YYYY-MM-DD");
+    nextDate = parsedDate.value;
+  }
+
+  const nextNote =
+    note === undefined
+      ? existing.note
+      : typeof note === "string"
+        ? note.trim().slice(0, 500) || null
+        : existing.note;
+  const nextBillable = billable === undefined ? existing.billable : billable !== false;
+
+  await execute(
+    `UPDATE time_entries
+        SET project_id = $2,
+            todo_id = $3,
+            hours = $4,
+            entry_date = $5,
+            note = $6,
+            billable = $7
+      WHERE id = $1`,
+    [existing.id, nextProjectId, nextTodoId, nextHours, nextDate, nextNote, nextBillable]
+  );
+  return getTimeEntryById(existing.id);
 }
