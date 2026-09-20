@@ -3,13 +3,16 @@ import { Link } from "react-router-dom"
 import { LuChevronLeft } from "react-icons/lu"
 import { INK, MUTED } from "@/theme/tokens"
 import { PageBody } from "./PageHeader"
-import { WelcomeBanner } from "./WelcomeBanner"
+import { WelcomeBanner, type PageStat } from "./WelcomeBanner"
 import { FeatureEmptyState, InquiryMockup } from "./FeatureEmptyState"
 import type { ReactNode } from "react"
 
+export type { PageStat }
+
 export interface PageIntro {
   title: string
-  bullets: string[]
+  bullets?: string[]
+  stats?: PageStat[]
   cta?: ReactNode
   mockup?: ReactNode
 }
@@ -22,6 +25,7 @@ interface PageShellProps {
   backLabel?: string
   action?: ReactNode
   intro?: PageIntro
+  stats?: PageStat[]
   wide?: boolean
   children: ReactNode
 }
@@ -34,6 +38,7 @@ export function PageShell({
   backLabel = "Back",
   action,
   intro,
+  stats,
   wide = true,
   children,
 }: PageShellProps) {
@@ -67,13 +72,14 @@ export function PageShell({
         </Link>
       )}
 
-      <WelcomeBanner eyebrow={eyebrow} title={title} action={action} />
+      <WelcomeBanner eyebrow={eyebrow} title={title} action={action} stats={stats} />
 
       {island && (
         <Box mb={6}>
           <FeatureEmptyState
             title={island.title}
             bullets={island.bullets}
+            stats={island.stats ?? stats}
             cta={island.cta}
             mockup={island.mockup ?? <InquiryMockup />}
           />

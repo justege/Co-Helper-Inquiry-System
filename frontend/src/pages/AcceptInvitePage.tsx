@@ -6,9 +6,9 @@ import { getInvitePreview, acceptInvite, type InvitePreview } from "@/api/worksp
 import { GREEN, INK, MUTED } from "@/components/marketing/tokens"
 
 function freelancerName(freelancer: InvitePreview["freelancer"]) {
-  if (!freelancer) return "the one-person business you work with"
+  if (!freelancer) return "Someone you work with"
   const full = [freelancer.firstName, freelancer.lastName].filter(Boolean).join(" ")
-  return full || freelancer.companyName || freelancer.username || freelancer.email
+  return full || freelancer.companyName || freelancer.username || freelancer.email || "Someone you work with"
 }
 
 export default function AcceptInvitePage() {
@@ -73,10 +73,14 @@ export default function AcceptInvitePage() {
               You&rsquo;re invited
             </Text>
             <Heading fontSize="1.375rem" fontWeight="800" color={INK} letterSpacing="-0.02em" mb={2}>
-              {freelancerName(preview.freelancer)} invited you to Co-Helper
+              {freelancerName(preview.freelancer)} invited you
+              {preview.projectName ? ` to ${preview.projectName}` : preview.workspaceName ? ` to ${preview.workspaceName}` : " to Co-Helper"}
             </Heading>
             <Text fontSize="0.875rem" color={MUTED} lineHeight="1.65" mb={7}>
-              Accept the invite to join the workspace and see the projects shared with you.
+              Accept the invite on Co-Helper to join the workspace
+              {preview.kind === "collaborator"
+                ? " and work on the project you were invited to."
+                : " and see the projects shared with you."}
             </Text>
 
             <Box

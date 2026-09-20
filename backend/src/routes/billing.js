@@ -10,6 +10,7 @@ import {
   upsertFromStripe,
 } from "../lib/stripe.js";
 import { queryOne } from "../db.js";
+import { appUrl } from "../lib/email.js";
 
 const router = Router();
 
@@ -87,7 +88,7 @@ router.post("/checkout", requireAuth, attachRole, async (req, res) => {
     const ws = await getWorkspaceByOwner(req.dbUser.id);
     if (!ws) return res.status(404).json({ error: "Workspace not found" });
     const sub = await ensureSubscriptionRow(ws.id);
-    const appUrl = (process.env.PUBLIC_APP_URL || "http://localhost:5173").replace(/\/$/, "");
+    const origin = appUrl();
 
     const session = await stripeClient.checkout.sessions.create({
       mode: "subscription",
@@ -95,8 +96,8 @@ router.post("/checkout", requireAuth, attachRole, async (req, res) => {
       customer_email: sub.stripe_customer_id ? undefined : req.dbUser.email,
       client_reference_id: ws.id,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${appUrl}/app/settings?billing=success`,
-      cancel_url: `${appUrl}/app/settings?billing=cancel`,
+      success_url: `${origin}/app/settings?billing=success`,
+      cancel_url: `${origin}/app/settings?billing=cancel`,
       metadata: { workspaceId: ws.id, plan: defaultPlan() },
     });
     res.json({ url: session.url });
@@ -119,10 +120,9 @@ router.post("/portal", requireAuth, attachRole, async (req, res) => {
     if (!sub?.stripe_customer_id) {
       return res.status(400).json({ error: "No Stripe customer yet — subscribe first" });
     }
-    const appUrl = (process.env.PUBLIC_APP_URL || "http://localhost:5173").replace(/\/$/, "");
     const portal = await stripeClient.billingPortal.sessions.create({
       customer: sub.stripe_customer_id,
-      return_url: `${appUrl}/app/settings`,
+      return_url: appUrl("/app/settings"),
     });
     res.json({ url: portal.url });
   } catch (err) {

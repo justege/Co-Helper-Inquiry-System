@@ -1,4 +1,5 @@
 import { query, queryOne, execute } from "../db.js";
+import { mapClientBilling } from "./billingProfile.js";
 
 export async function ensureWorkspaceForOwner(ownerId, name) {
   let workspace = await queryOne("SELECT * FROM workspaces WHERE owner_id = $1", [ownerId]);
@@ -8,7 +9,7 @@ export async function ensureWorkspaceForOwner(ownerId, name) {
       `INSERT INTO workspaces (owner_id, name)
        VALUES ($1, $2)
        RETURNING *`,
-      [ownerId, name?.trim() || "My workspace"]
+      [ownerId, name?.trim() || "Workspace"]
     );
   }
 
@@ -38,9 +39,13 @@ export async function startWorkspaceForUser(user, name) {
     await execute("UPDATE users SET role = 'expert' WHERE id = $1", [user.id]);
   }
 
+  const who =
+    String(user.company_name || "").trim() ||
+    [user.first_name, user.last_name].filter(Boolean).join(" ").trim() ||
+    String(user.username || "").trim();
   return ensureWorkspaceForOwner(
     user.id,
-    name?.trim() || user.company_name || user.username || "My workspace"
+    name?.trim() || (who ? `${who}'s workspace` : "Workspace")
   );
 }
 
@@ -103,6 +108,7 @@ export function mapClient(row) {
     notes: row.notes ?? null,
     projectCount: row.project_count ?? 0,
     createdAt: row.created_at,
+    ...mapClientBilling(row),
   };
 }
 

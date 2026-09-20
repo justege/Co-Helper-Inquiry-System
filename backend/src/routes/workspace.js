@@ -15,10 +15,16 @@ import {
   listProjectPeople,
   upsertWorkspaceMember,
 } from "../lib/workspace.js";
-import { sendEmail, appUrl, inviteEmail, sendTestEmail } from "../lib/email.js";
+import { sendEmail, appUrl, inviteEmail, sendTestEmail, personLabel, workspaceDisplayName } from "../lib/email.js";
 import { encryptSecret } from "../lib/secret.js";
 import { createNotification } from "../lib/notifications.js";
 import { clientLimitForWorkspace } from "../lib/stripe.js";
+import {
+  clientInsertValues,
+  clientRecordPatch,
+  mapWorkspaceBilling,
+  workspaceBillingPatch,
+} from "../lib/billingProfile.js";
 import {
   addProjectBlocker,
   addProjectComment,
@@ -136,6 +142,7 @@ function workspaceSettings(ws) {
     smtpConfigured: Boolean(ws.smtp_password_enc),
     weeklyHours: ws.weekly_hours != null ? Number(ws.weekly_hours) : 20,
     createdAt: ws.created_at,
+    ...mapWorkspaceBilling(ws),
   };
 }
 
@@ -167,12 +174,7 @@ async function ensureOwnerWorkspace(req) {
 }
 
 function freelancerLabel(user) {
-  return (
-    user.company_name ||
-    [user.first_name, user.last_name].filter(Boolean).join(" ") ||
-    user.username ||
-    "A solo business"
-  );
+  return personLabel(user);
 }
 
 function mapInvitation(inv) {
@@ -190,14 +192,21 @@ function mapInvitation(inv) {
 
 async function sendInvite(ws, user, inv) {
   const inviteUrl = appUrl(`/invite/${inv.token}`);
+  let projectName = null;
+  if (inv.project_id) {
+    const project = await queryOne("SELECT name FROM projects WHERE id = $1", [inv.project_id]);
+    projectName = project?.name || null;
+  }
   await sendEmail({
     workspace: ws,
+    replyTo: user.email || undefined,
     ...inviteEmail({
-      workspaceName: ws.name,
+      workspaceName: workspaceDisplayName(ws, user),
       freelancerName: freelancerLabel(user),
       inviteUrl,
       email: inv.invited_email,
       kind: inv.kind,
+      projectName,
     }),
   });
 }
@@ -301,18 +310,38 @@ router.post("/clients", requireAuth, attachRole, async (req, res) => {
       });
     }
 
+    const extra = clientInsertValues(req.body);
     const row = await queryOne(
-      `INSERT INTO clients (workspace_id, email, first_name, last_name, company_name, phone, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO clients (
+         workspace_id, email, first_name, last_name, company_name, phone, notes,
+         trade_name, legal_name, street, address_extra, postal_code, city, country,
+         vat_id, tax_number, commercial_register, register_court, legal_form,
+         contact_person, buyer_reference
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
        RETURNING *`,
       [
         ws.id,
         email,
-        typeof req.body?.firstName === "string" ? req.body.firstName.trim().slice(0, 80) || null : null,
-        typeof req.body?.lastName === "string" ? req.body.lastName.trim().slice(0, 80) || null : null,
-        typeof req.body?.companyName === "string" ? req.body.companyName.trim().slice(0, 120) || null : null,
-        typeof req.body?.phone === "string" ? req.body.phone.trim().slice(0, 40) || null : null,
-        typeof req.body?.notes === "string" ? req.body.notes.trim().slice(0, 2000) || null : null,
+        extra.first_name,
+        extra.last_name,
+        extra.company_name,
+        extra.phone,
+        extra.notes,
+        extra.trade_name,
+        extra.legal_name,
+        extra.street,
+        extra.address_extra,
+        extra.postal_code,
+        extra.city,
+        extra.country,
+        extra.vat_id,
+        extra.tax_number,
+        extra.commercial_register,
+        extra.register_court,
+        extra.legal_form,
+        extra.contact_person,
+        extra.buyer_reference,
       ]
     );
 
@@ -377,25 +406,18 @@ router.patch("/clients/:id", requireAuth, attachRole, async (req, res) => {
     const email = req.body?.email != null ? parseEmail(req.body.email) : existing.email;
     if (!email) return res.status(400).json({ error: "A valid email is required" });
 
+    const patch = clientRecordPatch(req.body);
+    const sets = ["email = $1"];
+    const values = [email];
+    let i = 2;
+    patch.fields.forEach((column, index) => {
+      sets.push(`${column} = $${i++}`);
+      values.push(patch.values[index]);
+    });
+    values.push(existing.id);
     const row = await queryOne(
-      `UPDATE clients SET
-         email = $1,
-         first_name = COALESCE($2, first_name),
-         last_name = COALESCE($3, last_name),
-         company_name = COALESCE($4, company_name),
-         phone = COALESCE($5, phone),
-         notes = COALESCE($6, notes)
-       WHERE id = $7
-       RETURNING *`,
-      [
-        email,
-        req.body?.firstName !== undefined ? String(req.body.firstName).trim().slice(0, 80) || null : null,
-        req.body?.lastName !== undefined ? String(req.body.lastName).trim().slice(0, 80) || null : null,
-        req.body?.companyName !== undefined ? String(req.body.companyName).trim().slice(0, 120) || null : null,
-        req.body?.phone !== undefined ? String(req.body.phone).trim().slice(0, 40) || null : null,
-        req.body?.notes !== undefined ? String(req.body.notes).trim().slice(0, 2000) || null : null,
-        existing.id,
-      ]
+      `UPDATE clients SET ${sets.join(", ")} WHERE id = $${i} RETURNING *`,
+      values
     );
     const counted = await queryOne(
       `${CLIENT_SELECT} WHERE c.id = $1`,
@@ -893,7 +915,7 @@ router.delete("/invitations/:id", requireAuth, attachRole, async (req, res) => {
 router.get("/invitations/token/:token", async (req, res) => {
   try {
     const data = await queryOne(
-      `SELECT inv.invited_email, inv.status, inv.kind,
+      `SELECT inv.invited_email, inv.status, inv.kind, p.name AS project_name,
               json_build_object(
                 'name', w.name,
                 'owner', json_build_object(
@@ -907,6 +929,7 @@ router.get("/invitations/token/:token", async (req, res) => {
        FROM workspace_invitations inv
        JOIN workspaces w ON w.id = inv.workspace_id
        JOIN users u ON u.id = w.owner_id
+       LEFT JOIN projects p ON p.id = inv.project_id
        WHERE inv.token = $1`,
       [req.params.token]
     );
@@ -916,7 +939,11 @@ router.get("/invitations/token/:token", async (req, res) => {
     res.json({
       email: data.invited_email,
       kind: data.kind,
-      workspaceName: data.workspace?.name ?? null,
+      workspaceName: workspaceDisplayName(
+        { name: data.workspace?.name },
+        data.workspace?.owner
+      ),
+      projectName: data.project_name || null,
       freelancer: mapUserBrief(data.workspace?.owner),
     });
   } catch (err) {
@@ -1112,6 +1139,12 @@ router.patch("/settings", requireAuth, attachRole, async (req, res) => {
       fields.push(`smtp_password_enc = $${i++}`);
       values.push(encryptSecret(req.body.smtpPassword.trim()));
     }
+    const billing = workspaceBillingPatch(req.body);
+    if (billing.error) return res.status(400).json({ error: billing.error });
+    billing.fields.forEach((column, index) => {
+      fields.push(`${column} = $${i++}`);
+      values.push(billing.values[index]);
+    });
     if (!fields.length) return res.json(workspaceSettings(ws));
     values.push(ws.id);
     const row = await queryOne(

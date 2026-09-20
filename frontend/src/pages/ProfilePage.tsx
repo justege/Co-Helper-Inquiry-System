@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form"
 import { Field } from "@/components/ui/field"
 import { FormInput } from "@/components/ui/form-controls"
 import { PageShell } from "@/components/ui/PageShell"
-import { PartnerMockup } from "@/components/ui/FeatureEmptyState"
 import { AppButton } from "@/components/ui/AppButton"
 import {
   APP_BG_SUBTLE,
@@ -75,19 +74,19 @@ export default function ProfilePage() {
     )
   }
 
+  const filled = [profile?.username, profile?.firstName, profile?.lastName, profile?.companyName]
+    .filter((value) => String(value || "").trim()).length
+
   return (
     <PageShell
       eyebrow="Account"
       title="Profile"
-      intro={{
-        title: "How you appear to clients and collaborators",
-        bullets: [
-          "Your name and company show on invites and shared projects",
-          "Keep this current so people know who they’re working with",
-          "Email stays on your account — change it from login settings if needed",
-        ],
-        mockup: <PartnerMockup />,
-      }}
+      stats={[
+        { label: "Complete", value: `${filled}/4` },
+        { label: "Name", value: [profile?.firstName, profile?.lastName].filter(Boolean).join(" ") || "—" },
+        { label: "Company", value: profile?.companyName || "—" },
+        { label: "Username", value: profile?.username || "—" },
+      ]}
     >
       <Box {...APP_CARD} overflow="hidden">
         <Box px={5} py={3.5} borderBottom={`1px solid ${APP_BORDER}`} bg={APP_BG_SUBTLE}>

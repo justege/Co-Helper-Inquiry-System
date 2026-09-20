@@ -3,14 +3,11 @@ import { Link } from "react-router-dom"
 import { INK, RADIUS_BANNER } from "@/theme/tokens"
 import type { ReactNode } from "react"
 
-const AVATARS = [
-  { initials: "SK", bg: "#3DA07E" },
-  { initials: "MT", bg: "#185FA5" },
-  { initials: "EV", bg: "#0F6E56" },
-  { initials: "TR", bg: "#6ABFA2" },
-  { initials: "PS", bg: "#083F30" },
-  { initials: "DM", bg: "#4B7A6A" },
-]
+export type PageStat = {
+  label: string
+  value: string
+  hint?: string
+}
 
 function MapTexture() {
   const dots: Array<{ cx: number; cy: number; r: number }> = []
@@ -42,14 +39,50 @@ function MapTexture() {
   )
 }
 
+export function BannerStats({ stats }: { stats: PageStat[] }) {
+  if (!stats.length) return null
+  return (
+    <Box display={{ base: "none", md: "flex" }} alignItems="stretch" gap={0} flexShrink={0}>
+      {stats.slice(0, 4).map((stat, i) => (
+        <Box
+          key={stat.label}
+          pl={i === 0 ? 0 : 5}
+          ml={i === 0 ? 0 : 5}
+          borderLeft={i === 0 ? "none" : "1px solid rgba(255,255,255,0.12)"}
+          minW="76px"
+        >
+          <Text
+            fontSize="1.25rem"
+            fontWeight="800"
+            color="white"
+            letterSpacing="-0.03em"
+            lineHeight="1.1"
+            whiteSpace="nowrap"
+            overflow="hidden"
+            textOverflow="ellipsis"
+            maxW="140px"
+          >
+            {stat.value}
+          </Text>
+          <Text fontSize="0.6875rem" fontWeight="600" color="rgba(255,255,255,0.55)" mt="3px">
+            {stat.label}
+          </Text>
+        </Box>
+      ))}
+    </Box>
+  )
+}
+
 export function WelcomeBanner({
   eyebrow = "Dashboard",
   title,
   action,
+  stats,
 }: {
   eyebrow?: string
   title: string
   action?: ReactNode
+  stats?: PageStat[]
 }) {
   return (
     <Box
@@ -95,32 +128,20 @@ export function WelcomeBanner({
         >
           {title}
         </Heading>
+        {stats && stats.length > 0 && (
+          <Box display={{ base: "flex", md: "none" }} gap={5} mt={4} flexWrap="wrap">
+            {stats.slice(0, 4).map((stat) => (
+              <Box key={stat.label}>
+                <Text fontSize="1rem" fontWeight="800" color="white">{stat.value}</Text>
+                <Text fontSize="0.65rem" fontWeight="600" color="rgba(255,255,255,0.55)">{stat.label}</Text>
+              </Box>
+            ))}
+          </Box>
+        )}
       </Box>
 
-      <Box position="relative" zIndex={1} display="flex" alignItems="center" gap={4} flexShrink={0}>
-        <Box display={{ base: "none", md: "flex" }} alignItems="center">
-          {AVATARS.map((a, i) => (
-            <Box
-              key={a.initials}
-              w="36px"
-              h="36px"
-              ml={i === 0 ? 0 : "-10px"}
-              rounded="full"
-              bg={a.bg}
-              border="2px solid"
-              borderColor={INK}
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-              fontSize="0.625rem"
-              fontWeight="800"
-              color="white"
-              zIndex={AVATARS.length - i}
-            >
-              {a.initials}
-            </Box>
-          ))}
-        </Box>
+      <Box position="relative" zIndex={1} display="flex" alignItems="center" gap={5} flexShrink={0}>
+        {stats && stats.length > 0 ? <BannerStats stats={stats} /> : null}
         {action}
       </Box>
     </Box>

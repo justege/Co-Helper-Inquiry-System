@@ -30,7 +30,7 @@ import {
 import { InviteEmailsField } from "@/components/workspace/InviteEmailsField"
 import { EMPTY_INVITE_EMAILS, normalizeInviteEmails } from "@/lib/inviteEmails"
 import { displayName, formatPeopleList, peopleOnTodo } from "@/lib/people"
-import { TODO_STATUS_LABEL } from "@/lib/hours"
+import { TODO_STATUS_LABEL, formatHours } from "@/lib/hours"
 import { ProjectFinancePanel } from "@/components/work/ProjectFinancePanel"
 import { WorkBoard } from "@/components/work/WorkBoard"
 import { WorkTimeline } from "@/components/work/WorkTimeline"
@@ -151,6 +151,12 @@ export default function ProjectDetailPage() {
       title={data.project.name}
       backHref="/app"
       action={<StatusChip status={data.project.status} />}
+      stats={[
+        { label: "Open", value: String(openTodos.length) },
+        { label: "Hours", value: formatHours(work.project.loggedHours) },
+        { label: "Unbilled", value: formatHours(work.project.unbilledHours || 0) },
+        { label: "People", value: String(data.collaborators.length + data.pendingInvites.length + 1) },
+      ]}
     >
       <Box minW={0}>
           <Box mb={4}>

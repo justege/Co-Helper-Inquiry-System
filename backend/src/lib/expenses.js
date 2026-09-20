@@ -1,6 +1,14 @@
 import { query, queryOne, execute, withTransaction } from "../db.js";
 import { getProjectAccess, getWorkspaceByOwner } from "./workspace.js";
 import { asNumber, mapInvoice, mapInvoiceLine, nextInvoiceNumber, parseDateInput } from "./work.js";
+import {
+  addDaysIso,
+  isoDate,
+  snapshotBuyer,
+  snapshotSeller,
+  taxSetupForWorkspace,
+  todayIso,
+} from "./billingProfile.js";
 
 function fail(status, message) {
   const err = new Error(message);
@@ -493,7 +501,7 @@ export async function deleteExpense(user, expenseId) {
   await execute(`DELETE FROM expenses WHERE id = $1`, [expense.id]);
 }
 
-export async function createInvoiceFromExpenses({ user, projectId, allocationIds, note, taxPercent = 0, dueAt }) {
+export async function createInvoiceFromExpenses({ user, projectId, allocationIds, note, taxPercent, dueAt }) {
   const ws = await requireOwnerWorkspace(user);
   const access = await getProjectAccess(projectId, user);
   if (!access || access.role !== "owner") fail(404, "Project not found");
@@ -519,8 +527,10 @@ export async function createInvoiceFromExpenses({ user, projectId, allocationIds
   );
   if (!rows.length) fail(400, "No unbilled expenses for this project");
 
-  const tax = Number(taxPercent);
-  if (!Number.isFinite(tax) || tax < 0 || tax > 100) fail(400, "Invalid tax percent");
+  if (taxPercent != null && taxPercent !== "") {
+    const requested = Number(taxPercent);
+    if (!Number.isFinite(requested) || requested < 0 || requested > 100) fail(400, "Invalid tax percent");
+  }
 
   const lines = rows.map((row, index) => {
     const dateLabel =
@@ -535,16 +545,27 @@ export async function createInvoiceFromExpenses({ user, projectId, allocationIds
       sortOrder: index,
     };
   });
+  const tax = taxSetupForWorkspace(ws, taxPercent);
   const subtotal = money(lines.reduce((sum, line) => sum + line.amount, 0));
-  const taxAmount = money(subtotal * (tax / 100));
+  const taxAmount = money(subtotal * (tax.taxPercent / 100));
   const total = money(subtotal + taxAmount);
   const number = await nextInvoiceNumber(ws.id);
+  const owner = await queryOne(`SELECT * FROM users WHERE id = $1`, [ws.owner_id]);
+  const client = await queryOne(`SELECT * FROM clients WHERE id = $1`, [access.project.client_id]);
+  const seller = snapshotSeller(ws, owner);
+  const buyer = snapshotBuyer(client);
+  const issueDate = todayIso();
+  const dates = rows.map((row) => isoDate(row.incurred_at)).filter(Boolean).sort();
+  const servicePeriodStart = dates[0] || issueDate;
+  const servicePeriodEnd = dates[dates.length - 1] || issueDate;
+  const due = dueAt || addDaysIso(issueDate, seller.paymentTermsDays);
 
   return withTransaction(async (tx) => {
     const invoice = await tx.queryOne(
       `INSERT INTO invoices
-         (workspace_id, project_id, client_id, number, status, currency, subtotal, tax_percent, total, due_at, note, created_by)
-       VALUES ($1, $2, $3, $4, 'draft', $5, $6, $7, $8, $9, $10, $11)
+         (workspace_id, project_id, client_id, number, status, currency, subtotal, tax_percent, total, due_at, note, created_by,
+          issue_date, service_date, service_period_start, service_period_end, tax_category, tax_note, seller_snapshot, buyer_snapshot)
+       VALUES ($1, $2, $3, $4, 'draft', $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18::jsonb, $19::jsonb)
        RETURNING *`,
       [
         ws.id,
@@ -553,11 +574,19 @@ export async function createInvoiceFromExpenses({ user, projectId, allocationIds
         number,
         ws.currency || "EUR",
         subtotal,
-        tax,
+        tax.taxPercent,
         total,
-        dueAt || null,
+        due,
         note || "Pass-through costs",
         user.id,
+        issueDate,
+        servicePeriodEnd,
+        servicePeriodStart,
+        servicePeriodEnd,
+        tax.taxCategory,
+        tax.taxNote,
+        JSON.stringify(seller),
+        JSON.stringify(buyer),
       ]
     );
     const createdLines = [];

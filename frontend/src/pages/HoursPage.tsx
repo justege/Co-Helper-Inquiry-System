@@ -7,7 +7,7 @@ import { PageShell } from "@/components/ui/PageShell"
 import { AppTabs } from "@/components/ui/AppTabs"
 import { TimesheetGrid } from "@/components/work/TimesheetGrid"
 import { ExpensesBoard } from "@/components/work/ExpensesBoard"
-import { monthRange } from "@/lib/hours"
+import { formatHours, formatMoney, monthRange } from "@/lib/hours"
 
 const TABS = ["timesheet", "expenses"] as const
 type Tab = (typeof TABS)[number]
@@ -65,32 +65,53 @@ export default function HoursPage() {
     }, { replace: true })
   }
 
-  function loadTimesheet(quiet = false) {
+  function load(quiet = false) {
     if (!quiet) setLoading(true)
     getTimesheet({ from: range.from, to: range.to, projectId: projectId || undefined })
-      .then((data) => { setSheet(data); setError(null) })
-      .catch((e: Error) => setError(e.message))
-      .finally(() => setLoading(false))
-  }
-
-  function loadExpenses(quiet = false) {
-    if (!quiet) setLoading(true)
-    getExpenses()
-      .then((data) => { setExpenses(data); setError(null) })
+      .then(async (data) => {
+        setSheet(data)
+        setError(null)
+        if (data.role === "owner") {
+          try {
+            setExpenses(await getExpenses())
+          } catch {
+            setExpenses(null)
+          }
+        } else {
+          setExpenses(null)
+        }
+      })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false))
   }
 
   useEffect(() => {
-    if (tab === "expenses") loadExpenses()
-    else loadTimesheet()
-  }, [tab, range.from, range.to, projectId])
+    load()
+  }, [range.from, range.to, projectId])
 
   const showExpenses = !sheet || sheet.role === "owner" || tab === "expenses"
   const monthLabel = new Date(month.year, month.month, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" })
+  const monthHours = sheet?.entries.reduce((sum, entry) => sum + Number(entry.hours || 0), 0) ?? 0
+  const billableHours = sheet?.entries.filter((entry) => entry.billable).reduce((sum, entry) => sum + Number(entry.hours || 0), 0) ?? 0
+  const daysLogged = new Set(sheet?.entries.map((entry) => entry.entryDate.slice(0, 10)) ?? []).size
+  const expenseAmount = expenses?.vendors.reduce(
+    (sum, vendor) => sum + vendor.expenses.reduce((inner, expense) => inner + Number(expense.amount || 0), 0),
+    0
+  ) ?? 0
 
   return (
-    <PageShell eyebrow="Workspace" title="Hours">
+    <PageShell
+      eyebrow="Workspace"
+      title="Hours"
+      stats={[
+        { label: "This month", value: formatHours(monthHours) },
+        { label: "Billable", value: formatHours(billableHours) },
+        { label: "Days", value: String(daysLogged) },
+        sheet?.role === "owner"
+          ? { label: "Expenses", value: formatMoney(expenseAmount, expenses?.currency || sheet?.workspace?.currency || "EUR") }
+          : { label: "Projects", value: String(sheet?.projects.length ?? 0) },
+      ]}
+    >
       <Box mb={4}>
         <AppTabs
           value={tab}
@@ -117,7 +138,7 @@ export default function HoursPage() {
           projectId={projectId}
           onProjectChange={setProject}
           onMonthChange={setMonth}
-          onChanged={() => loadTimesheet(true)}
+          onChanged={() => load(true)}
         />
       )}
 
@@ -126,7 +147,7 @@ export default function HoursPage() {
           vendors={expenses.vendors}
           projects={expenses.projects}
           currency={expenses.currency}
-          onChanged={() => loadExpenses(true)}
+          onChanged={() => load(true)}
         />
       )}
     </PageShell>

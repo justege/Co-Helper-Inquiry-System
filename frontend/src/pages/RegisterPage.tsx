@@ -33,7 +33,9 @@ export default function RegisterPage() {
     getInvitePreview(invite)
       .then((p) => {
         const f = p.freelancer
-        const name = f ? [f.firstName, f.lastName].filter(Boolean).join(" ") || f.companyName || f.username : null
+        const name = f
+          ? [f.firstName, f.lastName].filter(Boolean).join(" ") || f.companyName || f.username || f.email
+          : null
         setFreelancerLabel(name)
       })
       .catch(() => null)

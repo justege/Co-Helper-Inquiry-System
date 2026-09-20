@@ -236,6 +236,12 @@ export default function ProjectsPage() {
         ),
         mockup: <ProjectMockup />,
       } : undefined}
+      stats={[
+        { label: "Projects", value: String(counts.all) },
+        { label: "Active", value: String(counts.active) },
+        { label: "Waiting", value: String(counts.waiting) },
+        { label: "Done", value: String(counts.done) },
+      ]}
     >
       {error && (
         <Box mb={3} bg="#FEF2F2" border="1px solid #FECACA" borderRadius="10px" px={4} py={3}>

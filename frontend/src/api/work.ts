@@ -184,6 +184,12 @@ export interface Invoice {
   subtotal: number
   taxPercent: number
   total: number
+  issueDate?: string | null
+  serviceDate?: string | null
+  servicePeriodStart?: string | null
+  servicePeriodEnd?: string | null
+  taxCategory?: string
+  taxNote?: string | null
   dueAt: string | null
   sentAt: string | null
   paidAt: string | null
@@ -449,6 +455,7 @@ export const getInvoice = (id: string) =>
     role: "owner" | "client" | "admin"
     projectName: string
     client: WorkspaceClient
+    billing?: { complete: boolean; missing: string[]; format: string }
   }>(`/api/workspace/invoices/${id}`)
 
 export const sendInvoice = (id: string) => api.post<Invoice>(`/api/workspace/invoices/${id}/send`, {})
@@ -461,7 +468,10 @@ export async function downloadInvoicePdf(id: string, number: string) {
   const res = await fetch(`${getApiBaseUrl()}/api/workspace/invoices/${id}/pdf`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   })
-  if (!res.ok) throw new Error("Could not download PDF")
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({})) as { error?: string }
+    throw new Error(body.error || "Could not download PDF")
+  }
   const blob = await res.blob()
   const url = URL.createObjectURL(blob)
   const a = document.createElement("a")

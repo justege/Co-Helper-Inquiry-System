@@ -2,7 +2,7 @@ import { Router } from "express";
 import { query, queryOne, execute } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { attachRole } from "../middleware/requireRole.js";
-import { ensureWorkspaceForOwner, getProjectAccess } from "../lib/workspace.js";
+import { ensureWorkspaceForOwner, getProjectAccess, mapClient } from "../lib/workspace.js";
 import {
   TODO_STATUSES,
   TODO_PRIORITIES,
@@ -25,6 +25,7 @@ import {
   setTodoDependencies,
   createInvoiceFromWork,
   getInvoiceAccess,
+  loadInvoiceRenderContext,
   listInvoicesForUser,
   loadInvoiceDetail,
   cancelInvoice,
@@ -51,8 +52,8 @@ import {
   signTodoAttachment,
   updateChecklistItem,
 } from "../lib/todoCard.js";
-import { buildInvoicePdf } from "../lib/invoicePdf.js";
-import { sendEmail, appUrl } from "../lib/email.js";
+import { buildInvoiceDocument } from "../lib/invoicePdf.js";
+import { sendEmail, appUrl, invoiceEmail, workspaceDisplayName } from "../lib/email.js";
 import { createNotification } from "../lib/notifications.js";
 
 const router = Router();
@@ -707,8 +708,8 @@ router.post("/projects/:id/invoices", requireAuth, attachRole, async (req, res) 
     const access = await getProjectAccess(req.params.id, req.dbUser);
     if (!access || access.role !== "owner") return bad(res, 404, "Project not found");
     const ws = await ensureWorkspaceForOwner(req.dbUser.id, req.dbUser.company_name);
-    const tax = req.body?.taxPercent != null ? Number(req.body.taxPercent) : 0;
-    if (!Number.isFinite(tax) || tax < 0 || tax > 100) return bad(res, 400, "Invalid tax percent");
+    const tax = req.body?.taxPercent != null ? Number(req.body.taxPercent) : undefined;
+    if (tax != null && (!Number.isFinite(tax) || tax < 0 || tax > 100)) return bad(res, 400, "Invalid tax percent");
     const ids = Array.isArray(req.body?.timeEntryIds)
       ? req.body.timeEntryIds.filter((id) => typeof id === "string")
       : null;
@@ -737,17 +738,23 @@ router.get("/invoices/:id", requireAuth, attachRole, async (req, res) => {
   try {
     const access = await getInvoiceAccess(req.params.id, req.dbUser);
     if (!access) return bad(res, 404, "Invoice not found");
-    const lines = await loadInvoiceDetail(access.invoice.id);
+    const ctx = await loadInvoiceRenderContext(access.invoice.id);
+    const lines = ctx?.lines || await loadInvoiceDetail(access.invoice.id);
     res.json({
       invoice: mapInvoice(access.invoice),
       lines: lines.map(mapInvoiceLine),
       role: access.role,
       projectName: access.invoice.project_name,
-      client: {
+      client: mapClient(ctx?.client) || {
         email: access.invoice.client_email,
         firstName: access.invoice.client_first_name,
         lastName: access.invoice.client_last_name,
         companyName: access.invoice.client_company_name,
+      },
+      billing: {
+        complete: !(ctx?.missing || []).length,
+        missing: ctx?.missing || [],
+        format: "zugferd-en16931",
       },
     });
   } catch (err) {
@@ -760,31 +767,17 @@ router.get("/invoices/:id/pdf", requireAuth, attachRole, async (req, res) => {
   try {
     const access = await getInvoiceAccess(req.params.id, req.dbUser);
     if (!access) return bad(res, 404, "Invoice not found");
-    const lines = await loadInvoiceDetail(access.invoice.id);
-    const owner = await queryOne(`SELECT * FROM users WHERE id = $1`, [access.invoice.owner_id]);
-    const ws = await queryOne(`SELECT * FROM workspaces WHERE id = $1`, [access.invoice.workspace_id]);
-    const pdf = await buildInvoicePdf({
-      invoice: access.invoice,
-      workspace: ws,
-      client: {
-        email: access.invoice.client_email,
-        first_name: access.invoice.client_first_name,
-        last_name: access.invoice.client_last_name,
-        company_name: access.invoice.client_company_name,
-      },
-      project: { name: access.invoice.project_name },
-      lines,
-      freelancer: owner,
-    });
+    const ctx = await loadInvoiceRenderContext(access.invoice.id);
+    if (!ctx) return bad(res, 404, "Invoice not found");
+    const built = await buildInvoiceDocument(ctx, { requireZugferd: false });
+    const filename = `${access.invoice.number.replace(/[^\w.-]+/g, "_")}.pdf`;
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${access.invoice.number}.pdf"`
-    );
-    res.send(pdf);
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("X-Invoice-Format", built.zugferd ? "zugferd-en16931" : "pdf");
+    res.send(built.pdf);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message, missing: err.missing });
   }
 });
 
@@ -800,24 +793,35 @@ async function sendInvoice(invoiceId, req) {
     err.status = 409;
     throw err;
   }
+  const ctx = await loadInvoiceRenderContext(access.invoice.id);
+  if (!ctx) {
+    const err = new Error("Invoice not found");
+    err.status = 404;
+    throw err;
+  }
+  const built = await buildInvoiceDocument(ctx, { requireZugferd: true });
   const sent = await queryOne(
     `UPDATE invoices SET status = 'sent', sent_at = COALESCE(sent_at, NOW()) WHERE id = $1 RETURNING *`,
     [access.invoice.id]
   );
-  const ws = await queryOne(`SELECT * FROM workspaces WHERE id = $1`, [access.invoice.workspace_id]);
+  const ws = ctx.workspace;
   const url = appUrl(`/app/invoices/${sent.id}`);
+  const filename = `${sent.number.replace(/[^\w.-]+/g, "_")}.pdf`;
+  const totalLabel = `${Number(sent.total).toFixed(2)} ${sent.currency}`;
   await sendEmail({
     workspace: ws,
-    to: access.invoice.client_email,
-    subject: `Invoice ${sent.number} from ${ws.name}`,
-    html: `
-      <div style="font-family:Inter,system-ui,sans-serif;color:#0E1B17;line-height:1.6">
-        <p>Invoice <strong>${sent.number}</strong> for <strong>${access.invoice.project_name}</strong> is ready.</p>
-        <p>Total: <strong>${sent.total} ${sent.currency}</strong></p>
-        <p><a href="${url}" style="display:inline-block;background:#0F6E56;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:600">View invoice</a></p>
-      </div>
-    `,
-    text: `Invoice ${sent.number} for ${access.invoice.project_name}. Total ${sent.total} ${sent.currency}. ${url}`,
+    replyTo: ws.billing_email || undefined,
+    ...invoiceEmail({
+      to: access.invoice.client_email,
+      number: sent.number,
+      workspaceName: workspaceDisplayName(ws, ctx.owner),
+      projectName: access.invoice.project_name,
+      totalLabel,
+      invoiceUrl: url,
+    }),
+    attachments: [
+      { filename, content: built.pdf, contentType: "application/pdf" },
+    ],
   });
   if (access.invoice.client_user_id) {
     await createNotification({

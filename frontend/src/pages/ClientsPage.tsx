@@ -5,7 +5,6 @@ import { Box, Spinner, Stack, Text } from "@chakra-ui/react"
 import { LuCopy, LuPlus, LuTrash2, LuUsers } from "react-icons/lu"
 import { PageShell } from "@/components/ui/PageShell"
 import { WelcomeBannerAction } from "@/components/ui/WelcomeBanner"
-import { PartnerMockup } from "@/components/ui/FeatureEmptyState"
 import { Field } from "@/components/ui/field"
 import { FormInput } from "@/components/ui/form-controls"
 import {
@@ -96,16 +95,27 @@ export default function ClientsPage() {
     setTimeout(() => setCopiedId(null), 2000)
   }
 
+  const clients = data?.clients ?? []
+  const empty = !loading && clients.length === 0
+  const joined = clients.filter((c) => c.userId).length
+  const projectTotal = clients.reduce((sum, c) => sum + (c.projectCount ?? 0), 0)
+
   return (
     <PageShell
       eyebrow="Workspace"
       title="Clients"
+      stats={[
+        { label: "Clients", value: String(clients.length) },
+        { label: "Joined", value: String(joined) },
+        { label: "Pending", value: String(invitations.length) },
+        { label: "Projects", value: String(projectTotal) },
+      ]}
       action={
         <WelcomeBannerAction onClick={() => { setInviteSent(null); setInviteOpen(true) }}>
           <LuPlus size={15} /> Add client
         </WelcomeBannerAction>
       }
-      intro={{
+      intro={empty ? {
         title: "Invite the companies you already work with",
         bullets: [
           "Add a client by email — they join at no extra cost",
@@ -117,8 +127,7 @@ export default function ClientsPage() {
             <LuPlus size={16} /> Add client
           </AppButton>
         ),
-        mockup: <PartnerMockup />,
-      }}
+      } : undefined}
     >
       {loading ? (
         <Box display="flex" alignItems="center" gap={2} py={8}>

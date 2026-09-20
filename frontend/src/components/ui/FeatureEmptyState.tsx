@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 import { Box, Stack, Text } from "@chakra-ui/react"
 import { Link } from "react-router-dom"
 import {
@@ -24,14 +24,16 @@ import {
 
 export function FeatureEmptyState({
   title,
-  bullets,
+  bullets = [],
+  stats,
   cta,
   mockup,
 }: {
   title: string
-  bullets: string[]
-  cta?: React.ReactNode
-  mockup?: React.ReactNode
+  bullets?: string[]
+  stats?: { label: string; value: string; hint?: string }[]
+  cta?: ReactNode
+  mockup?: ReactNode
 }) {
   return (
     <Box
@@ -40,7 +42,7 @@ export function FeatureEmptyState({
       borderRadius="16px"
       boxShadow="0 8px 28px rgba(14,27,23,0.06), 0 1px 3px rgba(14,27,23,0.04)"
       px={{ base: 7, md: 12 }}
-      py={{ base: 10, md: 14 }}
+      py={{ base: 8, md: 12 }}
       display="flex"
       alignItems="center"
       gap={{ base: 0, md: 12 }}
@@ -49,46 +51,70 @@ export function FeatureEmptyState({
     >
       <Box flex="1" minW={0}>
         <Text
-          fontSize={{ base: "1.625rem", md: "2rem" }}
+          fontSize={{ base: "1.5rem", md: "1.75rem" }}
           fontWeight="700"
           color={APP_INK}
           letterSpacing="-0.03em"
           lineHeight="1.2"
-          mb={6}
+          mb={bullets.length || stats?.length ? 5 : 0}
           maxW="420px"
         >
           {title}
         </Text>
 
-        <Stack gap={4} mb={cta ? 8 : 0}>
-          {bullets.map((bullet) => (
-            <Box key={bullet} display="flex" alignItems="flex-start" gap={3}>
-              <Box
-                w="18px"
-                h="18px"
-                mt="2px"
-                flexShrink={0}
-                borderRadius="full"
-                bg={APP_ACCENT}
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
-              >
-                <svg width="10" height="8" viewBox="0 0 10 8" fill="none" aria-hidden>
-                  <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+        {stats && stats.length > 0 && (
+          <Box display={{ base: "grid", md: "none" }} gridTemplateColumns="1fr 1fr" gap={3} mb={cta ? 6 : 0}>
+            {stats.map((stat) => (
+              <Box key={stat.label} bg={APP_BG_SUBTLE} border={`1px solid ${APP_BORDER}`} borderRadius="12px" p={3}>
+                <Text fontSize="0.65rem" fontWeight="700" color={APP_LABEL} textTransform="uppercase" letterSpacing="0.04em">{stat.label}</Text>
+                <Text fontSize="1.25rem" fontWeight="800" color={APP_INK} letterSpacing="-0.03em">{stat.value}</Text>
+                {stat.hint && <Text fontSize="0.7rem" color={APP_MUTED}>{stat.hint}</Text>}
               </Box>
-              <Text fontSize="0.9375rem" color="#374151" lineHeight="1.5">
-                {bullet}
-              </Text>
-            </Box>
-          ))}
-        </Stack>
+            ))}
+          </Box>
+        )}
+
+        {bullets.length > 0 && (
+          <Stack gap={4} mb={cta ? 8 : 0}>
+            {bullets.map((bullet) => (
+              <Box key={bullet} display="flex" alignItems="flex-start" gap={3}>
+                <Box
+                  w="18px"
+                  h="18px"
+                  mt="2px"
+                  flexShrink={0}
+                  borderRadius="full"
+                  bg={APP_ACCENT}
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                >
+                  <svg width="10" height="8" viewBox="0 0 10 8" fill="none" aria-hidden>
+                    <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </Box>
+                <Text fontSize="0.9375rem" color="#374151" lineHeight="1.5">
+                  {bullet}
+                </Text>
+              </Box>
+            ))}
+          </Stack>
+        )}
 
         {cta && <Box mt={0}>{cta}</Box>}
       </Box>
 
-      {mockup}
+      {stats && stats.length > 0 ? (
+        <Box display={{ base: "none", md: "grid" }} gridTemplateColumns="1fr 1fr" gap={3} w="100%" maxW="340px" flexShrink={0}>
+          {stats.map((stat) => (
+            <Box key={stat.label} bg={APP_BG_SUBTLE} border={`1px solid ${APP_BORDER}`} borderRadius="14px" p={4}>
+              <Text fontSize="0.65rem" fontWeight="700" color={APP_LABEL} textTransform="uppercase" letterSpacing="0.04em">{stat.label}</Text>
+              <Text fontSize="1.5rem" fontWeight="800" color={APP_INK} letterSpacing="-0.03em" mt={1}>{stat.value}</Text>
+              {stat.hint && <Text fontSize="0.75rem" color={APP_MUTED} mt={1}>{stat.hint}</Text>}
+            </Box>
+          ))}
+        </Box>
+      ) : mockup}
     </Box>
   )
 }

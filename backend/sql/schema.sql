@@ -46,6 +46,30 @@ CREATE TABLE IF NOT EXISTS workspaces (
   smtp_password_enc  TEXT,
   weekly_hours       NUMERIC(6, 2) NOT NULL DEFAULT 20
                      CHECK (weekly_hours > 0 AND weekly_hours <= 168),
+  legal_name         TEXT,
+  trade_name         TEXT,
+  street             TEXT,
+  address_extra      TEXT,
+  postal_code        TEXT,
+  city               TEXT,
+  country            TEXT NOT NULL DEFAULT 'DE',
+  vat_id             TEXT,
+  tax_number         TEXT,
+  commercial_register TEXT,
+  register_court     TEXT,
+  legal_form         TEXT,
+  managing_directors TEXT,
+  billing_phone      TEXT,
+  billing_email      TEXT,
+  website            TEXT,
+  iban               TEXT,
+  bic                TEXT,
+  bank_name          TEXT,
+  tax_regime         TEXT NOT NULL DEFAULT 'standard'
+                     CHECK (tax_regime IN ('standard', 'kleinunternehmer', 'reverse_charge')),
+  default_tax_percent NUMERIC(6, 2) NOT NULL DEFAULT 19,
+  payment_terms_days INTEGER NOT NULL DEFAULT 14
+                     CHECK (payment_terms_days >= 0 AND payment_terms_days <= 365),
   created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -70,8 +94,22 @@ CREATE TABLE IF NOT EXISTS clients (
   first_name    TEXT,
   last_name     TEXT,
   company_name  TEXT,
+  trade_name    TEXT,
+  legal_name    TEXT,
   phone         TEXT,
   notes         TEXT,
+  street        TEXT,
+  address_extra TEXT,
+  postal_code   TEXT,
+  city          TEXT,
+  country       TEXT NOT NULL DEFAULT 'DE',
+  vat_id        TEXT,
+  tax_number    TEXT,
+  commercial_register TEXT,
+  register_court TEXT,
+  legal_form    TEXT,
+  contact_person TEXT,
+  buyer_reference TEXT,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (workspace_id, email)
 );
@@ -228,6 +266,15 @@ CREATE TABLE IF NOT EXISTS invoices (
   subtotal      NUMERIC(12, 2) NOT NULL DEFAULT 0,
   tax_percent   NUMERIC(6, 2) NOT NULL DEFAULT 0,
   total         NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  issue_date    DATE NOT NULL DEFAULT CURRENT_DATE,
+  service_date  DATE,
+  service_period_start DATE,
+  service_period_end   DATE,
+  tax_category  TEXT NOT NULL DEFAULT 'S'
+                CHECK (tax_category IN ('S', 'E', 'AE', 'Z', 'O')),
+  tax_note      TEXT,
+  seller_snapshot JSONB,
+  buyer_snapshot  JSONB,
   due_at        DATE,
   sent_at       TIMESTAMPTZ,
   paid_at       TIMESTAMPTZ,
@@ -561,3 +608,72 @@ ALTER TABLE invoice_lines
 
 CREATE INDEX IF NOT EXISTS invoice_lines_expense_idx
   ON invoice_lines (expense_allocation_id) WHERE expense_allocation_id IS NOT NULL;
+
+-- German invoice / ZUGFeRD billing profiles (seller + buyer).
+ALTER TABLE workspaces
+  ADD COLUMN IF NOT EXISTS legal_name TEXT,
+  ADD COLUMN IF NOT EXISTS trade_name TEXT,
+  ADD COLUMN IF NOT EXISTS street TEXT,
+  ADD COLUMN IF NOT EXISTS address_extra TEXT,
+  ADD COLUMN IF NOT EXISTS postal_code TEXT,
+  ADD COLUMN IF NOT EXISTS city TEXT,
+  ADD COLUMN IF NOT EXISTS country TEXT NOT NULL DEFAULT 'DE',
+  ADD COLUMN IF NOT EXISTS vat_id TEXT,
+  ADD COLUMN IF NOT EXISTS tax_number TEXT,
+  ADD COLUMN IF NOT EXISTS commercial_register TEXT,
+  ADD COLUMN IF NOT EXISTS register_court TEXT,
+  ADD COLUMN IF NOT EXISTS legal_form TEXT,
+  ADD COLUMN IF NOT EXISTS managing_directors TEXT,
+  ADD COLUMN IF NOT EXISTS billing_phone TEXT,
+  ADD COLUMN IF NOT EXISTS billing_email TEXT,
+  ADD COLUMN IF NOT EXISTS website TEXT,
+  ADD COLUMN IF NOT EXISTS iban TEXT,
+  ADD COLUMN IF NOT EXISTS bic TEXT,
+  ADD COLUMN IF NOT EXISTS bank_name TEXT,
+  ADD COLUMN IF NOT EXISTS tax_regime TEXT NOT NULL DEFAULT 'standard',
+  ADD COLUMN IF NOT EXISTS default_tax_percent NUMERIC(6, 2) NOT NULL DEFAULT 19,
+  ADD COLUMN IF NOT EXISTS payment_terms_days INTEGER NOT NULL DEFAULT 14;
+
+ALTER TABLE workspaces DROP CONSTRAINT IF EXISTS workspaces_tax_regime_check;
+ALTER TABLE workspaces
+  ADD CONSTRAINT workspaces_tax_regime_check
+  CHECK (tax_regime IN ('standard', 'kleinunternehmer', 'reverse_charge'));
+
+ALTER TABLE workspaces DROP CONSTRAINT IF EXISTS workspaces_payment_terms_days_check;
+ALTER TABLE workspaces
+  ADD CONSTRAINT workspaces_payment_terms_days_check
+  CHECK (payment_terms_days >= 0 AND payment_terms_days <= 365);
+
+ALTER TABLE clients
+  ADD COLUMN IF NOT EXISTS trade_name TEXT,
+  ADD COLUMN IF NOT EXISTS legal_name TEXT,
+  ADD COLUMN IF NOT EXISTS street TEXT,
+  ADD COLUMN IF NOT EXISTS address_extra TEXT,
+  ADD COLUMN IF NOT EXISTS postal_code TEXT,
+  ADD COLUMN IF NOT EXISTS city TEXT,
+  ADD COLUMN IF NOT EXISTS country TEXT NOT NULL DEFAULT 'DE',
+  ADD COLUMN IF NOT EXISTS vat_id TEXT,
+  ADD COLUMN IF NOT EXISTS tax_number TEXT,
+  ADD COLUMN IF NOT EXISTS commercial_register TEXT,
+  ADD COLUMN IF NOT EXISTS register_court TEXT,
+  ADD COLUMN IF NOT EXISTS legal_form TEXT,
+  ADD COLUMN IF NOT EXISTS contact_person TEXT,
+  ADD COLUMN IF NOT EXISTS buyer_reference TEXT;
+
+ALTER TABLE invoices
+  ADD COLUMN IF NOT EXISTS issue_date DATE,
+  ADD COLUMN IF NOT EXISTS service_date DATE,
+  ADD COLUMN IF NOT EXISTS service_period_start DATE,
+  ADD COLUMN IF NOT EXISTS service_period_end DATE,
+  ADD COLUMN IF NOT EXISTS tax_category TEXT NOT NULL DEFAULT 'S',
+  ADD COLUMN IF NOT EXISTS tax_note TEXT,
+  ADD COLUMN IF NOT EXISTS seller_snapshot JSONB,
+  ADD COLUMN IF NOT EXISTS buyer_snapshot JSONB;
+
+UPDATE invoices SET issue_date = created_at::date WHERE issue_date IS NULL;
+ALTER TABLE invoices ALTER COLUMN issue_date SET DEFAULT CURRENT_DATE;
+
+ALTER TABLE invoices DROP CONSTRAINT IF EXISTS invoices_tax_category_check;
+ALTER TABLE invoices
+  ADD CONSTRAINT invoices_tax_category_check
+  CHECK (tax_category IN ('S', 'E', 'AE', 'Z', 'O'));

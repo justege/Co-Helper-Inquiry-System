@@ -19,9 +19,50 @@ export interface WorkspaceClient {
   companyName: string | null;
   phone?: string | null;
   notes?: string | null;
+  tradeName?: string | null;
+  legalName?: string | null;
+  street?: string | null;
+  addressExtra?: string | null;
+  postalCode?: string | null;
+  city?: string | null;
+  country?: string | null;
+  vatId?: string | null;
+  taxNumber?: string | null;
+  commercialRegister?: string | null;
+  registerCourt?: string | null;
+  legalForm?: string | null;
+  contactPerson?: string | null;
+  buyerReference?: string | null;
   projectCount?: number;
   createdAt: string;
   memberSince?: string;
+}
+
+export type TaxRegime = "standard" | "kleinunternehmer" | "reverse_charge";
+
+export interface WorkspaceBilling {
+  legalName?: string | null;
+  tradeName?: string | null;
+  street?: string | null;
+  addressExtra?: string | null;
+  postalCode?: string | null;
+  city?: string | null;
+  country?: string | null;
+  vatId?: string | null;
+  taxNumber?: string | null;
+  commercialRegister?: string | null;
+  registerCourt?: string | null;
+  legalForm?: string | null;
+  managingDirectors?: string | null;
+  billingPhone?: string | null;
+  billingEmail?: string | null;
+  website?: string | null;
+  iban?: string | null;
+  bic?: string | null;
+  bankName?: string | null;
+  taxRegime?: TaxRegime;
+  defaultTaxPercent?: number;
+  paymentTermsDays?: number;
 }
 
 export interface FreelancerWorkspaceMe {
@@ -40,7 +81,7 @@ export interface FreelancerWorkspaceMe {
     smtpConfigured?: boolean;
     weeklyHours?: number;
     createdAt: string;
-  };
+  } & WorkspaceBilling;
   clients: WorkspaceClient[];
 }
 
@@ -356,6 +397,11 @@ export const createWorkspaceClient = (data: {
     data
   );
 
+export const updateWorkspaceClient = (
+  id: string,
+  data: Partial<Omit<WorkspaceClient, "id" | "workspaceId" | "userId" | "createdAt" | "projectCount" | "memberSince">>
+) => api.patch<WorkspaceClient>(`/api/workspace/clients/${id}`, data);
+
 export const inviteExistingClient = (id: string) =>
   api.post<WorkspaceInvitation>(`/api/workspace/clients/${id}/invite`, {});
 
@@ -372,6 +418,7 @@ export interface InvitePreview {
   email: string;
   kind?: "client" | "collaborator";
   workspaceName: string | null;
+  projectName?: string | null;
   freelancer: WorkspaceUserBrief | null;
 }
 
@@ -395,7 +442,7 @@ export const updateWorkspaceSettings = (data: {
   smtpFrom?: string;
   smtpPassword?: string;
   weeklyHours?: number;
-}) =>
+} & Partial<WorkspaceBilling>) =>
   api.patch<{
     id: string;
     name: string;

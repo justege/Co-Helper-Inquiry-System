@@ -14,7 +14,7 @@ import { useTodoCard } from "@/components/work/TodoCardContext"
 import { AvatarStack, DueChip } from "@/components/work/todoUi"
 import { APP_ACCENT, APP_BORDER, APP_INK, APP_MUTED } from "@/components/ui/appUi"
 import { displayName, peopleOnTodo } from "@/lib/people"
-import { formatWhen, TODO_STATUS_LABEL } from "@/lib/hours"
+import { formatHours, formatWhen, TODO_STATUS_LABEL } from "@/lib/hours"
 
 export default function DashboardPage() {
   const [me, setMe] = useState<User | null>(null)
@@ -54,9 +54,9 @@ export default function DashboardPage() {
   }, [])
 
   const owner = me?.role === "expert"
-  const greetName = me?.username || me?.firstName || "there"
+  const greetName = me?.firstName || me?.username || me?.companyName || ""
   const role = bench?.role || (owner ? "owner" : "client")
-  const title = role === "client" ? "Your work" : `Today, ${greetName}`
+  const title = role === "client" ? "Your work" : greetName ? `Today, ${greetName}` : "Today"
   const nowCanWork = Boolean(
     owner ||
     (bench?.now && bench.projects.some((project) => project.id === bench.now?.projectId && project.canWork))
@@ -74,11 +74,20 @@ export default function DashboardPage() {
   const waitingOnYou = bench?.waitingOnYou ?? []
   const discussions = bench?.discussions ?? []
   const projects = bench?.projects ?? []
+  const stats = [
+    { label: "Projects", value: String(bench?.projectCount ?? projects.length) },
+    { label: "Waiting", value: String(waitingOnYou.length) },
+    { label: "This week", value: formatHours(bench?.thisWeekHours || 0) },
+    owner
+      ? { label: "Unbilled", value: formatHours(bench?.unbilledHours || 0) }
+      : { label: "To-dos", value: String(myTodos.length) },
+  ]
 
   return (
     <PageShell
       eyebrow="Home"
       title={title}
+      stats={stats}
       action={
         owner ? (
           <WelcomeBannerAction to="/app/projects?new=1">

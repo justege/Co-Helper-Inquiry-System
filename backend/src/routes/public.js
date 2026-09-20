@@ -2,7 +2,7 @@ import { Router } from "express";
 import { queryOne, execute } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { registerPartner } from "../lib/partnerRegistration.js";
-import { sendEmail } from "../lib/email.js";
+import { sendEmail, contactEmail } from "../lib/email.js";
 
 const router = Router();
 
@@ -56,9 +56,8 @@ router.post("/contact", async (req, res) => {
     const inbox = process.env.CONTACT_INBOX || "hello@co-helper.com";
     await sendEmail({
       to: inbox,
-      subject: `[Co-Helper] ${subject}`,
-      text: `${name} <${email}> ${company}\n\n${message}`,
-      html: `<p><strong>${name}</strong> &lt;${email}&gt;<br>${company}</p><p>${message.replace(/\n/g, "<br>")}</p>`,
+      replyTo: email,
+      ...contactEmail({ name, email, company, subject, message }),
     });
     res.status(201).json({ success: true });
   } catch (err) {

@@ -29,6 +29,8 @@ const allowedOrigins = new Set(
 );
 
 allowedOrigins.add(PRODUCTION_APP_ORIGIN);
+allowedOrigins.add("https://co-helper.com");
+allowedOrigins.add("https://www.co-helper.com");
 
 if (process.env.RAILWAY_PUBLIC_DOMAIN) {
   allowedOrigins.add(`https://${process.env.RAILWAY_PUBLIC_DOMAIN}`);

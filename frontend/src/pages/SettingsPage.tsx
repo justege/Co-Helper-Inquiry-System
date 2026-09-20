@@ -15,9 +15,10 @@ import {
   LuShieldCheck,
   LuUsers,
   LuLayoutGrid,
+  LuReceipt,
 } from "react-icons/lu"
 import { PageShell } from "@/components/ui/PageShell"
-import { AdminInquiryMockup, StartWorkspaceButton } from "@/components/ui/FeatureEmptyState"
+import { StartWorkspaceButton } from "@/components/ui/FeatureEmptyState"
 import { getMe, updateMe, type User } from "@/api/users"
 import { getBilling, startCheckout, openBillingPortal } from "@/api/billing"
 import {
@@ -25,6 +26,8 @@ import {
   sendWorkspaceTestEmail,
   updateWorkspaceSettings,
   type ClientWorkspaceMe,
+  type FreelancerWorkspaceMe,
+  type TaxRegime,
 } from "@/api/workspace"
 import { sendPasswordResetEmail } from "firebase/auth"
 import { auth } from "@/lib/firebase"
@@ -43,12 +46,18 @@ type ContactFields = { phone: string; contactPref: string }
 
 export default function SettingsPage() {
   const [profile, setProfile] = useState<User | null>(null)
+  const [workspace, setWorkspace] = useState<FreelancerWorkspaceMe["workspace"] | null>(null)
   const [loading, setLoading] = useState(true)
   const [passwordSent, setPasswordSent] = useState(false)
   const [passwordError, setPasswordError] = useState<string | null>(null)
 
   useEffect(() => {
-    getMe().then(setProfile).finally(() => setLoading(false))
+    Promise.all([getMe(), getMyWorkspace().catch(() => null)])
+      .then(([me, ws]) => {
+        setProfile(me)
+        if (ws && ws.role === "owner") setWorkspace(ws.workspace)
+      })
+      .finally(() => setLoading(false))
   }, [])
 
   async function handlePasswordReset() {
@@ -74,19 +83,25 @@ export default function SettingsPage() {
     )
   }
 
+  const invoiceFields = workspace
+    ? [workspace.legalName, workspace.street, workspace.postalCode, workspace.city, workspace.iban, workspace.vatId || workspace.taxNumber]
+    : []
+  const invoiceFilled = invoiceFields.filter((value) => String(value || "").trim()).length
+  const taxLabel =
+    workspace?.taxRegime === "kleinunternehmer" ? "§19" :
+    workspace?.taxRegime === "reverse_charge" ? "§13b" :
+    workspace ? `${workspace.defaultTaxPercent ?? 19}%` : "—"
+
   return (
     <PageShell
       eyebrow="Account"
       title="Settings"
-      intro={{
-        title: "Your workspace, billing, and how people reach you",
-        bullets: [
-          "Set contact details so clients know how to get hold of you",
-          "Workspace name, weekly hours, currency, and email live here",
-          "Subscribe when you’re ready — invited companies never pay Co-Helper",
-        ],
-        mockup: <AdminInquiryMockup />,
-      }}
+      stats={[
+        { label: "Invoice details", value: workspace ? `${invoiceFilled}/6` : "—" },
+        { label: "Tax", value: taxLabel },
+        { label: "Email", value: workspace?.emailMode === "smtp" ? "SMTP" : "Co-Helper" },
+        { label: "Week", value: workspace?.weeklyHours ? `${workspace.weeklyHours}h` : "—" },
+      ]}
     >
       <Stack gap={5}>
         <ContactSection profile={profile} />
@@ -114,6 +129,7 @@ export default function SettingsPage() {
         {profile?.role === "expert" ? (
           <>
             <WorkspaceSettingsSection />
+            <InvoiceDetailsSection />
             <EmailSettingsSection />
             <BillingSection />
           </>
@@ -282,6 +298,196 @@ function WorkspaceSettingsSection() {
       </Grid>
       <AppButton size="sm" mt={5} onClick={() => updateWorkspaceSettings({ name, currency, timezone, weeklyHours: Number(weeklyHours) || 20 }).then(() => { setSaved(true); setTimeout(() => setSaved(false), 2000) })}>
         Save workspace
+      </AppButton>
+      {saved && <Text fontSize="sm" color="#047857" fontWeight="600" mt={2}>Saved</Text>}
+    </SectionCard>
+  )
+}
+
+function InvoiceDetailsSection() {
+  const [legalName, setLegalName] = useState("")
+  const [tradeName, setTradeName] = useState("")
+  const [legalForm, setLegalForm] = useState("")
+  const [street, setStreet] = useState("")
+  const [addressExtra, setAddressExtra] = useState("")
+  const [postalCode, setPostalCode] = useState("")
+  const [city, setCity] = useState("")
+  const [country, setCountry] = useState("DE")
+  const [vatId, setVatId] = useState("")
+  const [taxNumber, setTaxNumber] = useState("")
+  const [commercialRegister, setCommercialRegister] = useState("")
+  const [registerCourt, setRegisterCourt] = useState("")
+  const [managingDirectors, setManagingDirectors] = useState("")
+  const [billingEmail, setBillingEmail] = useState("")
+  const [billingPhone, setBillingPhone] = useState("")
+  const [website, setWebsite] = useState("")
+  const [iban, setIban] = useState("")
+  const [bic, setBic] = useState("")
+  const [bankName, setBankName] = useState("")
+  const [taxRegime, setTaxRegime] = useState<TaxRegime>("standard")
+  const [defaultTaxPercent, setDefaultTaxPercent] = useState("19")
+  const [paymentTermsDays, setPaymentTermsDays] = useState("14")
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    getMyWorkspace().then((ws) => {
+      if (ws.role !== "owner") return
+      const w = ws.workspace
+      setLegalName(w.legalName || "")
+      setTradeName(w.tradeName || "")
+      setLegalForm(w.legalForm || "")
+      setStreet(w.street || "")
+      setAddressExtra(w.addressExtra || "")
+      setPostalCode(w.postalCode || "")
+      setCity(w.city || "")
+      setCountry(w.country || "DE")
+      setVatId(w.vatId || "")
+      setTaxNumber(w.taxNumber || "")
+      setCommercialRegister(w.commercialRegister || "")
+      setRegisterCourt(w.registerCourt || "")
+      setManagingDirectors(w.managingDirectors || "")
+      setBillingEmail(w.billingEmail || "")
+      setBillingPhone(w.billingPhone || "")
+      setWebsite(w.website || "")
+      setIban(w.iban || "")
+      setBic(w.bic || "")
+      setBankName(w.bankName || "")
+      setTaxRegime(w.taxRegime || "standard")
+      setDefaultTaxPercent(String(w.defaultTaxPercent ?? 19))
+      setPaymentTermsDays(String(w.paymentTermsDays ?? 14))
+    }).catch(() => null)
+  }, [])
+
+  return (
+    <SectionCard icon={<LuReceipt size={16} />} title="German invoice (ZUGFeRD)">
+      <Text fontSize="0.875rem" color={APP_MUTED} mb={4}>
+        These seller details appear on every invoice and in the embedded ZUGFeRD XML. Street, postcode, city, country, and a VAT ID or tax number are required by German invoice law.
+      </Text>
+      <Grid templateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={5}>
+        <Box>
+          <FieldLabel>Legal name</FieldLabel>
+          <FormInput value={legalName} onChange={(e) => setLegalName(e.target.value)} />
+        </Box>
+        <Box>
+          <FieldLabel>Trade name (Handelsname)</FieldLabel>
+          <FormInput value={tradeName} onChange={(e) => setTradeName(e.target.value)} />
+        </Box>
+        <Box>
+          <FieldLabel>Legal form</FieldLabel>
+          <FormInput placeholder="Freiberufler, GmbH, UG…" value={legalForm} onChange={(e) => setLegalForm(e.target.value)} />
+        </Box>
+        <Box>
+          <FieldLabel>Managing directors</FieldLabel>
+          <FormInput value={managingDirectors} onChange={(e) => setManagingDirectors(e.target.value)} />
+        </Box>
+        <Box>
+          <FieldLabel>Street and number</FieldLabel>
+          <FormInput value={street} onChange={(e) => setStreet(e.target.value)} />
+        </Box>
+        <Box>
+          <FieldLabel>Address extra</FieldLabel>
+          <FormInput value={addressExtra} onChange={(e) => setAddressExtra(e.target.value)} />
+        </Box>
+        <Box>
+          <FieldLabel>Postal code</FieldLabel>
+          <FormInput value={postalCode} onChange={(e) => setPostalCode(e.target.value)} />
+        </Box>
+        <Box>
+          <FieldLabel>City</FieldLabel>
+          <FormInput value={city} onChange={(e) => setCity(e.target.value)} />
+        </Box>
+        <Box>
+          <FieldLabel>Country (ISO)</FieldLabel>
+          <FormInput maxLength={2} value={country} onChange={(e) => setCountry(e.target.value)} />
+        </Box>
+        <Box>
+          <FieldLabel>VAT ID (USt-IdNr.)</FieldLabel>
+          <FormInput placeholder="DE123456789" value={vatId} onChange={(e) => setVatId(e.target.value)} />
+        </Box>
+        <Box>
+          <FieldLabel>Tax number (Steuernummer)</FieldLabel>
+          <FormInput value={taxNumber} onChange={(e) => setTaxNumber(e.target.value)} />
+        </Box>
+        <Box>
+          <FieldLabel>Commercial register (HRB)</FieldLabel>
+          <FormInput value={commercialRegister} onChange={(e) => setCommercialRegister(e.target.value)} />
+        </Box>
+        <Box>
+          <FieldLabel>Register court</FieldLabel>
+          <FormInput value={registerCourt} onChange={(e) => setRegisterCourt(e.target.value)} />
+        </Box>
+        <Box>
+          <FieldLabel>Invoice email</FieldLabel>
+          <FormInput value={billingEmail} onChange={(e) => setBillingEmail(e.target.value)} />
+        </Box>
+        <Box>
+          <FieldLabel>Invoice phone</FieldLabel>
+          <FormInput value={billingPhone} onChange={(e) => setBillingPhone(e.target.value)} />
+        </Box>
+        <Box>
+          <FieldLabel>Website</FieldLabel>
+          <FormInput value={website} onChange={(e) => setWebsite(e.target.value)} />
+        </Box>
+        <Box>
+          <FieldLabel>IBAN</FieldLabel>
+          <FormInput value={iban} onChange={(e) => setIban(e.target.value)} />
+        </Box>
+        <Box>
+          <FieldLabel>BIC</FieldLabel>
+          <FormInput value={bic} onChange={(e) => setBic(e.target.value)} />
+        </Box>
+        <Box>
+          <FieldLabel>Bank</FieldLabel>
+          <FormInput value={bankName} onChange={(e) => setBankName(e.target.value)} />
+        </Box>
+        <Box>
+          <FieldLabel>VAT treatment</FieldLabel>
+          <FormNativeSelect value={taxRegime} onChange={(e) => setTaxRegime(e.target.value as TaxRegime)}>
+            <option value="standard">Standard VAT</option>
+            <option value="kleinunternehmer">Kleinunternehmer (§ 19 UStG)</option>
+            <option value="reverse_charge">Reverse charge (§ 13b UStG)</option>
+          </FormNativeSelect>
+        </Box>
+        <Box>
+          <FieldLabel>Default VAT %</FieldLabel>
+          <FormInput type="number" step="0.01" min="0" max="100" value={defaultTaxPercent} onChange={(e) => setDefaultTaxPercent(e.target.value)} />
+        </Box>
+        <Box>
+          <FieldLabel>Payment terms (days)</FieldLabel>
+          <FormInput type="number" min="0" max="365" value={paymentTermsDays} onChange={(e) => setPaymentTermsDays(e.target.value)} />
+        </Box>
+      </Grid>
+      {error && <Text fontSize="sm" color="#B91C1C" mt={3}>{error}</Text>}
+      <AppButton size="sm" mt={5} onClick={() => {
+        setError(null)
+        updateWorkspaceSettings({
+          legalName,
+          tradeName,
+          legalForm,
+          street,
+          addressExtra,
+          postalCode,
+          city,
+          country,
+          vatId,
+          taxNumber,
+          commercialRegister,
+          registerCourt,
+          managingDirectors,
+          billingEmail,
+          billingPhone,
+          website,
+          iban,
+          bic,
+          bankName,
+          taxRegime,
+          defaultTaxPercent: Number(defaultTaxPercent) || 0,
+          paymentTermsDays: Number(paymentTermsDays) || 0,
+        }).then(() => { setSaved(true); setTimeout(() => setSaved(false), 2000) })
+          .catch((e: Error) => setError(e.message))
+      }}>
+        Save invoice details
       </AppButton>
       {saved && <Text fontSize="sm" color="#047857" fontWeight="600" mt={2}>Saved</Text>}
     </SectionCard>

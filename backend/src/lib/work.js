@@ -1,5 +1,14 @@
 import { query, queryOne, execute, withTransaction } from "../db.js";
 import { mapClient, mapUserBrief, getProjectAccess, getWorkspaceByOwner, assertProjectAssignee, listProjectPeople } from "./workspace.js";
+import {
+  addDaysIso,
+  invoiceBillingGaps,
+  isoDate,
+  snapshotBuyer,
+  snapshotSeller,
+  taxSetupForWorkspace,
+  todayIso,
+} from "./billingProfile.js";
 
 export const TODO_STATUSES = ["backlog", "in_progress", "waiting_on_client", "done", "invoiced"];
 export const TODO_PRIORITIES = ["low", "medium", "high"];
@@ -212,7 +221,13 @@ export function mapInvoice(row) {
     subtotal: asNumber(row.subtotal),
     taxPercent: asNumber(row.tax_percent),
     total: asNumber(row.total),
-    dueAt: row.due_at,
+    issueDate: isoDate(row.issue_date) || isoDate(row.created_at),
+    serviceDate: isoDate(row.service_date),
+    servicePeriodStart: isoDate(row.service_period_start),
+    servicePeriodEnd: isoDate(row.service_period_end),
+    taxCategory: row.tax_category || "S",
+    taxNote: row.tax_note ?? null,
+    dueAt: isoDate(row.due_at),
     sentAt: row.sent_at,
     paidAt: row.paid_at,
     note: row.note ?? null,
@@ -1192,7 +1207,7 @@ export async function createInvoiceFromWork({
   user,
   timeEntryIds,
   note,
-  taxPercent = 0,
+  taxPercent,
   dueAt = null,
 }) {
   const entries = await unbilledEntries(project.id, timeEntryIds);
@@ -1238,16 +1253,28 @@ export async function createInvoiceFromWork({
       entries: g.entries,
     };
   });
+  const tax = taxSetupForWorkspace(workspace, taxPercent);
   const subtotal = Math.round(lines.reduce((s, l) => s + l.amount, 0) * 100) / 100;
-  const tax = Math.round(subtotal * (asNumber(taxPercent) / 100) * 100) / 100;
-  const total = Math.round((subtotal + tax) * 100) / 100;
+  const taxAmount = Math.round(subtotal * (tax.taxPercent / 100) * 100) / 100;
+  const total = Math.round((subtotal + taxAmount) * 100) / 100;
   const number = await nextInvoiceNumber(workspace.id);
+  const owner = await queryOne(`SELECT * FROM users WHERE id = $1`, [workspace.owner_id]);
+  const client = await queryOne(`SELECT * FROM clients WHERE id = $1`, [clientId]);
+  const seller = snapshotSeller(workspace, owner);
+  const buyer = snapshotBuyer(client);
+  const issueDate = todayIso();
+  const entryDates = entries.map((e) => isoDate(e.entry_date)).filter(Boolean).sort();
+  const servicePeriodStart = entryDates[0] || issueDate;
+  const servicePeriodEnd = entryDates[entryDates.length - 1] || issueDate;
+  const due = dueAt || addDaysIso(issueDate, seller.paymentTermsDays);
 
   return withTransaction(async (tx) => {
     const invoice = await tx.queryOne(
       `INSERT INTO invoices
-         (workspace_id, project_id, client_id, number, status, currency, subtotal, tax_percent, total, due_at, note, created_by)
-       VALUES ($1, $2, $3, $4, 'draft', $5, $6, $7, $8, $9, $10, $11)
+         (workspace_id, project_id, client_id, number, status, currency, subtotal, tax_percent, total,
+          due_at, note, created_by, issue_date, service_date, service_period_start, service_period_end,
+          tax_category, tax_note, seller_snapshot, buyer_snapshot)
+       VALUES ($1, $2, $3, $4, 'draft', $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18::jsonb, $19::jsonb)
        RETURNING *`,
       [
         workspace.id,
@@ -1256,11 +1283,19 @@ export async function createInvoiceFromWork({
         number,
         workspace.currency || "EUR",
         subtotal,
-        asNumber(taxPercent),
+        tax.taxPercent,
         total,
-        dueAt,
+        due,
         note || null,
         user.id,
+        issueDate,
+        servicePeriodEnd,
+        servicePeriodStart,
+        servicePeriodEnd,
+        tax.taxCategory,
+        tax.taxNote,
+        JSON.stringify(seller),
+        JSON.stringify(buyer),
       ]
     );
     for (const line of lines) {
@@ -1317,6 +1352,52 @@ export async function getInvoiceAccess(invoiceId, user) {
     return { invoice, role: "client" };
   }
   return null;
+}
+
+function parseSnapshot(value, fallback) {
+  if (!value) return fallback;
+  if (typeof value === "string") {
+    try {
+      return { ...fallback, ...JSON.parse(value) };
+    } catch {
+      return fallback;
+    }
+  }
+  if (typeof value === "object") return { ...fallback, ...value };
+  return fallback;
+}
+
+export async function loadInvoiceRenderContext(invoiceId) {
+  const invoice = await queryOne(
+    `SELECT i.*,
+            p.name AS project_name,
+            w.owner_id
+     FROM invoices i
+     JOIN projects p ON p.id = i.project_id
+     JOIN workspaces w ON w.id = i.workspace_id
+     WHERE i.id = $1`,
+    [invoiceId]
+  );
+  if (!invoice) return null;
+  const [workspace, owner, client, lines] = await Promise.all([
+    queryOne(`SELECT * FROM workspaces WHERE id = $1`, [invoice.workspace_id]),
+    queryOne(`SELECT * FROM users WHERE id = $1`, [invoice.owner_id]),
+    queryOne(`SELECT * FROM clients WHERE id = $1`, [invoice.client_id]),
+    loadInvoiceDetail(invoice.id),
+  ]);
+  const seller = parseSnapshot(invoice.seller_snapshot, snapshotSeller(workspace, owner));
+  const buyer = parseSnapshot(invoice.buyer_snapshot, snapshotBuyer(client));
+  return {
+    invoice,
+    workspace,
+    owner,
+    client,
+    lines,
+    seller,
+    buyer,
+    projectName: invoice.project_name,
+    missing: invoiceBillingGaps({ seller, buyer }),
+  };
 }
 
 export async function listInvoicesForUser(user) {
