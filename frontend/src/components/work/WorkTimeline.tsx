@@ -5,10 +5,10 @@ import {
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
+  type ReactNode,
 } from "react"
 import { Box, Text } from "@chakra-ui/react"
 import {
-  LuChevronDown,
   LuChevronLeft,
   LuChevronRight,
   LuMaximize2,
@@ -28,9 +28,9 @@ import {
   APP_PEACH_INK,
   APP_SHADOW_CARD,
   APP_SURFACE,
-  AppFilterChip,
 } from "@/components/ui/appUi"
 import { FormInput, FormNativeSelect } from "@/components/ui/form-controls"
+import { RADIUS_CONTROL } from "@/theme/tokens"
 import { formatDate, formatHours, TODO_STATUS_LABEL } from "@/lib/hours"
 import { peopleOnTodo } from "@/lib/people"
 import {
@@ -47,12 +47,10 @@ import { AddTodoDialog } from "./WorkDialogs"
 import { AvatarStack } from "./todoUi"
 
 const BAR_H = 26
-const ROW_H = 40
+const ROW_H = 44
 const HEAD_H = 58
-const LABEL_W = 220
+const LABEL_W = 240
 const HEADER_ROW_H = 30
-const MULTI_LANE_HEADER_H = 32
-const EXPANDED_ITEM_H = 36
 const DEFAULT_SPAN = 3
 const ZOOM_DAY_W = { compact: 32, normal: 44, wide: 60 } as const
 type ZoomLevel = keyof typeof ZOOM_DAY_W
@@ -91,21 +89,18 @@ function scheduledRange(todo: WorkTodo): { start: string; end: string } | null {
   return start <= end ? { start, end } : { start: end, end: start }
 }
 
-function packLanes(items: Omit<Bar, "lane">[]): Bar[] {
-  const lanes: { endIdx: number }[] = []
-  const placed: Bar[] = []
-  const sorted = items.slice().sort((a, b) => a.startIdx - b.startIdx || a.span - b.span)
-  for (const item of sorted) {
-    let lane = lanes.findIndex((row) => row.endIdx + 0.35 < item.startIdx)
-    if (lane < 0) {
-      lane = lanes.length
-      lanes.push({ endIdx: item.startIdx + item.span })
-    } else {
-      lanes[lane].endIdx = item.startIdx + item.span
-    }
-    placed.push({ ...item, lane })
-  }
-  return placed
+function assignUniqueLanes(items: Omit<Bar, "lane">[], overrides: Record<string, number> = {}): Bar[] {
+  return items
+    .slice()
+    .sort((a, b) => {
+      const la = overrides[a.todo.id]
+      const lb = overrides[b.todo.id]
+      if (la != null && lb != null && la !== lb) return la - lb
+      if (la != null && lb == null) return -1
+      if (lb != null && la == null) return 1
+      return a.startIdx - b.startIdx || a.todo.title.localeCompare(b.todo.title)
+    })
+    .map((item, lane) => ({ ...item, lane }))
 }
 
 function barCoversCell(bar: Bar, lane: number, dayIdx: number) {
@@ -116,164 +111,134 @@ function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n))
 }
 
-function laneHeightForCount(count: number, expanded: boolean) {
-  if (count <= 1) return ROW_H
-  if (expanded) return MULTI_LANE_HEADER_H + count * EXPANDED_ITEM_H + 4
-  return ROW_H
-}
-
 function TimelineLaneLabel({
-  laneBars,
-  height,
-  expanded,
+  bar,
   indented,
   canEdit,
-  onToggleExpand,
   onOpenTodo,
 }: {
-  laneBars: Bar[]
-  height: number
-  expanded: boolean
+  bar: Bar | null
   indented?: boolean
   canEdit: boolean
-  onToggleExpand: () => void
   onOpenTodo: (id: string) => void
 }) {
-  const px = indented ? 5 : 3
-
-  if (!laneBars.length) {
+  if (!bar) {
     return (
       <Box
-        h={`${height}px`}
-        px={px}
+        h={`${ROW_H}px`}
+        px={indented ? 5 : 3}
         display="flex"
-        flexDirection="column"
-        justifyContent="center"
+        alignItems="center"
         borderBottom={`1px solid ${APP_BORDER}`}
       >
-        <Text fontSize="0.75rem" fontWeight="600" color={APP_MUTED}>
-          Empty row
-        </Text>
-        {canEdit && (
-          <Text fontSize="0.65rem" color={APP_MUTED} mt={0.5}>
-            Click grid to add
+        {canEdit ? (
+          <Text fontSize="0.75rem" color={APP_MUTED}>
+            Click a day to add
           </Text>
-        )}
+        ) : null}
       </Box>
     )
   }
 
-  if (laneBars.length === 1) {
-    const todo = laneBars[0].todo
-    const tone = todoStatusTone(todo.status)
-    return (
-      <Box
-        as="button"
-        type="button"
-        h={`${height}px`}
-        w="100%"
-        px={px}
-        display="flex"
-        flexDirection="column"
-        justifyContent="center"
-        borderBottom={`1px solid ${APP_BORDER}`}
-        textAlign="left"
-        cursor="pointer"
-        onClick={() => onOpenTodo(todo.id)}
-        _hover={{ bg: "rgba(15,110,86,0.04)" }}
-      >
-        <Box display="flex" alignItems="center" gap={2} minW={0}>
-          <Box w="6px" h="6px" borderRadius="999px" bg={tone.color} flexShrink={0} />
-          <Text fontSize="0.75rem" fontWeight="700" color={APP_INK} truncate>
-            {todo.title}
-          </Text>
-        </Box>
-        <Text fontSize="0.65rem" color={APP_MUTED} truncate mt={0.5} pl="14px">
+  const todo = bar.todo
+  const tone = todoStatusTone(todo.status)
+  return (
+    <Box
+      as="button"
+      type="button"
+      h={`${ROW_H}px`}
+      w="100%"
+      px={indented ? 5 : 3}
+      display="flex"
+      alignItems="center"
+      gap={2}
+      borderBottom={`1px solid ${APP_BORDER}`}
+      textAlign="left"
+      cursor="pointer"
+      onClick={() => onOpenTodo(todo.id)}
+      _hover={{ bg: "rgba(15,110,86,0.04)" }}
+    >
+      <Box w="8px" h="8px" borderRadius="999px" bg={todoColor(todo.color)} flexShrink={0} />
+      <Box flex={1} minW={0}>
+        <Text fontSize="0.8125rem" fontWeight="600" color={APP_INK} truncate>
+          {todo.title}
+        </Text>
+        <Text fontSize="0.6875rem" color={tone.color} truncate>
           {TODO_STATUS_LABEL[todo.status] || todo.status}
         </Text>
       </Box>
-    )
-  }
+    </Box>
+  )
+}
 
-  const sorted = laneBars.slice().sort((a, b) => a.startIdx - b.startIdx || a.todo.title.localeCompare(b.todo.title))
-  const nextBar = sorted.find((bar) => bar.end >= isoToday()) ?? sorted[0]
-
+function ToolbarBtn({
+  children,
+  onClick,
+  active,
+  square,
+}: {
+  children: ReactNode
+  onClick: () => void
+  active?: boolean
+  square?: boolean
+}) {
   return (
-    <Box h={`${height}px`} borderBottom={`1px solid ${APP_BORDER}`} overflow="hidden">
-      <Box
-        as="button"
-        type="button"
-        w="100%"
-        h={expanded ? `${MULTI_LANE_HEADER_H}px` : "100%"}
-        px={px}
-        display="flex"
-        alignItems="center"
-        gap={1.5}
-        textAlign="left"
-        cursor="pointer"
-        onClick={onToggleExpand}
-        _hover={{ bg: "rgba(15,110,86,0.04)" }}
-      >
-        <Box
-          as="span"
-          display="flex"
-          color={APP_MUTED}
-          transform={expanded ? "rotate(180deg)" : undefined}
-          transition="transform 0.15s ease"
-          flexShrink={0}
-        >
-          <LuChevronDown size={14} />
-        </Box>
-        <Box flex={1} minW={0}>
-          <Text fontSize="0.75rem" fontWeight="700" color={APP_INK}>
-            {laneBars.length} to-dos
-          </Text>
-          {!expanded && nextBar && (
-            <Text fontSize="0.65rem" color={APP_MUTED} truncate mt={0.5}>
-              Next: {nextBar.todo.title}
-            </Text>
-          )}
-        </Box>
-      </Box>
-      {expanded &&
-        sorted.map((bar) => {
-          const tone = todoStatusTone(bar.todo.status)
-          return (
-            <Box
-              key={bar.todo.id}
-              as="button"
-              type="button"
-              w="100%"
-              h={`${EXPANDED_ITEM_H}px`}
-              px={px}
-              pl={indented ? 7 : 5}
-              display="flex"
-              alignItems="center"
-              gap={2}
-              textAlign="left"
-              cursor="pointer"
-              onClick={() => onOpenTodo(bar.todo.id)}
-              _hover={{ bg: "rgba(15,110,86,0.06)" }}
-            >
-              <Box w="6px" h="6px" borderRadius="999px" bg={tone.color} flexShrink={0} />
-              <Box flex={1} minW={0}>
-                <Text fontSize="0.75rem" fontWeight="700" color={APP_INK} truncate>
-                  {bar.todo.title}
-                </Text>
-                <Text fontSize="0.625rem" color={APP_MUTED} truncate>
-                  {TODO_STATUS_LABEL[bar.todo.status]} · {formatDate(bar.start)}
-                </Text>
-              </Box>
-              <Box
-                w="8px"
-                h="8px"
-                borderRadius="999px"
-                bg={todoColor(bar.todo.color)}
-                flexShrink={0}
-              />
-            </Box>
-          )
-        })}
+    <Box
+      as="button"
+      type="button"
+      h="34px"
+      minW={square ? "34px" : undefined}
+      px={square ? 0 : 3}
+      borderRadius="8px"
+      border={`1px solid ${active ? APP_MINT : APP_BORDER}`}
+      bg={active ? "rgba(15,110,86,0.08)" : APP_SURFACE}
+      color={active ? APP_INK : APP_MUTED}
+      fontSize="0.8125rem"
+      fontWeight="650"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      gap={1.5}
+      onClick={onClick}
+      _hover={{ borderColor: APP_MINT, color: APP_INK }}
+    >
+      {children}
+    </Box>
+  )
+}
+
+function Segmented<T extends string>({
+  value,
+  onChange,
+  options,
+}: {
+  value: T
+  onChange: (value: T) => void
+  options: { value: T; label: string }[]
+}) {
+  return (
+    <Box display="flex" gap={0.5} p={0.5} bg={APP_PAPER} borderRadius={RADIUS_CONTROL} border={`1px solid ${APP_BORDER}`}>
+      {options.map((option) => {
+        const active = value === option.value
+        return (
+          <Box
+            key={option.value}
+            as="button"
+            type="button"
+            h="30px"
+            px={2.5}
+            borderRadius="8px"
+            fontSize="0.75rem"
+            fontWeight="600"
+            color={active ? APP_INK : APP_MUTED}
+            bg={active ? APP_SURFACE : "transparent"}
+            boxShadow={active ? "0 1px 2px rgba(14,27,23,0.06)" : "none"}
+            onClick={() => onChange(option.value)}
+          >
+            {option.label}
+          </Box>
+        )
+      })}
     </Box>
   )
 }
@@ -325,11 +290,10 @@ export function WorkTimeline({
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "done">("all")
   const [groupMilestones, setGroupMilestones] = useState(false)
   const [laneOverrides, setLaneOverrides] = useState<Record<string, number>>({})
-  const [extraRows, setExtraRows] = useState(1)
+  const [extraRows, setExtraRows] = useState(0)
   const [drag, setDrag] = useState<DragState | null>(null)
   const [savingId, setSavingId] = useState<string | null>(null)
   const [hoveredId, setHoveredId] = useState<string | null>(null)
-  const [expandedLanes, setExpandedLanes] = useState<Set<number>>(() => new Set())
   const [addOpen, setAddOpen] = useState(false)
   const [addDates, setAddDates] = useState<{ startAt: string; dueAt: string; lane: number } | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -410,7 +374,7 @@ export function WorkTimeline({
       })
       .filter((item): item is Omit<Bar, "lane"> => Boolean(item))
 
-    const packedBars = packLanes(raw)
+    const packedBars = assignUniqueLanes(raw)
     const rangeLabel =
       days.length > 0
         ? `${formatDate(days[0])} – ${formatDate(days[days.length - 1])}`
@@ -420,18 +384,14 @@ export function WorkTimeline({
   }, [filteredTodos, weekShift, today, rangeMode, milestones, projectStartAt, projectDueAt])
 
   const bars = useMemo(
-    () =>
-      packedBars.map((bar) => ({
-        ...bar,
-        lane: laneOverrides[bar.todo.id] ?? bar.lane,
-      })),
+    () => assignUniqueLanes(packedBars, laneOverrides),
     [packedBars, laneOverrides]
   )
 
   const visualRows: VisualRow[] = useMemo(() => {
     if (!groupMilestones) {
-      const maxLane = bars.reduce((max, bar) => Math.max(max, bar.lane + 1), 0)
-      const count = Math.max(maxLane + extraRows, 2)
+      const occupied = bars.length
+      const count = Math.max(occupied + extraRows, occupied > 0 ? occupied : 1)
       return Array.from({ length: count }, (_, lane) => ({
         kind: "lane" as const,
         lane,
@@ -469,11 +429,7 @@ export function WorkTimeline({
     let laneBase = 0
     for (const group of groups) {
       rows.push({ kind: "milestone", milestone: group.milestone, label: group.label })
-      const packed = packLanes(group.items)
-      const groupLaneCount = Math.max(
-        packed.reduce((max, bar) => Math.max(max, bar.lane + 1), 0),
-        group.items.length ? 1 : 0
-      )
+      const groupLaneCount = Math.max(group.items.length, 1)
       for (let i = 0; i < groupLaneCount; i++) {
         rows.push({ kind: "lane", lane: laneBase + i, milestoneId: group.milestoneId })
       }
@@ -501,23 +457,13 @@ export function WorkTimeline({
     for (const milestoneId of orderedIds) {
       const items = byMilestone.get(milestoneId) || []
       if (!items.length && milestoneId !== null) continue
-      const packed = packLanes(items)
-      for (const bar of packed) {
-        remapped.push({
-          ...bar,
-          lane: laneOverrides[bar.todo.id] ?? laneBase + bar.lane,
-        })
+      const assigned = assignUniqueLanes(items, laneOverrides)
+      for (const bar of assigned) {
+        remapped.push({ ...bar, lane: laneBase + bar.lane })
       }
-      const groupLaneCount = Math.max(
-        packed.reduce((max, bar) => Math.max(max, bar.lane + 1), 0),
-        items.length ? 1 : 0
-      )
-      laneBase += groupLaneCount
+      laneBase += Math.max(assigned.length, 1)
     }
-    return remapped.map((bar) => ({
-      ...bar,
-      lane: laneOverrides[bar.todo.id] ?? bar.lane,
-    }))
+    return remapped
   }, [groupMilestones, bars, packedBars, milestones, laneOverrides])
 
   const displayBars = groupMilestones ? groupedBars : bars
@@ -526,27 +472,19 @@ export function WorkTimeline({
     const laneTop = new Map<number, number>()
     const laneHeightMap = new Map<number, number>()
 
-    const heightForLane = (lane: number) => {
-      const count = displayBars.filter((bar) => bar.lane === lane).length
-      return laneHeightForCount(count, expandedLanes.has(lane))
-    }
-
     if (!groupMilestones) {
-      const rowCount = Math.max(
-        displayBars.reduce((max, bar) => Math.max(max, bar.lane + 1), 0) + extraRows,
-        2
-      )
+      const occupied = displayBars.reduce((max, bar) => Math.max(max, bar.lane + 1), 0)
+      const rowCount = Math.max(occupied + extraRows, occupied > 0 ? occupied : 1)
       let y = HEAD_H
       for (let lane = 0; lane < rowCount; lane++) {
-        const h = heightForLane(lane)
         laneTop.set(lane, y)
-        laneHeightMap.set(lane, h)
-        y += h
+        laneHeightMap.set(lane, ROW_H)
+        y += ROW_H
       }
       return {
         rowCount,
         rowTop: (lane: number) => laneTop.get(lane) ?? HEAD_H,
-        rowHeight: (lane: number) => laneHeightMap.get(lane) ?? ROW_H,
+        rowHeight: (_lane: number) => ROW_H,
         totalHeight: y + 16,
       }
     }
@@ -556,19 +494,18 @@ export function WorkTimeline({
       if (row.kind === "milestone") {
         y += HEADER_ROW_H
       } else {
-        const h = heightForLane(row.lane)
         laneTop.set(row.lane, y)
-        laneHeightMap.set(row.lane, h)
-        y += h
+        laneHeightMap.set(row.lane, ROW_H)
+        y += ROW_H
       }
     }
     return {
       rowCount: visualRows.length,
       rowTop: (lane: number) => laneTop.get(lane) ?? HEAD_H,
-      rowHeight: (lane: number) => laneHeightMap.get(lane) ?? ROW_H,
+      rowHeight: (_lane: number) => ROW_H,
       totalHeight: y + 16,
     }
-  }, [groupMilestones, displayBars, extraRows, visualRows, expandedLanes])
+  }, [groupMilestones, displayBars, extraRows, visualRows])
 
   const gridHeight = rowLayout.totalHeight
 
@@ -814,26 +751,14 @@ export function WorkTimeline({
     return displayBars.filter((bar) => bar.lane === lane)
   }
 
-  function toggleLaneExpanded(lane: number) {
-    setExpandedLanes((prev) => {
-      const next = new Set(prev)
-      if (next.has(lane)) next.delete(lane)
-      else next.add(lane)
-      return next
-    })
-  }
-
   function renderLaneLabel(lane: number, indented = false) {
     const laneBars = barsInLane(lane)
     return (
       <TimelineLaneLabel
         key={`label-${lane}${indented ? "-g" : ""}`}
-        laneBars={laneBars}
-        height={rowLayout.rowHeight(lane)}
-        expanded={expandedLanes.has(lane)}
+        bar={laneBars[0] ?? null}
         indented={indented}
         canEdit={canEdit}
-        onToggleExpand={() => toggleLaneExpanded(lane)}
         onOpenTodo={onOpen}
       />
     )
@@ -845,6 +770,62 @@ export function WorkTimeline({
     return days.some((d) => d === due)
   })
 
+  let projectWindow: { left: number; width: number } | null = null
+  if (projectStartAt && projectDueAt && days[0]) {
+    const startIdx = diffDays(days[0], projectStartAt.slice(0, 10))
+    const endIdx = diffDays(days[0], projectDueAt.slice(0, 10))
+    if (endIdx >= 0 && startIdx <= days.length - 1) {
+      const left = clamp(startIdx, 0, days.length - 1) * dayW
+      const right = clamp(endIdx, 0, days.length - 1) * dayW + dayW
+      projectWindow = { left, width: right - left }
+    }
+  }
+
+  function renderDayCell(lane: number, day: string, dayIdx: number, top: number, height: number) {
+    const occupied = displayBars.some((bar) => barCoversCell(bar, lane, dayIdx))
+    const isDropTarget =
+      Boolean(dragPreview) &&
+      dragPreview!.lane === lane &&
+      dayIdx >= dragPreview!.startIdx &&
+      dayIdx < dragPreview!.startIdx + dragPreview!.span
+    const isWeekend = new Date(`${day}T12:00:00`).getDay() % 6 === 0
+    return (
+      <Box
+        key={`cell-${lane}-${day}`}
+        position="absolute"
+        top={`${top}px`}
+        left={`${dayIdx * dayW}px`}
+        w={`${dayW}px`}
+        h={`${height}px`}
+        borderRight={`1px solid ${APP_BORDER}`}
+        borderBottom={`1px solid ${APP_BORDER}`}
+        bg={
+          isDropTarget
+            ? "rgba(15,110,86,0.12)"
+            : isWeekend
+              ? "rgba(15,110,86,0.03)"
+              : "transparent"
+        }
+        cursor={canEdit && !occupied ? "cell" : "default"}
+        onClick={() => handleCellClick(lane, dayIdx)}
+        _hover={canEdit && !occupied ? { bg: "rgba(15,110,86,0.06)" } : undefined}
+      />
+    )
+  }
+
+  const gridCells = !groupMilestones
+    ? Array.from({ length: rowLayout.rowCount }, (_, lane) =>
+        days.map((day, dayIdx) =>
+          renderDayCell(lane, day, dayIdx, rowLayout.rowTop(lane), rowLayout.rowHeight(lane))
+        )
+      )
+    : visualRows.flatMap((row) => {
+        if (row.kind === "milestone") return []
+        const top = rowLayout.rowTop(row.lane)
+        const height = rowLayout.rowHeight(row.lane)
+        return days.map((day, dayIdx) => renderDayCell(row.lane, day, dayIdx, top, height))
+      })
+
   return (
     <Box
       bg={APP_PAPER}
@@ -855,131 +836,100 @@ export function WorkTimeline({
     >
       {/* Toolbar */}
       <Box px={4} py={3} borderBottom={`1px solid ${APP_BORDER}`}>
-        <Box display="flex" alignItems="center" justifyContent="space-between" gap={3} flexWrap="wrap" mb={3}>
-          <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
-            <Box
-              as="button"
-              h="32px"
-              px={3}
-              borderRadius="8px"
-              border={`1px solid ${APP_BORDER}`}
-              bg={APP_SURFACE}
-              fontSize="0.8125rem"
-              fontWeight="700"
-              display="flex"
-              alignItems="center"
-              gap={1.5}
-              onClick={scrollToToday}
-            >
+        <Box display="flex" alignItems="center" justifyContent="space-between" gap={3} flexWrap="wrap">
+          <Box display="flex" alignItems="center" gap={1.5} flexWrap="wrap">
+            <ToolbarBtn onClick={scrollToToday}>
               <LuTarget size={14} /> Today
-            </Box>
-            <Box
-              as="button"
-              w="32px"
-              h="32px"
-              borderRadius="8px"
-              border={`1px solid ${APP_BORDER}`}
-              bg={APP_SURFACE}
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-              onClick={() => {
-                setRangeMode("auto")
-                setWeekShift((n) => n - 1)
-              }}
-            >
-              <LuChevronLeft size={16} />
-            </Box>
-            <Box
-              as="button"
-              w="32px"
-              h="32px"
-              borderRadius="8px"
-              border={`1px solid ${APP_BORDER}`}
-              bg={APP_SURFACE}
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-              onClick={() => {
-                setRangeMode("auto")
-                setWeekShift((n) => n + 1)
-              }}
-            >
-              <LuChevronRight size={16} />
-            </Box>
-            <Box
-              as="button"
-              h="32px"
-              px={3}
-              borderRadius="8px"
-              border={`1px solid ${APP_BORDER}`}
-              bg={rangeMode === "fit" ? "rgba(15,110,86,0.1)" : APP_SURFACE}
-              fontSize="0.8125rem"
-              fontWeight="700"
-              display="flex"
-              alignItems="center"
-              gap={1.5}
-              onClick={() => setRangeMode("fit")}
-            >
-              <LuMaximize2 size={14} /> Fit all
-            </Box>
-            {canEdit && (
+            </ToolbarBtn>
+            <Box display="flex" alignItems="center" border={`1px solid ${APP_BORDER}`} borderRadius="8px" overflow="hidden" bg={APP_SURFACE}>
               <Box
                 as="button"
-                h="32px"
-                px={3}
-                borderRadius="8px"
-                border={`1px solid ${APP_BORDER}`}
-                bg={APP_SURFACE}
-                fontSize="0.8125rem"
-                fontWeight="700"
+                type="button"
+                w="34px"
+                h="34px"
                 display="flex"
                 alignItems="center"
-                gap={1.5}
-                onClick={() => setExtraRows((n) => n + 1)}
+                justifyContent="center"
+                color={APP_MUTED}
+                onClick={() => {
+                  setRangeMode("auto")
+                  setWeekShift((n) => n - 1)
+                }}
+                _hover={{ bg: APP_PAPER, color: APP_INK }}
               >
-                <LuPlus size={14} /> Row
+                <LuChevronLeft size={16} />
               </Box>
+              <Text
+                minW="168px"
+                px={2}
+                fontSize="0.8125rem"
+                fontWeight="600"
+                color={APP_INK}
+                textAlign="center"
+              >
+                {rangeLabel}
+              </Text>
+              <Box
+                as="button"
+                type="button"
+                w="34px"
+                h="34px"
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                color={APP_MUTED}
+                onClick={() => {
+                  setRangeMode("auto")
+                  setWeekShift((n) => n + 1)
+                }}
+                _hover={{ bg: APP_PAPER, color: APP_INK }}
+              >
+                <LuChevronRight size={16} />
+              </Box>
+            </Box>
+            <ToolbarBtn active={rangeMode === "fit"} onClick={() => setRangeMode("fit")}>
+              <LuMaximize2 size={14} /> Fit
+            </ToolbarBtn>
+            {canEdit && (
+              <ToolbarBtn onClick={() => setExtraRows((n) => n + 1)}>
+                <LuPlus size={14} /> Add row
+              </ToolbarBtn>
             )}
           </Box>
-          <Box textAlign="right">
-            <Text fontSize="0.8125rem" fontWeight="700" color={APP_INK}>
-              {rangeLabel}
-            </Text>
-            <Text fontSize="0.75rem" color={APP_MUTED} fontWeight="600">
-              {displayBars.length} scheduled · {unscheduled.length} need dates
-              {overdueCount > 0 ? ` · ${overdueCount} overdue` : ""}
-            </Text>
-          </Box>
+          <Text fontSize="0.75rem" color={APP_MUTED} fontWeight="600">
+            {displayBars.length} scheduled
+            {unscheduled.length ? ` · ${unscheduled.length} unscheduled` : ""}
+            {overdueCount > 0 ? ` · ${overdueCount} overdue` : ""}
+          </Text>
         </Box>
 
-        <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
-          <Box position="relative" flex="1" minW="180px" maxW="280px">
+        <Box display="flex" alignItems="center" gap={2} flexWrap="wrap" mt={3}>
+          <Box position="relative" w="220px">
             <Box position="absolute" left={3} top="50%" transform="translateY(-50%)" color={APP_MUTED} pointerEvents="none">
               <LuSearch size={14} />
             </Box>
             <FormInput
               pl={8}
-              h="32px"
-              placeholder="Search to-dos…"
+              h="34px"
+              placeholder="Search…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </Box>
-          <AppFilterChip active={statusFilter === "all"} onClick={() => setStatusFilter("all")}>
-            All
-          </AppFilterChip>
-          <AppFilterChip active={statusFilter === "active"} onClick={() => setStatusFilter("active")}>
-            Active
-          </AppFilterChip>
-          <AppFilterChip active={statusFilter === "done"} onClick={() => setStatusFilter("done")}>
-            Done
-          </AppFilterChip>
+          <Segmented
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={[
+              { value: "all", label: "All" },
+              { value: "active", label: "Active" },
+              { value: "done", label: "Done" },
+            ]}
+          />
           {milestones.length > 0 && (
             <FormNativeSelect
-              h="32px"
+              h="34px"
               w="auto"
-              minW="140px"
+              minW="160px"
               value={milestoneFilter}
               onChange={(e) => setMilestoneFilter(e.target.value)}
               style={{ fontSize: "0.8125rem", fontWeight: 600 }}
@@ -992,14 +942,20 @@ export function WorkTimeline({
               ))}
             </FormNativeSelect>
           )}
-          <AppFilterChip active={groupMilestones} onClick={() => setGroupMilestones((v) => !v)}>
-            By milestone
-          </AppFilterChip>
-          {(["compact", "normal", "wide"] as ZoomLevel[]).map((level) => (
-            <AppFilterChip key={level} active={zoom === level} onClick={() => setZoom(level)}>
-              {level === "compact" ? "S" : level === "normal" ? "M" : "L"}
-            </AppFilterChip>
-          ))}
+          {milestones.length > 0 && (
+            <ToolbarBtn active={groupMilestones} onClick={() => setGroupMilestones((v) => !v)}>
+              Group
+            </ToolbarBtn>
+          )}
+          <Segmented
+            value={zoom}
+            onChange={setZoom}
+            options={[
+              { value: "compact", label: "Compact" },
+              { value: "normal", label: "Comfort" },
+              { value: "wide", label: "Wide" },
+            ]}
+          />
         </Box>
       </Box>
 
@@ -1134,112 +1090,22 @@ export function WorkTimeline({
               })}
             </Box>
 
-            {/* Project window */}
-            {projectStartAt && projectDueAt && (
-              (() => {
-                const s = diffDays(days[0], projectStartAt.slice(0, 10))
-                const e = diffDays(days[0], projectDueAt.slice(0, 10))
-                if (e < 0 || s > days.length - 1) return null
-                const left = clamp(s, 0, days.length - 1) * dayW
-                const right = clamp(e, 0, days.length - 1) * dayW + dayW
-                return (
-                  <Box
-                    position="absolute"
-                    top={HEAD_H}
-                    left={`${left}px`}
-                    w={`${right - left}px`}
-                    bottom={0}
-                    bg="rgba(15,110,86,0.04)"
-                    borderLeft="2px solid rgba(15,110,86,0.2)"
-                    borderRight="2px solid rgba(15,110,86,0.2)"
-                    pointerEvents="none"
-                    zIndex={1}
-                  />
-                )
-              })()
+            {projectWindow && (
+              <Box
+                position="absolute"
+                top={HEAD_H}
+                left={`${projectWindow.left}px`}
+                w={`${projectWindow.width}px`}
+                bottom={0}
+                bg="rgba(15,110,86,0.04)"
+                borderLeft="2px solid rgba(15,110,86,0.2)"
+                borderRight="2px solid rgba(15,110,86,0.2)"
+                pointerEvents="none"
+                zIndex={1}
+              />
             )}
 
-            {/* Cells */}
-            {!groupMilestones
-              ? Array.from({ length: rowLayout.rowCount }, (_, lane) =>
-                  days.map((day, dayIdx) => {
-                    const occupied = displayBars.some((bar) => barCoversCell(bar, lane, dayIdx))
-                    const isDropTarget =
-                      dragPreview &&
-                      dragPreview.lane === lane &&
-                      dayIdx >= dragPreview.startIdx &&
-                      dayIdx < dragPreview.startIdx + dragPreview.span
-                    const isWeekend = new Date(`${day}T12:00:00`).getDay() % 6 === 0
-                    const rowTop = rowLayout.rowTop(lane)
-                    const rowHeight = rowLayout.rowHeight(lane)
-                    return (
-                      <Box
-                        key={`cell-${lane}-${day}`}
-                        position="absolute"
-                        top={`${rowTop}px`}
-                        left={`${dayIdx * dayW}px`}
-                        w={`${dayW}px`}
-                        h={`${rowHeight}px`}
-                        borderRight={`1px solid ${APP_BORDER}`}
-                        borderBottom={`1px solid ${APP_BORDER}`}
-                        bg={
-                          isDropTarget
-                            ? "rgba(15,110,86,0.12)"
-                            : isWeekend
-                              ? "rgba(15,110,86,0.03)"
-                              : "transparent"
-                        }
-                        cursor={canEdit && !occupied ? "cell" : "default"}
-                        onClick={() => handleCellClick(lane, dayIdx)}
-                        _hover={canEdit && !occupied ? { bg: "rgba(15,110,86,0.06)" } : undefined}
-                      />
-                    )
-                  })
-                )
-              : (() => {
-                  let y = HEAD_H
-                  return visualRows.flatMap((row, rowIndex) => {
-                    if (row.kind === "milestone") {
-                      y += HEADER_ROW_H
-                      return []
-                    }
-                    const lane = row.lane
-                    const rowHeight = rowLayout.rowHeight(lane)
-                    const rowTop = y
-                    const cells = days.map((day, dayIdx) => {
-                      const occupied = displayBars.some((bar) => barCoversCell(bar, lane, dayIdx))
-                      const isDropTarget =
-                        dragPreview &&
-                        dragPreview.lane === lane &&
-                        dayIdx >= dragPreview.startIdx &&
-                        dayIdx < dragPreview.startIdx + dragPreview.span
-                      const isWeekend = new Date(`${day}T12:00:00`).getDay() % 6 === 0
-                      return (
-                        <Box
-                          key={`cell-g-${rowIndex}-${day}`}
-                          position="absolute"
-                          top={`${rowTop}px`}
-                          left={`${dayIdx * dayW}px`}
-                          w={`${dayW}px`}
-                          h={`${rowHeight}px`}
-                          borderRight={`1px solid ${APP_BORDER}`}
-                          borderBottom={`1px solid ${APP_BORDER}`}
-                          bg={
-                            isDropTarget
-                              ? "rgba(15,110,86,0.12)"
-                              : isWeekend
-                                ? "rgba(15,110,86,0.03)"
-                                : "transparent"
-                          }
-                          cursor={canEdit && !occupied ? "cell" : "default"}
-                          onClick={() => handleCellClick(lane, dayIdx)}
-                        />
-                      )
-                    })
-                    y += ROW_H
-                    return cells
-                  })
-                })()}
+            {gridCells}
 
             {/* Today line */}
             {todayIdx >= 0 && (

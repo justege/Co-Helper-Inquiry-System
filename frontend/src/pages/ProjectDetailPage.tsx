@@ -12,6 +12,7 @@ import {
 import { createInvoice, getProjectWork, type ProjectWork } from "@/api/work"
 import { PageShell } from "@/components/ui/PageShell"
 import { APP_BORDER, APP_INK, APP_MUTED, APP_SURFACE } from "@/components/ui/appUi"
+import { GREEN } from "@/theme/tokens"
 import { AppButton } from "@/components/ui/AppButton"
 import { AppTabs } from "@/components/ui/AppTabs"
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog"
@@ -279,7 +280,7 @@ export default function ProjectDetailPage() {
               <Box bg={APP_SURFACE} border={`1px solid ${APP_BORDER}`} borderRadius="14px" overflow="hidden">
                 <Box px={5} py={3.5} borderBottom={`1px solid ${APP_BORDER}`} display="flex" alignItems="center" justifyContent="space-between" gap={2}>
                   <Box display="flex" alignItems="center" gap={2}>
-                    <LuUsers size={16} color={APP_ACCENT} />
+                    <LuUsers size={16} color={GREEN} />
                     <Text fontWeight="700" color={APP_INK}>People on this project</Text>
                   </Box>
                   {canManage && (
