@@ -5,8 +5,8 @@ import { INK, MUTED, RULE, SURFACE } from "@/components/marketing/tokens"
 
 const VALUES = [
   { title: "You own the relationship", body: "Companies come from you. We don’t match, staff, or insert a project manager between you and the people you already work with." },
-  { title: "One record of the job", body: "Brief, chat, files, to-dos, rates, hours, and payment logs live together — so nothing important is trapped in email." },
-  { title: "Clarity, not control", body: "Edit with AI rewrites your words using that job’s context. It does not invent scope or run the engagement for you." },
+  { title: "One record of the work", body: "To-dos, rates, hours, remaining work, and invoices live together — so nothing important is trapped in email." },
+  { title: "Honesty, not theatre", body: "If you’re on another client, we say so. If there’s no estimate, we don’t invent a date." },
   { title: "Track money, don’t process it", body: "Record what was agreed and what was paid. Invoicing and transfers stay how you already operate." },
 ]
 
@@ -36,9 +36,8 @@ export default function AboutPage() {
             </p>
             <p>
               The product is a workspace owned by a one-person business. You invite the companies you
-              already work with. Each job holds the brief, chat, documents, to-dos, an hourly or project
-              agreement, time entries, and a payment log. Optional Trello import turns boards you already
-              use into jobs.
+              already work with. Each project holds to-dos, an hourly or project rate, time entries,
+              remaining hours, weekly pace, and invoices generated from unbilled work.
             </p>
             <p>
               We are based in Berlin and remote-first. We are not a staffing network, escrow agent, or

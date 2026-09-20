@@ -12,12 +12,39 @@ import {
   mapProject,
   getProjectAccess,
   listProjectsForUser,
+  listProjectPeople,
   upsertWorkspaceMember,
 } from "../lib/workspace.js";
 import { sendEmail, appUrl, inviteEmail, sendTestEmail } from "../lib/email.js";
 import { encryptSecret } from "../lib/secret.js";
 import { createNotification } from "../lib/notifications.js";
 import { clientLimitForWorkspace } from "../lib/stripe.js";
+import {
+  addProjectBlocker,
+  addProjectComment,
+  addProjectGoal,
+  addProjectMilestone,
+  confirmProjectAttachment,
+  deleteProjectAttachment,
+  deleteProjectBlocker,
+  deleteProjectComment,
+  deleteProjectGoal,
+  deleteProjectMilestone,
+  getMilestoneDetail,
+  getProjectTicket,
+  parseBlockerKind,
+  parseCommentBody,
+  parseDelayedDays,
+  parseItemTitle,
+  parseMilestoneDue,
+  PROJECT_PRIORITIES,
+  PROJECT_STATUSES,
+  removeProjectFiles,
+  signProjectAttachment,
+  updateProjectBlocker,
+  updateProjectGoal,
+  updateProjectMilestone,
+} from "../lib/projectCard.js";
 
 const router = Router();
 
@@ -48,6 +75,7 @@ function workspaceSettings(ws) {
     smtpUser: ws.smtp_user ?? null,
     smtpFrom: ws.smtp_from ?? null,
     smtpConfigured: Boolean(ws.smtp_password_enc),
+    weeklyHours: ws.weekly_hours != null ? Number(ws.weekly_hours) : 20,
     createdAt: ws.created_at,
   };
 }
@@ -346,14 +374,75 @@ router.post("/clients/:id/invite", requireAuth, attachRole, async (req, res) => 
   }
 });
 
-function parseProjectName(body) {
+function parseNullableNumber(value, { min = 0, max = 1_000_000 } = {}) {
+  if (value === undefined) return { skip: true };
+  if (value === null || value === "") return { value: null };
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < min || n > max) return { error: "Invalid number" };
+  return { value: n };
+}
+
+function parseOptionalDate(value) {
+  if (value === undefined) return { skip: true };
+  if (value === null || value === "") return { value: null };
+  const s = String(value).slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return { error: true };
+  return { value: s };
+}
+
+function parseProjectFields(body, { nameRequired = true } = {}) {
   const name = typeof body?.name === "string" ? body.name.trim() : "";
-  if (name.length < 1 || name.length > 80) {
+  if (nameRequired && (name.length < 1 || name.length > 80)) {
+    return { error: "name must be 1–80 characters" };
+  }
+  if (!nameRequired && name && (name.length < 1 || name.length > 80)) {
     return { error: "name must be 1–80 characters" };
   }
   const description =
-    body?.description == null ? undefined : String(body.description).trim().slice(0, 2000);
-  return { name, description };
+    body?.description == null ? undefined : String(body.description).trim().slice(0, 20000);
+  const billingType = body?.billingType;
+  if (billingType != null && !["hourly", "fixed", "hybrid"].includes(billingType)) {
+    return { error: "billingType must be hourly, fixed, or hybrid" };
+  }
+  const hourlyRate = parseNullableNumber(body?.hourlyRate, { max: 100000 });
+  if (hourlyRate.error) return { error: "hourlyRate is invalid" };
+  const fixedPrice = parseNullableNumber(body?.fixedPrice, { max: 10_000_000 });
+  if (fixedPrice.error) return { error: "fixedPrice is invalid" };
+  const estimatedHours = parseNullableNumber(body?.estimatedHours, { max: 10000 });
+  if (estimatedHours.error) return { error: "estimatedHours is invalid" };
+  const weeklyHoursTarget = parseNullableNumber(body?.weeklyHoursTarget, { max: 168 });
+  if (weeklyHoursTarget.error) return { error: "weeklyHoursTarget is invalid" };
+  if (body?.status != null && !PROJECT_STATUSES.includes(body.status)) {
+    return { error: "status must be backlog, in_progress, waiting_on_client, or done" };
+  }
+  if (body?.priority != null && !PROJECT_PRIORITIES.includes(body.priority)) {
+    return { error: "priority must be low, medium, or high" };
+  }
+  const startAt = parseOptionalDate(body?.startAt);
+  if (startAt.error) return { error: "startAt must be YYYY-MM-DD" };
+  const dueAt = parseOptionalDate(body?.dueAt);
+  if (dueAt.error) return { error: "dueAt must be YYYY-MM-DD" };
+  return {
+    name: name || undefined,
+    description,
+    billingType: billingType || undefined,
+    hourlyRate,
+    fixedPrice,
+    estimatedHours,
+    weeklyHoursTarget,
+    status: body?.status || undefined,
+    priority: body?.priority || undefined,
+    startAt,
+    dueAt,
+  };
+}
+
+function canEditProjectTicket(role) {
+  return role === "owner" || role === "admin" || role === "collaborator";
+}
+
+function canManageProject(role) {
+  return role === "owner" || role === "admin";
 }
 
 router.get("/projects", requireAuth, attachRole, async (req, res) => {
@@ -368,7 +457,7 @@ router.get("/projects", requireAuth, attachRole, async (req, res) => {
 
 router.post("/projects", requireAuth, attachRole, async (req, res) => {
   if (!requireOwner(req, res)) return;
-  const parsed = parseProjectName(req.body);
+  const parsed = parseProjectFields(req.body);
   if (parsed.error) return res.status(400).json({ error: parsed.error });
   const clientId = req.body?.clientId;
   if (typeof clientId !== "string") {
@@ -382,10 +471,21 @@ router.post("/projects", requireAuth, attachRole, async (req, res) => {
     );
     if (!client) return res.status(400).json({ error: "That client is not in this workspace" });
     const row = await queryOne(
-      `INSERT INTO projects (workspace_id, client_id, name, description)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO projects
+         (workspace_id, client_id, name, description, billing_type, hourly_rate, fixed_price, estimated_hours, weekly_hours_target)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
-      [ws.id, client.id, parsed.name, parsed.description || null]
+      [
+        ws.id,
+        client.id,
+        parsed.name,
+        parsed.description || null,
+        parsed.billingType || "hourly",
+        parsed.hourlyRate.skip ? null : parsed.hourlyRate.value,
+        parsed.fixedPrice.skip ? null : parsed.fixedPrice.value,
+        parsed.estimatedHours.skip ? null : parsed.estimatedHours.value,
+        parsed.weeklyHoursTarget.skip ? null : parsed.weeklyHoursTarget.value,
+      ]
     );
     res.status(201).json(mapProject({
       ...row,
@@ -429,6 +529,8 @@ router.get("/projects/:id", requireAuth, attachRole, async (req, res) => {
        ORDER BY created_at DESC`,
       [project.id]
     );
+    const ticket = await getProjectTicket(project.id, req.dbUser);
+    const people = await listProjectPeople(project);
     res.json({
       project: mapProject({
         ...project,
@@ -439,8 +541,15 @@ router.get("/projects/:id", requireAuth, attachRole, async (req, res) => {
         ...mapUserBrief(m.users),
         memberSince: m.created_at,
       })),
+      people,
       pendingInvites: pending.map(mapInvitation),
       role: access.role,
+      meId: req.dbUser.id,
+      goals: ticket?.goals ?? [],
+      milestones: ticket?.milestones ?? [],
+      comments: ticket?.comments ?? [],
+      attachments: ticket?.attachments ?? [],
+      blockers: ticket?.blockers ?? [],
     });
   } catch (err) {
     console.error(err);
@@ -449,29 +558,97 @@ router.get("/projects/:id", requireAuth, attachRole, async (req, res) => {
 });
 
 router.patch("/projects/:id", requireAuth, attachRole, async (req, res) => {
-  if (!requireOwner(req, res)) return;
-  const parsed = parseProjectName(req.body);
+  const parsed = parseProjectFields(req.body, { nameRequired: Boolean(req.body?.name) });
   if (parsed.error) return res.status(400).json({ error: parsed.error });
   try {
     const access = await getProjectAccess(req.params.id, req.dbUser);
-    if (!access || access.role === "collaborator" || access.role === "client") {
-      return res.status(404).json({ error: "Project not found" });
+    if (!access) return res.status(404).json({ error: "Project not found" });
+    if (!canEditProjectTicket(access.role)) {
+      return res.status(403).json({ error: "You cannot edit this project" });
     }
-    const ws = await ensureOwnerWorkspace(req);
-    let clientId = access.project.client_id;
-    if (req.body?.clientId) {
-      const client = await queryOne(
-        `SELECT id FROM clients WHERE id = $1 AND workspace_id = $2`,
-        [req.body.clientId, ws.id]
-      );
-      if (!client) return res.status(400).json({ error: "That client is not in this workspace" });
-      clientId = client.id;
+    const manage = canManageProject(access.role);
+    const sets = [];
+    const values = [];
+    let i = 1;
+    if (parsed.name) {
+      sets.push(`name = $${i++}`);
+      values.push(parsed.name);
     }
+    if (parsed.description !== undefined) {
+      sets.push(`description = $${i++}`);
+      values.push(parsed.description || null);
+    }
+    if (parsed.status) {
+      sets.push(`status = $${i++}`);
+      values.push(parsed.status);
+    }
+    if (parsed.priority) {
+      sets.push(`priority = $${i++}`);
+      values.push(parsed.priority);
+    }
+    if (!parsed.startAt.skip) {
+      sets.push(`start_at = $${i++}`);
+      values.push(parsed.startAt.value);
+    }
+    if (!parsed.dueAt.skip) {
+      sets.push(`due_at = $${i++}`);
+      values.push(parsed.dueAt.value);
+    }
+    if (req.body?.currentMilestoneId !== undefined) {
+      if (req.body.currentMilestoneId === null || req.body.currentMilestoneId === "") {
+        sets.push(`current_milestone_id = $${i++}`);
+        values.push(null);
+      } else {
+        const milestone = await queryOne(
+          `SELECT id FROM project_milestones WHERE id = $1 AND project_id = $2`,
+          [req.body.currentMilestoneId, access.project.id]
+        );
+        if (!milestone) return res.status(400).json({ error: "Milestone not found on this project" });
+        sets.push(`current_milestone_id = $${i++}`);
+        values.push(milestone.id);
+      }
+    }
+    if (manage) {
+      if (req.body?.clientId) {
+        const ws = await ensureOwnerWorkspace(req);
+        const client = await queryOne(
+          `SELECT id FROM clients WHERE id = $1 AND workspace_id = $2`,
+          [req.body.clientId, ws.id]
+        );
+        if (!client) return res.status(400).json({ error: "That client is not in this workspace" });
+        sets.push(`client_id = $${i++}`);
+        values.push(client.id);
+      }
+      if (parsed.billingType) {
+        sets.push(`billing_type = $${i++}`);
+        values.push(parsed.billingType);
+      }
+      if (!parsed.hourlyRate.skip) {
+        sets.push(`hourly_rate = $${i++}`);
+        values.push(parsed.hourlyRate.value);
+      }
+      if (!parsed.fixedPrice.skip) {
+        sets.push(`fixed_price = $${i++}`);
+        values.push(parsed.fixedPrice.value);
+      }
+      if (!parsed.estimatedHours.skip) {
+        sets.push(`estimated_hours = $${i++}`);
+        values.push(parsed.estimatedHours.value);
+      }
+      if (!parsed.weeklyHoursTarget.skip) {
+        sets.push(`weekly_hours_target = $${i++}`);
+        values.push(parsed.weeklyHoursTarget.value);
+      }
+    }
+    if (!sets.length) {
+      const full = (await listProjectsForUser(req.dbUser)).find((p) => p.id === access.project.id);
+      return res.json(mapProject(full || access.project));
+    }
+    sets.push("updated_at = NOW()");
+    values.push(access.project.id);
     const row = await queryOne(
-      `UPDATE projects SET name = $1, description = COALESCE($2, description), client_id = $3
-       WHERE id = $4
-       RETURNING *`,
-      [parsed.name, parsed.description ?? null, clientId, access.project.id]
+      `UPDATE projects SET ${sets.join(", ")} WHERE id = $${i} RETURNING *`,
+      values
     );
     const full = (await listProjectsForUser(req.dbUser)).find((p) => p.id === row.id);
     res.json(mapProject(full || row));
@@ -488,6 +665,7 @@ router.delete("/projects/:id", requireAuth, attachRole, async (req, res) => {
     if (!access || access.project.owner_id !== req.dbUser.id) {
       return res.status(404).json({ error: "Project not found" });
     }
+    await removeProjectFiles(access.project.id);
     await execute(`DELETE FROM projects WHERE id = $1`, [access.project.id]);
     res.status(204).send();
   } catch (err) {
@@ -735,12 +913,12 @@ router.post("/invitations/token/:token/accept", requireAuth, attachRole, async (
 
 router.get("/search", requireAuth, attachRole, async (req, res) => {
   const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
-  if (q.length < 2) return res.json({ projects: [], clients: [] });
+  if (q.length < 2) return res.json({ projects: [], clients: [], todos: [] });
   const like = `%${q.replace(/[%_]/g, "\\$&")}%`;
   try {
     if (req.userRole === "expert") {
       const ws = await ensureOwnerWorkspace(req);
-      const [projects, clients] = await Promise.all([
+      const [projects, clients, todos] = await Promise.all([
         query(
           `SELECT id, name FROM projects
            WHERE workspace_id = $1 AND name ILIKE $2
@@ -755,25 +933,54 @@ router.get("/search", requireAuth, attachRole, async (req, res) => {
            ORDER BY created_at DESC LIMIT 8`,
           [ws.id, like]
         ),
+        query(
+          `SELECT t.id, t.title, p.name AS project_name
+           FROM todos t
+           JOIN projects p ON p.id = t.project_id
+           WHERE t.workspace_id = $1 AND t.title ILIKE $2
+           ORDER BY t.updated_at DESC LIMIT 8`,
+          [ws.id, like]
+        ),
       ]);
       return res.json({
         projects: projects.map((p) => ({ id: p.id, name: p.name })),
         clients: clients.map(mapClient),
+        todos: todos.map((t) => ({ id: t.id, title: t.title, projectName: t.project_name })),
       });
     }
-    const projects = await query(
-      `SELECT p.id, p.name
-       FROM projects p
-       JOIN clients c ON c.id = p.client_id
-       WHERE (c.user_id = $1 OR EXISTS (
-         SELECT 1 FROM project_members pm WHERE pm.project_id = p.id AND pm.user_id = $1
-       )) AND p.name ILIKE $2
-       ORDER BY p.created_at DESC LIMIT 8`,
-      [req.dbUser.id, like]
-    );
+    const [projects, todos] = await Promise.all([
+      query(
+        `SELECT p.id, p.name
+         FROM projects p
+         JOIN clients c ON c.id = p.client_id
+         WHERE (c.user_id = $1 OR EXISTS (
+           SELECT 1 FROM project_members pm WHERE pm.project_id = p.id AND pm.user_id = $1
+         )) AND p.name ILIKE $2
+         ORDER BY p.created_at DESC LIMIT 8`,
+        [req.dbUser.id, like]
+      ),
+      query(
+        `SELECT t.id, t.title, p.name AS project_name
+         FROM todos t
+         JOIN projects p ON p.id = t.project_id
+         JOIN clients c ON c.id = p.client_id
+         WHERE (
+           c.user_id = $1 OR EXISTS (
+             SELECT 1 FROM project_members pm WHERE pm.project_id = p.id AND pm.user_id = $1
+           )
+         )
+           AND (t.internal = FALSE OR EXISTS (
+             SELECT 1 FROM project_members pm WHERE pm.project_id = p.id AND pm.user_id = $1
+           ))
+           AND t.title ILIKE $2
+         ORDER BY t.updated_at DESC LIMIT 8`,
+        [req.dbUser.id, like]
+      ),
+    ]);
     res.json({
       projects: projects.map((p) => ({ id: p.id, name: p.name })),
       clients: [],
+      todos: todos.map((t) => ({ id: t.id, title: t.title, projectName: t.project_name })),
     });
   } catch (err) {
     console.error(err);
@@ -799,6 +1006,14 @@ router.patch("/settings", requireAuth, attachRole, async (req, res) => {
     if (typeof req.body?.timezone === "string" && req.body.timezone.trim()) {
       fields.push(`timezone = $${i++}`);
       values.push(req.body.timezone.trim().slice(0, 64));
+    }
+    if (req.body?.weeklyHours != null) {
+      const n = Number(req.body.weeklyHours);
+      if (!Number.isFinite(n) || n <= 0 || n > 168) {
+        return res.status(400).json({ error: "weeklyHours must be between 0 and 168" });
+      }
+      fields.push(`weekly_hours = $${i++}`);
+      values.push(n);
     }
     if (req.body?.emailMode === "platform" || req.body?.emailMode === "smtp") {
       fields.push(`email_mode = $${i++}`);
@@ -845,6 +1060,338 @@ router.post("/settings/test-email", requireAuth, attachRole, async (req, res) =>
     const result = await sendTestEmail(ws, to);
     if (result.error) return res.status(400).json({ error: result.error });
     res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+async function loadProjectTicketAccess(req, res, { edit = false } = {}) {
+  const access = await getProjectAccess(req.params.id, req.dbUser);
+  if (!access) {
+    res.status(404).json({ error: "Project not found" });
+    return null;
+  }
+  if (edit && !canEditProjectTicket(access.role)) {
+    res.status(403).json({ error: "You cannot edit this project" });
+    return null;
+  }
+  return access;
+}
+
+router.post("/projects/:id/comments", requireAuth, attachRole, async (req, res) => {
+  try {
+    const access = await loadProjectTicketAccess(req, res);
+    if (!access) return;
+    const parsed = parseCommentBody(req.body?.body);
+    if (parsed.error) return res.status(400).json({ error: parsed.error });
+    const comment = await addProjectComment({
+      project: access.project,
+      user: req.dbUser,
+      body: parsed.body,
+      milestoneId: req.body?.milestoneId || null,
+    });
+    res.status(201).json(comment);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete("/projects/:id/comments/:commentId", requireAuth, attachRole, async (req, res) => {
+  try {
+    const access = await loadProjectTicketAccess(req, res);
+    if (!access) return;
+    const result = await deleteProjectComment({
+      commentId: req.params.commentId,
+      projectId: access.project.id,
+      user: req.dbUser,
+      role: access.role,
+    });
+    if (result.error) return res.status(result.status).json({ error: result.error });
+    res.status(204).send();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/projects/:id/goals", requireAuth, attachRole, async (req, res) => {
+  try {
+    const access = await loadProjectTicketAccess(req, res, { edit: true });
+    if (!access) return;
+    const parsed = parseItemTitle(req.body?.title);
+    if (parsed.error) return res.status(400).json({ error: parsed.error });
+    res.status(201).json(await addProjectGoal({ project: access.project, title: parsed.title }));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.patch("/projects/:id/goals/:goalId", requireAuth, attachRole, async (req, res) => {
+  try {
+    const access = await loadProjectTicketAccess(req, res, { edit: true });
+    if (!access) return;
+    let title;
+    if (req.body?.title != null) {
+      const parsed = parseItemTitle(req.body.title);
+      if (parsed.error) return res.status(400).json({ error: parsed.error });
+      title = parsed.title;
+    }
+    const goal = await updateProjectGoal({
+      goalId: req.params.goalId,
+      projectId: access.project.id,
+      title,
+      done: req.body?.done,
+    });
+    if (!goal) return res.status(404).json({ error: "Goal not found" });
+    res.json(goal);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete("/projects/:id/goals/:goalId", requireAuth, attachRole, async (req, res) => {
+  try {
+    const access = await loadProjectTicketAccess(req, res, { edit: true });
+    if (!access) return;
+    const ok = await deleteProjectGoal({ goalId: req.params.goalId, projectId: access.project.id });
+    if (!ok) return res.status(404).json({ error: "Goal not found" });
+    res.status(204).send();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/projects/:id/milestones", requireAuth, attachRole, async (req, res) => {
+  try {
+    const access = await loadProjectTicketAccess(req, res, { edit: true });
+    if (!access) return;
+    const parsed = parseItemTitle(req.body?.title);
+    if (parsed.error) return res.status(400).json({ error: parsed.error });
+    const due = parseMilestoneDue(req.body?.dueAt);
+    if (due.error) return res.status(400).json({ error: due.error });
+    res.status(201).json(
+      await addProjectMilestone({
+        project: access.project,
+        title: parsed.title,
+        dueAt: due.skip ? null : due.value,
+      })
+    );
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.patch("/projects/:id/milestones/:milestoneId", requireAuth, attachRole, async (req, res) => {
+  try {
+    const access = await loadProjectTicketAccess(req, res, { edit: true });
+    if (!access) return;
+    let title;
+    if (req.body?.title != null) {
+      const parsed = parseItemTitle(req.body.title);
+      if (parsed.error) return res.status(400).json({ error: parsed.error });
+      title = parsed.title;
+    }
+    let dueAt;
+    if (req.body?.dueAt !== undefined) {
+      const due = parseMilestoneDue(req.body.dueAt);
+      if (due.error) return res.status(400).json({ error: due.error });
+      dueAt = due.value;
+    }
+    const milestone = await updateProjectMilestone({
+      milestoneId: req.params.milestoneId,
+      projectId: access.project.id,
+      title,
+      dueAt,
+      done: req.body?.done,
+    });
+    if (!milestone) return res.status(404).json({ error: "Milestone not found" });
+    res.json(milestone);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get("/projects/:id/milestones/:milestoneId", requireAuth, attachRole, async (req, res) => {
+  try {
+    const detail = await getMilestoneDetail({
+      projectId: req.params.id,
+      milestoneId: req.params.milestoneId,
+      user: req.dbUser,
+    });
+    if (!detail) return res.status(404).json({ error: "Project not found" });
+    if (detail.error) return res.status(detail.status || 404).json({ error: detail.error });
+    res.json({
+      milestone: detail.milestone,
+      todos: detail.todos,
+      conversations: detail.conversations,
+      blockers: detail.blockers,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/projects/:id/blockers", requireAuth, attachRole, async (req, res) => {
+  try {
+    const access = await loadProjectTicketAccess(req, res, { edit: true });
+    if (!access) return;
+    const parsed = parseItemTitle(req.body?.title);
+    if (parsed.error) return res.status(400).json({ error: parsed.error });
+    const kind = parseBlockerKind(req.body?.kind);
+    if (kind.error) return res.status(400).json({ error: kind.error });
+    const delay = parseDelayedDays(req.body?.delayedDays);
+    if (delay.error) return res.status(400).json({ error: delay.error });
+    const body = typeof req.body?.body === "string" ? req.body.body.trim().slice(0, 8000) : "";
+    const blocker = await addProjectBlocker({
+      project: access.project,
+      user: req.dbUser,
+      title: parsed.title,
+      body: body || null,
+      kind: kind.value,
+      delayedDays: delay.skip ? null : delay.value,
+      milestoneId: req.body?.milestoneId || null,
+      todoId: req.body?.todoId || null,
+    });
+    res.status(201).json(blocker);
+  } catch (err) {
+    console.error(err);
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+router.patch("/projects/:id/blockers/:blockerId", requireAuth, attachRole, async (req, res) => {
+  try {
+    const access = await loadProjectTicketAccess(req, res, { edit: true });
+    if (!access) return;
+    let title;
+    if (req.body?.title != null) {
+      const parsed = parseItemTitle(req.body.title);
+      if (parsed.error) return res.status(400).json({ error: parsed.error });
+      title = parsed.title;
+    }
+    if (req.body?.kind != null) {
+      const kind = parseBlockerKind(req.body.kind);
+      if (kind.error) return res.status(400).json({ error: kind.error });
+    }
+    const delay = parseDelayedDays(req.body?.delayedDays);
+    if (delay.error) return res.status(400).json({ error: delay.error });
+    const body =
+      req.body?.body === undefined
+        ? undefined
+        : typeof req.body.body === "string"
+          ? req.body.body.trim().slice(0, 8000) || null
+          : null;
+    const blocker = await updateProjectBlocker({
+      blockerId: req.params.blockerId,
+      projectId: access.project.id,
+      title,
+      body,
+      kind: req.body?.kind,
+      status: req.body?.status,
+      delayedDays: delay.skip ? undefined : delay.value,
+      milestoneId: req.body?.milestoneId,
+      todoId: req.body?.todoId,
+    });
+    if (!blocker) return res.status(404).json({ error: "Blocker not found" });
+    res.json(blocker);
+  } catch (err) {
+    console.error(err);
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+router.delete("/projects/:id/blockers/:blockerId", requireAuth, attachRole, async (req, res) => {
+  try {
+    const access = await loadProjectTicketAccess(req, res, { edit: true });
+    if (!access) return;
+    const ok = await deleteProjectBlocker({
+      blockerId: req.params.blockerId,
+      projectId: access.project.id,
+    });
+    if (!ok) return res.status(404).json({ error: "Blocker not found" });
+    res.status(204).send();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete("/projects/:id/milestones/:milestoneId", requireAuth, attachRole, async (req, res) => {
+  try {
+    const access = await loadProjectTicketAccess(req, res, { edit: true });
+    if (!access) return;
+    const ok = await deleteProjectMilestone({
+      milestoneId: req.params.milestoneId,
+      projectId: access.project.id,
+    });
+    if (!ok) return res.status(404).json({ error: "Milestone not found" });
+    res.status(204).send();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/projects/:id/attachments/sign", requireAuth, attachRole, async (req, res) => {
+  try {
+    const access = await loadProjectTicketAccess(req, res);
+    if (!access) return;
+    const result = await signProjectAttachment({
+      project: access.project,
+      fileName: req.body?.fileName,
+      contentType: req.body?.contentType,
+      size: req.body?.size,
+    });
+    if (result.error) return res.status(result.status).json({ error: result.error });
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/projects/:id/attachments", requireAuth, attachRole, async (req, res) => {
+  try {
+    const access = await loadProjectTicketAccess(req, res);
+    if (!access) return;
+    const result = await confirmProjectAttachment({
+      project: access.project,
+      user: req.dbUser,
+      filePath: req.body?.filePath,
+      fileName: req.body?.fileName,
+      contentType: req.body?.contentType,
+      size: req.body?.size,
+    });
+    if (result.error) return res.status(result.status).json({ error: result.error });
+    res.status(201).json(result);
+  } catch (err) {
+    if (err.code === "23505") return res.status(409).json({ error: "That file is already attached" });
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete("/projects/:id/attachments/:attachmentId", requireAuth, attachRole, async (req, res) => {
+  try {
+    const access = await loadProjectTicketAccess(req, res);
+    if (!access) return;
+    if (access.role === "client") {
+      return res.status(403).json({ error: "Clients cannot remove project files" });
+    }
+    const row = await deleteProjectAttachment({
+      attachmentId: req.params.attachmentId,
+      projectId: access.project.id,
+    });
+    if (!row) return res.status(404).json({ error: "Attachment not found" });
+    res.status(204).send();
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });

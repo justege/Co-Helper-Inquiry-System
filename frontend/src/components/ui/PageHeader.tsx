@@ -36,7 +36,7 @@ export function PageHeader({
         )}
         <Heading
           as="h1"
-          fontFamily="'Space Grotesk', Inter, sans-serif"
+          fontFamily="var(--font-heading)"
           fontSize={{ base: "1.5rem", md: "1.75rem" }}
           fontWeight="700"
           letterSpacing="-0.02em"

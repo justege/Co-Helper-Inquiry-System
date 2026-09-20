@@ -6,10 +6,10 @@ import { INK, MUTED, RULE, SURFACE } from "@/components/marketing/tokens"
 const FEATURES = [
   "Private workspace you own",
   "Invite the companies you already work with",
-  "Jobs, chat, to-dos, and documents",
-  "Edit with AI on the job",
-  "Hourly or project rates, hours, and payment logs",
-  "Trello import included",
+  "Work home: one Now and to-dos in project accordions",
+  "Remaining hours, weekly pace, and a finish window for clients",
+  "Hourly, fixed, or hybrid rates — then invoices from unbilled hours",
+  "PDF invoices you send; mark paid when money lands",
   "Companies you invite join at no extra cost",
   "No commission, no escrow, no matching fees",
 ]
@@ -25,7 +25,7 @@ export default function PricingPage() {
 
       <ContentSection>
         <Grid templateColumns={{ base: "1fr", lg: "1.1fr 0.9fr" }} gap={8} mb={16} alignItems="stretch">
-          <Box p={{ base: 8, md: 10 }} bg={INK} color="white" borderRadius="8px" border={`1px solid ${INK}`}>
+          <Box p={{ base: 8, md: 10 }} bg={INK} color="white" borderRadius="16px" border={`1px solid ${INK}`}>
             <Text fontSize="0.75rem" fontWeight="600" letterSpacing="0.08em" textTransform="uppercase"
               color="rgba(255,255,255,0.6)" mb={3}>
               Workspace
@@ -55,7 +55,7 @@ export default function PricingPage() {
           </Box>
 
           <Stack gap={6}>
-            <Box p={8} bg="white" borderRadius="8px" border={`1px solid ${RULE}`}>
+            <Box p={8} bg="white" borderRadius="16px" border={`1px solid ${RULE}`}>
               <Text fontSize="0.75rem" fontWeight="600" letterSpacing="0.08em" textTransform="uppercase" color={MUTED} mb={3}>
                 From 1 January 2027
               </Text>
@@ -74,8 +74,8 @@ export default function PricingPage() {
                 Join with an invite — no extra fee
               </Heading>
               <Text fontSize="0.875rem" color={MUTED} lineHeight="1.7" mb={6}>
-                The companies you work with see only the jobs you share: brief, chat, rates, hours, and
-                payment logs. They do not pay Co-Helper.
+                The companies you work with see only the projects you share: to-dos, hours,
+                remaining work, weekly pace, and invoices. They do not pay Co-Helper.
               </Text>
               <CTA to="/login" variant="outline">I have an invite</CTA>
             </Box>
@@ -107,10 +107,10 @@ export default function PricingPage() {
               </Text>
             </Box>
             <Box>
-              <Text fontSize="0.875rem" fontWeight="600" color={INK} mb={2}>What about Trello and AI?</Text>
+              <Text fontSize="0.875rem" fontWeight="600" color={INK} mb={2}>What does the client see?</Text>
               <Text fontSize="0.875rem" color={MUTED} lineHeight="1.65">
-                Trello import and Edit with AI are included. AI uses your job context on our servers; we
-                don’t expose the API key to the browser.
+                Current work (or an honest note if you’re on another client), remaining hours, your
+                normal week, hours on their project, and invoices you send. They never pay Co-Helper.
               </Text>
             </Box>
           </Grid>

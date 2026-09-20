@@ -5,14 +5,22 @@ import { INK, MUTED, RULE } from "@/components/marketing/tokens"
 
 const ENTRIES = [
   {
+    version: "2.1.0",
+    date: "September 2026",
+    title: "Workbench and invoices",
+    items: [
+      "Work home: one Now, this week vs capacity, to-dos in project accordions",
+      "Clients see current work, remaining hours, weekly pace, and a finish window",
+      "Invoices from unbilled hours — PDF, send, mark paid",
+    ],
+  },
+  {
     version: "2.0.0",
     date: "September 2026",
     title: "Workspace for one-person businesses",
     items: [
       "Each one-person business owns a private workspace and invites companies by link",
-      "Jobs include brief, chat, to-dos, price agreements, hours, and payment logs",
-      "Edit with AI on requirements, chat, and to-dos — Gemini key on the server",
-      "Trello: columns → projects, cards → jobs, checklists → to-dos, optional auto-sync",
+      "Clients and projects replace the old marketplace job board",
       "Marketplace matching and escrow are no longer the product",
     ],
   },

@@ -2,7 +2,6 @@ import { useState } from "react"
 import { Box, Stack, Text } from "@chakra-ui/react"
 import { Link } from "react-router-dom"
 import {
-  LuCircleCheckBig,
   LuInbox,
   LuStar,
   LuBuilding2,
@@ -39,6 +38,7 @@ export function FeatureEmptyState({
       bg="white"
       border={`1px solid ${APP_BORDER}`}
       borderRadius="16px"
+      boxShadow="0 8px 28px rgba(14,27,23,0.06), 0 1px 3px rgba(14,27,23,0.04)"
       px={{ base: 7, md: 12 }}
       py={{ base: 10, md: 14 }}
       display="flex"
@@ -63,8 +63,20 @@ export function FeatureEmptyState({
         <Stack gap={4} mb={cta ? 8 : 0}>
           {bullets.map((bullet) => (
             <Box key={bullet} display="flex" alignItems="flex-start" gap={3}>
-              <Box pt="2px" color={APP_ACCENT} flexShrink={0}>
-                <LuCircleCheckBig size={17} strokeWidth={2} />
+              <Box
+                w="18px"
+                h="18px"
+                mt="2px"
+                flexShrink={0}
+                borderRadius="full"
+                bg={APP_ACCENT}
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+              >
+                <svg width="10" height="8" viewBox="0 0 10 8" fill="none" aria-hidden>
+                  <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
               </Box>
               <Text fontSize="0.9375rem" color="#374151" lineHeight="1.5">
                 {bullet}
@@ -82,6 +94,85 @@ export function FeatureEmptyState({
 }
 
 // ── Mockup cards ──────────────────────────────────────────────────────────────
+
+/** Project card mockup — used on Projects and project detail. */
+export function ProjectMockup() {
+  return (
+    <Box
+      w="100%"
+      maxW="340px"
+      flexShrink={0}
+      position="relative"
+      display={{ base: "none", md: "block" }}
+    >
+      <Box
+        position="absolute"
+        top="16px" right="-8px"
+        w="88%" h="90%"
+        bg="#F0F2F5"
+        borderRadius="12px"
+        border="1px solid #E5E7EB"
+      />
+      <Box
+        position="relative"
+        bg="white"
+        border="1px solid #E5E7EB"
+        borderRadius="12px"
+        p={5}
+        boxShadow="0 4px 24px rgba(14,27,23,0.07)"
+      >
+        <Box display="flex" alignItems="center" justifyContent="space-between" mb={4}>
+          <Box display="flex" alignItems="center" gap={2}>
+            <Box w="28px" h="28px" bg="#E8F5EF" borderRadius="8px" display="flex" alignItems="center" justifyContent="center">
+              <LuClipboardList size={14} color={APP_ACCENT} />
+            </Box>
+            <Box>
+              <Text fontSize="0.75rem" fontWeight="700" color={APP_INK} letterSpacing="-0.01em">PRJ-0042</Text>
+              <Text fontSize="0.6875rem" color={APP_MUTED}>Shared project</Text>
+            </Box>
+          </Box>
+          <Box px={2.5} py={1} borderRadius="6px" bg="#E8F5EF" fontSize="0.6875rem" fontWeight="600" color={APP_ACCENT}>
+            Active
+          </Box>
+        </Box>
+
+        <Text fontSize="0.875rem" fontWeight="600" color={APP_INK} mb={1} letterSpacing="-0.015em">
+          Website rebuild
+        </Text>
+        <Text fontSize="0.75rem" color={APP_MUTED} mb={4}>Acme Studio · 2 collaborators</Text>
+
+        {[
+          { label: "Client", value: "Acme Studio" },
+          { label: "Rate", value: "€65 / hour" },
+          { label: "Hours", value: "12.5 logged" },
+        ].map(({ label, value }) => (
+          <Box
+            key={label}
+            display="flex"
+            justifyContent="space-between"
+            py={2}
+            borderBottom="1px solid #F3F4F6"
+            _last={{ borderBottom: "none" }}
+          >
+            <Text fontSize="0.75rem" color={APP_LABEL}>{label}</Text>
+            <Text fontSize="0.75rem" fontWeight="500" color={APP_INK}>{value}</Text>
+          </Box>
+        ))}
+
+        <Box display="flex" gap={2} mt={4}>
+          {["Brief", "Chat"].map((p) => (
+            <Box key={p} px={2.5} py={1} bg={APP_BG_SUBTLE} border={`1px solid ${APP_BORDER}`} borderRadius="6px" fontSize="0.6875rem" fontWeight="500" color={APP_MUTED}>
+              {p}
+            </Box>
+          ))}
+          <Box px={2.5} py={1} bg="#FFF7ED" border="1px solid #FED7AA" borderRadius="6px" fontSize="0.6875rem" fontWeight="600" color="#C2410C">
+            2 to-dos
+          </Box>
+        </Box>
+      </Box>
+    </Box>
+  )
+}
 
 /** Inquiry card mockup — used on Dashboard and InquiriesListPage */
 export function InquiryMockup() {
@@ -344,7 +435,7 @@ export function StartWorkspaceButton({
   return (
     <Box>
       <AppButton
-        variant="accent"
+        variant="primary"
         size={size}
         loading={busy}
         onClick={onStart}

@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useMemo, useState, useEffect } from "react"
 import { Link } from "react-router-dom"
-import { Box, Grid, Spinner, Stack, Text } from "@chakra-ui/react"
-import { LuFolderKanban, LuPencil, LuTrash2 } from "react-icons/lu"
+import { Box, Grid, Spinner, Text } from "@chakra-ui/react"
+import { LuPencil, LuPlus, LuTrash2 } from "react-icons/lu"
 import { PageShell } from "@/components/ui/PageShell"
+import { WelcomeBannerAction } from "@/components/ui/WelcomeBanner"
 import { Field } from "@/components/ui/field"
 import { FormInput, FormNativeSelect } from "@/components/ui/form-controls"
 import {
@@ -14,39 +15,35 @@ import {
   DialogFooter,
   DialogCloseTrigger,
 } from "@/components/ui/dialog"
-import {
-  APP_ACCENT,
-  APP_BG_SUBTLE,
-  APP_BORDER,
-  APP_CARD,
-  APP_INK,
-  APP_LABEL,
-  APP_MUTED,
-} from "@/components/ui/appUi"
+import { APP_ACCENT, APP_BORDER, APP_INK, APP_MUTED } from "@/components/ui/appUi"
 import { AppButton } from "@/components/ui/AppButton"
+import { ProjectMockup } from "@/components/ui/FeatureEmptyState"
+import { ProjectGlance } from "@/components/work/ProjectGlance"
 import {
   createWorkspaceProject,
   deleteWorkspaceProject,
   getMyWorkspace,
-  getWorkspaceProjects,
   updateWorkspaceProject,
   type WorkspaceClient,
   type WorkspaceProject,
 } from "@/api/workspace"
+import { getWorkbench, type WorkProject } from "@/api/work"
 import { displayName } from "@/lib/people"
 
+type Filter = "all" | "active" | "waiting" | "done"
+
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState<WorkspaceProject[]>([])
+  const [projects, setProjects] = useState<WorkProject[]>([])
   const [clients, setClients] = useState<WorkspaceClient[]>([])
   const [canManage, setCanManage] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [dialog, setDialog] = useState<"create" | "rename" | "delete" | null>(null)
-  const [active, setActive] = useState<WorkspaceProject | null>(null)
+  const [active, setActive] = useState<WorkProject | null>(null)
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [clientId, setClientId] = useState("")
-  const [view, setView] = useState<"list" | "cards">("list")
+  const [filter, setFilter] = useState<Filter>("all")
   const [busy, setBusy] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
@@ -54,10 +51,10 @@ export default function ProjectsPage() {
     setLoading(true)
     setError(null)
     try {
-      const [ws, data] = await Promise.all([getMyWorkspace(), getWorkspaceProjects()])
+      const [ws, work] = await Promise.all([getMyWorkspace(), getWorkbench()])
       setCanManage(ws.role === "owner")
       if (ws.role === "owner") setClients(ws.clients)
-      setProjects(data.projects)
+      setProjects(work.projects)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load projects")
     } finally {
@@ -76,7 +73,7 @@ export default function ProjectsPage() {
     setDialog("create")
   }
 
-  function openRename(project: WorkspaceProject) {
+  function openRename(project: WorkProject) {
     setActive(project)
     setName(project.name)
     setDescription(project.description || "")
@@ -85,10 +82,25 @@ export default function ProjectsPage() {
     setDialog("rename")
   }
 
-  function openDelete(project: WorkspaceProject) {
+  function openDelete(project: WorkProject) {
     setActive(project)
     setFormError(null)
     setDialog("delete")
+  }
+
+  function mergeProject(updated: WorkspaceProject) {
+    setProjects((prev) => prev.map((item) => (
+      item.id === updated.id
+        ? {
+            ...item,
+            name: updated.name,
+            description: updated.description ?? item.description,
+            clientId: updated.clientId,
+            client: updated.client,
+            status: updated.status || item.status,
+          }
+        : item
+    )))
   }
 
   async function save() {
@@ -106,10 +118,10 @@ export default function ProjectsPage() {
     try {
       if (dialog === "rename" && active) {
         const updated = await updateWorkspaceProject(active.id, { name: next, description, clientId })
-        setProjects((prev) => prev.map((item) => (item.id === updated.id ? { ...item, ...updated } : item)))
+        mergeProject(updated)
       } else {
-        const created = await createWorkspaceProject(next, clientId, description)
-        setProjects((prev) => [created, ...prev])
+        await createWorkspaceProject(next, clientId, description)
+        await load()
       }
       setDialog(null)
     } catch (err) {
@@ -134,33 +146,69 @@ export default function ProjectsPage() {
     }
   }
 
+  const needClient = canManage && clients.length === 0
+  const empty = !loading && projects.length === 0
+  const visible = useMemo(() => {
+    if (filter === "waiting") return projects.filter((project) => project.waitingOnClient)
+    if (filter === "done") return projects.filter((project) => project.finished || project.status === "done")
+    if (filter === "active") return projects.filter((project) => !project.finished && project.status !== "done")
+    return projects
+  }, [filter, projects])
+
+  const counts = {
+    all: projects.length,
+    active: projects.filter((project) => !project.finished && project.status !== "done").length,
+    waiting: projects.filter((project) => project.waitingOnClient).length,
+    done: projects.filter((project) => project.finished || project.status === "done").length,
+  }
+
   return (
     <PageShell
       eyebrow="Workspace"
       title="Projects"
-      subtitle="Each project belongs to one client. Invite collaborators on the project page."
       action={
-        <Box display="flex" gap={2} alignItems="center">
-          <AppButton size="sm" variant={view === "list" ? "primary" : "secondary"} onClick={() => setView("list")}>List</AppButton>
-          <AppButton size="sm" variant={view === "cards" ? "primary" : "secondary"} onClick={() => setView("cards")}>Cards</AppButton>
-          {canManage ? (
-            <AppButton size="sm" onClick={openCreate} disabled={clients.length === 0}>New project</AppButton>
-          ) : undefined}
-        </Box>
+        canManage ? (
+          needClient ? (
+            <WelcomeBannerAction to="/app/clients">
+              <LuPlus size={15} /> Add a client
+            </WelcomeBannerAction>
+          ) : (
+            <WelcomeBannerAction onClick={openCreate}>
+              <LuPlus size={15} /> New project
+            </WelcomeBannerAction>
+          )
+        ) : undefined
       }
+      intro={empty ? {
+        title: "One shared project for the work you run together",
+        bullets: [
+          "Attach the client this work belongs to — they see only this project",
+          "To-dos, hours, and remaining work live on the project",
+          "Invite collaborators onto the project, not your whole workspace",
+        ],
+        cta: canManage ? (
+          needClient ? (
+            <Link to="/app/clients" style={{ textDecoration: "none" }}>
+              <AppButton>
+                <LuPlus size={16} /> Add a client first
+              </AppButton>
+            </Link>
+          ) : (
+            <AppButton onClick={openCreate}>
+              <LuPlus size={16} /> New project
+            </AppButton>
+          )
+        ) : (
+          <AppButton variant="secondary" disabled>
+            Waiting for an invite
+          </AppButton>
+        ),
+        mockup: <ProjectMockup />,
+      } : undefined}
     >
       {error && (
         <Box mb={3} bg="#FEF2F2" border="1px solid #FECACA" borderRadius="10px" px={4} py={3}>
           <Text fontSize="0.8125rem" color="#991B1B">{error}</Text>
-        </Box>
-      )}
-
-      {canManage && clients.length === 0 && !loading && (
-        <Box mb={4} bg="#FFF8E8" border="1px solid #F6E05E" borderRadius="12px" px={4} py={3}>
-          <Text fontSize="0.875rem" color="#92400E">
-            Add a client first, then create a project for them.{" "}
-            <Link to="/app/clients" style={{ fontWeight: 700 }}>Go to clients</Link>
-          </Text>
         </Box>
       )}
 
@@ -169,68 +217,60 @@ export default function ProjectsPage() {
           <Spinner size="sm" color="green.500" />
           <Text fontSize="sm" color={APP_MUTED}>Loading projects…</Text>
         </Box>
-      ) : (
-        <Box {...APP_CARD} overflow="hidden">
-          <Box px={5} py={3.5} borderBottom={`1px solid ${APP_BORDER}`} bg={APP_BG_SUBTLE}
-            display="flex" alignItems="center" gap={2.5}>
-            <Box color={APP_ACCENT}><LuFolderKanban size={16} /></Box>
-            <Text fontSize="0.875rem" fontWeight="700" color={APP_INK}>Your projects</Text>
+      ) : projects.length > 0 ? (
+        <>
+          <Box display="flex" gap={2} flexWrap="wrap" mb={4}>
+            {([
+              ["all", `All (${counts.all})`],
+              ["active", `Active (${counts.active})`],
+              ["waiting", `Waiting (${counts.waiting})`],
+              ["done", `Done (${counts.done})`],
+            ] as const).map(([id, label]) => (
+              <Box
+                key={id}
+                as="button"
+                h="32px"
+                px={3}
+                borderRadius="999px"
+                fontSize="0.75rem"
+                fontWeight="700"
+                border={`1px solid ${filter === id ? APP_ACCENT : APP_BORDER}`}
+                bg={filter === id ? "rgba(15,110,86,0.08)" : "white"}
+                color={filter === id ? APP_ACCENT : APP_MUTED}
+                onClick={() => setFilter(id)}
+              >
+                {label}
+              </Box>
+            ))}
           </Box>
-          <Box p={5}>
-            {projects.length === 0 ? (
-              <Text fontSize="0.875rem" color={APP_MUTED} lineHeight="1.6">
-                No projects yet. Create one for a client, then invite collaborators.
-              </Text>
-            ) : view === "cards" ? (
-              <Grid templateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={3}>
-                {projects.map((project) => (
-                  <Box key={project.id} px={4} py={4} bg={APP_BG_SUBTLE} borderRadius="14px" border={`1px solid ${APP_BORDER}`}>
-                    <Link to={`/app/projects/${project.id}`} style={{ textDecoration: "none" }}>
-                      <Text fontSize="1rem" fontWeight="700" color={APP_INK} mb={1}>{project.name}</Text>
-                    </Link>
-                    {project.description && <Text fontSize="0.8125rem" color={APP_MUTED} mb={2}>{project.description}</Text>}
-                    <Text fontSize="0.75rem" color={APP_LABEL}>
-                      {displayName(project.client)}
-                      {project.collaboratorCount ? ` · ${project.collaboratorCount} collaborator${project.collaboratorCount === 1 ? "" : "s"}` : ""}
-                    </Text>
-                  </Box>
-                ))}
-              </Grid>
-            ) : (
-              <Stack gap={3}>
-                {projects.map((project) => (
-                  <Box key={project.id} display="flex" alignItems="center" justifyContent="space-between" gap={3}
-                    px={4} py={3} bg={APP_BG_SUBTLE} borderRadius="10px" border={`1px solid ${APP_BORDER}`} flexWrap="wrap">
-                    <Box minW={0}>
-                      <Link to={`/app/projects/${project.id}`} style={{ textDecoration: "none" }}>
-                        <Text fontSize="0.875rem" fontWeight="600" color={APP_INK}>{project.name}</Text>
-                      </Link>
-                      <Text fontSize="0.75rem" color={APP_LABEL}>
-                        {displayName(project.client)}
-                        {project.collaboratorCount ? ` · ${project.collaboratorCount} collaborator${project.collaboratorCount === 1 ? "" : "s"}` : ""}
-                      </Text>
-                    </Box>
-                    {canManage && (
-                      <Box display="flex" gap={3} alignItems="center">
-                        <Box as="button" onClick={() => openRename(project)}
-                          display="inline-flex" alignItems="center" gap={1}
-                          color={APP_ACCENT} fontSize="0.75rem" fontWeight="600" cursor="pointer">
-                          <LuPencil size={12} /> Edit
-                        </Box>
-                        <Box as="button" onClick={() => openDelete(project)}
-                          display="inline-flex" alignItems="center" gap={1}
-                          color="#B91C1C" fontSize="0.75rem" fontWeight="600" cursor="pointer">
-                          <LuTrash2 size={12} /> Delete
-                        </Box>
+          {visible.length === 0 ? (
+            <Text fontSize="0.875rem" color={APP_MUTED}>No projects in this filter.</Text>
+          ) : (
+            <Grid templateColumns={{ base: "1fr", lg: "1fr 1fr" }} gap={3}>
+              {visible.map((project) => (
+                <ProjectGlance
+                  key={project.id}
+                  project={project}
+                  actions={canManage ? (
+                    <>
+                      <Box as="button" onClick={() => openRename(project)}
+                        display="inline-flex" alignItems="center" gap={1}
+                        color={APP_ACCENT} fontSize="0.75rem" fontWeight="600" cursor="pointer">
+                        <LuPencil size={12} /> Edit
                       </Box>
-                    )}
-                  </Box>
-                ))}
-              </Stack>
-            )}
-          </Box>
-        </Box>
-      )}
+                      <Box as="button" onClick={() => openDelete(project)}
+                        display="inline-flex" alignItems="center" gap={1}
+                        color="#B91C1C" fontSize="0.75rem" fontWeight="600" cursor="pointer">
+                        <LuTrash2 size={12} /> Delete
+                      </Box>
+                    </>
+                  ) : undefined}
+                />
+              ))}
+            </Grid>
+          )}
+        </>
+      ) : null}
 
       <DialogRoot
         open={dialog === "create" || dialog === "rename"}

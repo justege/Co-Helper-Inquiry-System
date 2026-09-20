@@ -14,18 +14,18 @@ const TOPICS = [
     ],
   },
   {
-    title: "Jobs",
+    title: "Projects",
     links: [
-      { label: "Opening a job and writing the brief", to: "/how-it-works" },
-      { label: "Edit with AI on requirements and chat", to: "/how-it-works" },
-      { label: "To-dos, hours, and payment logs", to: "/how-it-works" },
+      { label: "Opening a project and adding to-dos", to: "/how-it-works" },
+      { label: "Hours, remaining work, and weekly pace", to: "/how-it-works" },
+      { label: "Invoices from unbilled hours", to: "/how-it-works" },
     ],
   },
   {
     title: "For one-person businesses",
     links: [
       { label: "Create your workspace", to: "/partners" },
-      { label: "Import a Trello board", to: "/how-it-works" },
+      { label: "Set your normal weekly hours", to: "/how-it-works" },
       { label: "Services you offer the companies you work with", to: "/partners" },
     ],
   },

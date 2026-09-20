@@ -12,22 +12,22 @@ const STEPS = [
   {
     n: "02",
     title: "Invite the companies you work with",
-    body: "Send each company an invite link. They join your workspace and only see the jobs you share with them. Someone invited by two operators simply belongs to two workspaces.",
+    body: "Send each company an invite link. They join your workspace and only see the projects you share with them. Someone invited by two operators simply belongs to two workspaces.",
   },
   {
     n: "03",
-    title: "Run every job in one place",
-    body: "Open a job (or import a Trello board). Clarify the brief and chat with Edit with AI, agree hourly or project rates, keep to-dos, log hours, and record payments — so both sides always know where things stand.",
+    title: "Run the work in one place",
+    body: "Open the workbench: one Now, to-dos in project accordions, hours as you go. The client always sees current work, remaining hours, your normal week, and invoices from that same record.",
   },
 ]
 
 const JOB_TYPES = [
   { name: "Ongoing service", examples: "Retainers, weekly support, continuous product work" },
   { name: "Fixed-scope project", examples: "A launch, a rebuild, a defined delivery with an end date" },
-  { name: "Requirements & chat", examples: "One shared brief, messages, and documents per job" },
-  { name: "To-dos", examples: "Checklists from you — or imported from Trello cards" },
-  { name: "Rates & hours", examples: "Hourly or project price, then logged time against the job" },
-  { name: "Payment logs", examples: "Record paid, partial, or unpaid — Co-Helper does not process money" },
+  { name: "To-dos", examples: "Status, estimate, and logged hours on each item" },
+  { name: "Rates & hours", examples: "Hourly, fixed, or hybrid — then time against the project" },
+  { name: "Weekly pace", examples: "Your normal week, hours on this project, a finish window" },
+  { name: "Invoices", examples: "Draft from unbilled work, PDF, send, mark paid — we don’t move money" },
 ]
 
 export default function HowItWorksPage() {
@@ -36,7 +36,7 @@ export default function HowItWorksPage() {
       <PageHero
         label="Platform"
         title="How it works"
-        subtitle="A private workspace between a one-person business and the companies they work with — invite, open jobs, clarify with AI, and track rates, hours, and payments."
+        subtitle="A private workspace between a one-person business and the companies they work with — invite, work from one Now, and share hours, remaining work, and invoices."
       />
 
       <ContentSection>
@@ -54,10 +54,10 @@ export default function HowItWorksPage() {
           <Text fontSize="0.7rem" fontWeight="700" color={GREEN}
             letterSpacing="0.12em" textTransform="uppercase" mb={4}
             fontFamily="var(--font-heading)">
-            What lives on a job
+            What lives on a project
           </Text>
           <Heading fontSize="1.25rem" fontWeight="600" color={INK} mb={3} letterSpacing="-0.02em">
-            One job. Everything you used to scatter across email and Trello.
+            One project. Everything you used to scatter across email and a spreadsheet.
           </Heading>
           <Text fontSize="0.9375rem" color={MUTED} lineHeight="1.75" mb={8} maxW="640px">
             You decide the work. Co-Helper is the shared record — not a staffing network and not an escrow agent.
@@ -80,9 +80,9 @@ export default function HowItWorksPage() {
             <Stack gap={3} mb={8}>
               {[
                 "You join with an invite from the one-person business you work with",
-                "See only the jobs they share with you",
-                "Agree hourly or project rates together",
-                "Follow hours, to-dos, and what you’ve paid",
+                "See only the projects they share with you",
+                "See what they are working on right now — or an honest note if it’s other client work",
+                "Follow remaining hours, weekly pace, and invoices",
                 "No browsing, matching, or platform commission",
               ].map((item) => (
                 <CheckItem key={item}>{item}</CheckItem>
@@ -96,9 +96,9 @@ export default function HowItWorksPage() {
               {[
                 "Your own workspace — you own the client relationship",
                 "Invite companies by email and copy a link",
-                "Import Trello columns as projects and cards as jobs",
-                "Edit with AI on requirements, chat, and to-dos",
-                "Log hours and payments; we don’t take a cut or hold funds",
+                "Home is the work: one Now and to-dos in project accordions",
+                "Set a normal week and optional hours/week per project",
+                "Invoice from unbilled hours; we don’t take a cut or hold funds",
               ].map((item) => (
                 <CheckItem key={item}>{item}</CheckItem>
               ))}

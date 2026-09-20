@@ -3,6 +3,8 @@ import { Link, Navigate, useParams } from "react-router-dom"
 import { Box, Spinner, Text } from "@chakra-ui/react"
 import { getWorkspaceClient, inviteExistingClient } from "@/api/workspace"
 import { PageShell } from "@/components/ui/PageShell"
+import { PartnerMockup } from "@/components/ui/FeatureEmptyState"
+import { WelcomeBannerAction } from "@/components/ui/WelcomeBanner"
 import { APP_BORDER, APP_INK, APP_MUTED, APP_SURFACE } from "@/components/ui/appUi"
 import { displayName } from "@/lib/people"
 import { AppButton } from "@/components/ui/AppButton"
@@ -19,27 +21,43 @@ export default function ClientDetailPage() {
   }, [id])
 
   if (!id) return <Navigate to="/app/clients" replace />
-  if (error) return <PageShell title="Client" backHref="/app/clients"><Text color="#B91C1C">{error}</Text></PageShell>
-  if (!data) return <PageShell title="Client" backHref="/app/clients"><Spinner /></PageShell>
+  if (error) return <PageShell eyebrow="Workspace" title="Client" backHref="/app/clients"><Text color="#B91C1C">{error}</Text></PageShell>
+  if (!data) return <PageShell eyebrow="Workspace" title="Client" backHref="/app/clients"><Spinner /></PageShell>
 
   const { client, projects } = data
 
   return (
     <PageShell
+      eyebrow="Workspace"
       title={displayName(client)}
-      subtitle={client.email}
       backHref="/app/clients"
       action={
         !client.userId ? (
-          <AppButton size="sm" variant="secondary" onClick={() => {
-            inviteExistingClient(client.id)
-              .then(() => setInviteMsg("Invite sent"))
-              .catch((e: Error) => setInviteMsg(e.message))
-          }}>
+          <WelcomeBannerAction
+            onClick={() => {
+              inviteExistingClient(client.id)
+                .then(() => setInviteMsg("Invite sent"))
+                .catch((e: Error) => setInviteMsg(e.message))
+            }}
+          >
             Send invite
-          </AppButton>
+          </WelcomeBannerAction>
         ) : undefined
       }
+      intro={{
+        title: "This client only sees the projects you attach",
+        bullets: [
+          "Invite them once — they join at no extra fee",
+          "Each project is a separate job they can follow",
+          "Open a project to add collaborators for that work only",
+        ],
+        cta: (
+          <Link to="/app/projects" style={{ textDecoration: "none" }}>
+            <AppButton>Create a project</AppButton>
+          </Link>
+        ),
+        mockup: <PartnerMockup />,
+      }}
     >
       {inviteMsg && <Text fontSize="0.8125rem" color={APP_MUTED} mb={4}>{inviteMsg}</Text>}
       <Box bg={APP_SURFACE} border={`1px solid ${APP_BORDER}`} borderRadius="14px" overflow="hidden">

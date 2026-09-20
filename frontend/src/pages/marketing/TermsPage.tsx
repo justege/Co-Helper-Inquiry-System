@@ -21,7 +21,7 @@ export default function TermsPage() {
           <h2>2. What Co-Helper is</h2>
           <p>
             Co-Helper is software for a workspace owned by a one-person business. You invite the companies
-            you already work with and run jobs (inquiries) with shared requirements, chat, to-dos, rate
+            you already work with and run projects with shared to-dos, hours, rates,
             agreements, time logs, and payment records. We do not match companies with operators, assign a
             project manager, hold escrow, or process payments. We are not a party to the commercial
             relationship between a one-person business and a company.

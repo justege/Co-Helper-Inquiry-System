@@ -18,6 +18,9 @@ import ClientsPage from "./pages/ClientsPage";
 import ClientDetailPage from "./pages/ClientDetailPage";
 import ProjectsPage from "./pages/ProjectsPage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
+import InvoicesPage from "./pages/InvoicesPage";
+import InvoiceDetailPage from "./pages/InvoiceDetailPage";
+import TodoDetailPage from "./pages/TodoDetailPage";
 
 import HowItWorksPage from "./pages/marketing/HowItWorksPage";
 import PricingPage from "./pages/marketing/PricingPage";
@@ -72,6 +75,9 @@ export default function App() {
             <Route path="clients/:id" element={<ClientDetailPage />} />
             <Route path="projects" element={<ProjectsPage />} />
             <Route path="projects/:id" element={<ProjectDetailPage />} />
+            <Route path="todos/:id" element={<TodoDetailPage />} />
+            <Route path="invoices" element={<InvoicesPage />} />
+            <Route path="invoices/:id" element={<InvoiceDetailPage />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>

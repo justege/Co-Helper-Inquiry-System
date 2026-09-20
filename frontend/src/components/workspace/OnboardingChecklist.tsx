@@ -25,7 +25,7 @@ export function OnboardingChecklist({
 
   return (
     <Box bg={SURFACE} border={`1px solid ${RULE}`} borderRadius="14px" p={{ base: 5, md: 6 }} mb={6}>
-      <Text fontFamily="'Space Grotesk', Inter, sans-serif" fontWeight="700" fontSize="1.125rem" color={INK} mb={1}>
+      <Text fontFamily="var(--font-heading)" fontWeight="700" fontSize="1.125rem" color={INK} mb={1}>
         Get set up
       </Text>
       <Text fontSize="0.875rem" color={MUTED} mb={4}>
@@ -44,7 +44,7 @@ export function OnboardingChecklist({
       {!hasClients && (
         <Box mt={4}>
           <Link to="/app/clients">
-            <AppButton variant="accent">Add a client</AppButton>
+            <AppButton>Add a client</AppButton>
           </Link>
         </Box>
       )}

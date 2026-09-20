@@ -1,33 +1,10 @@
 import { Box, Flex, Heading, Text, VStack } from "@chakra-ui/react"
 import { Link } from "react-router-dom"
-
-// ── Logo ──────────────────────────────────────────────────────────────────────
+import { BrandMark } from "@/components/brand/BrandMark"
+import { INK, PAPER } from "@/theme/tokens"
 
 export function LogoMark({ dark = true, size = "md" }: { dark?: boolean; size?: "sm" | "md" }) {
-  const px = size === "sm" ? "22px" : "26px"
-  const py = size === "sm" ? "22px" : "26px"
-  const dot = size === "sm" ? "8px" : "9px"
-  const fs = size === "sm" ? "0.75rem" : "0.875rem"
-  return (
-    <Box display="flex" alignItems="center" gap={2}>
-      <Box
-        w={px} h={py}
-        bg={dark ? "#0D1B2E" : "rgba(255,255,255,0.15)"}
-        rounded="6px"
-        display="flex" alignItems="center" justifyContent="center"
-        flexShrink={0}
-      >
-        <Box w={dot} h={dot} bg={dark ? "#0F6E56" : "white"} rounded="sm" transform="rotate(45deg)" />
-      </Box>
-      <Text
-        fontSize={fs} fontWeight="800" letterSpacing="0.06em" textTransform="uppercase"
-        color={dark ? "#0D1B2E" : "white"}
-        lineHeight="1"
-      >
-        Co-Helper
-      </Text>
-    </Box>
-  )
+  return <BrandMark inverted={!dark} size={size} to={null} />
 }
 
 // ── AuthShell ─────────────────────────────────────────────────────────────────
@@ -41,7 +18,7 @@ function AuthFormHeader({ title, subtitle }: { title: string; subtitle: string }
   return (
     <VStack gap={1} align="flex-start" mb={8}>
       <Heading
-        fontSize="1.625rem" fontWeight="800" color="#0D1B2E"
+        fontSize="1.625rem" fontWeight="800" color={INK}
         letterSpacing="-0.03em" lineHeight="1.2"
       >
         {title}
@@ -85,11 +62,11 @@ export function AuthShell({
             <Box
               position="absolute"
               inset={0}
-              background="linear-gradient(160deg, rgba(8,16,32,0.78) 0%, rgba(8,16,32,0.55) 45%, rgba(8,16,32,0.82) 100%)"
+              background="linear-gradient(160deg, rgba(14,27,23,0.82) 0%, rgba(14,27,23,0.58) 45%, rgba(14,27,23,0.86) 100%)"
             />
           </>
         ) : (
-          <Box position="absolute" inset={0} bg="#0B1528" />
+          <Box position="absolute" inset={0} bg={INK} />
         )}
 
         <Box
@@ -140,7 +117,7 @@ export function AuthShell({
   }
 
   return (
-    <Flex minH="100vh" bg="#F2F4F8">
+    <Flex minH="100vh" bg={PAPER}>
       {/* ── Left: Form panel ─────────────────────────────────────── */}
       <Flex
         flex={{ base: "1", lg: "none" }}
@@ -151,7 +128,7 @@ export function AuthShell({
         bg="white"
         position="relative"
         zIndex={1}
-        boxShadow={{ lg: "2px 0 24px rgba(11,21,40,0.06)" }}
+        boxShadow={{ lg: "2px 0 24px rgba(14,27,23,0.06)" }}
       >
         {/* Brand */}
         <Box mb={16}>
@@ -189,7 +166,7 @@ export function AuthShell({
             />
             {/* Gradient: strong at bottom for text, lighter in middle */}
             <Box position="absolute" inset={0}
-              background="linear-gradient(180deg, rgba(8,16,32,0.55) 0%, rgba(8,16,32,0.20) 50%, rgba(8,16,32,0.72) 100%)"
+              background="linear-gradient(180deg, rgba(14,27,23,0.55) 0%, rgba(14,27,23,0.20) 50%, rgba(14,27,23,0.72) 100%)"
             />
             {/* Blue accent line top */}
             <Box position="absolute" top={0} left={0} right={0} h="3px"
@@ -221,7 +198,7 @@ export function AuthShell({
           </>
         ) : (
           /* fallback dark panel */
-          <Box bg="#0B1528" position="absolute" inset={0} display="flex" alignItems="center" justifyContent="center">
+          <Box bg={INK} position="absolute" inset={0} display="flex" alignItems="center" justifyContent="center">
             <Text fontSize="2rem" fontWeight="800" color="white" maxW="360px" textAlign="center" letterSpacing="-0.03em">
               {promo.tagline}
             </Text>

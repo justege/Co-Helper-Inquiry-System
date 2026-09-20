@@ -8,7 +8,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LOCAL_UPLOAD_DIR = path.join(__dirname, "../uploads");
 
-const BUCKETS = ["inquiry-documents", "partner-documents"];
+const BUCKETS = ["inquiry-documents", "partner-documents", "todo-attachments", "project-attachments"];
 
 function spacesConfigured() {
   return Boolean(
@@ -74,7 +74,7 @@ export async function ensureStorageBuckets() {
   console.log("[storage] Using local disk uploads at", LOCAL_UPLOAD_DIR);
 }
 
-export async function createSignedUploadUrl(bucket, filePath) {
+export async function createSignedUploadUrl(bucket, filePath, { contentType } = {}) {
   if (spacesConfigured()) {
     const client = spacesClient();
     const url = await getSignedUrl(
@@ -82,6 +82,7 @@ export async function createSignedUploadUrl(bucket, filePath) {
       new PutObjectCommand({
         Bucket: process.env.DO_SPACES_BUCKET,
         Key: spacesKey(bucket, filePath),
+        ...(contentType ? { ContentType: contentType } : {}),
       }),
       { expiresIn: 600 }
     );

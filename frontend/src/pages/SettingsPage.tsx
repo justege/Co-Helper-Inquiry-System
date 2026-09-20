@@ -17,6 +17,7 @@ import {
   LuLayoutGrid,
 } from "react-icons/lu"
 import { PageShell } from "@/components/ui/PageShell"
+import { AdminInquiryMockup, StartWorkspaceButton } from "@/components/ui/FeatureEmptyState"
 import { getMe, updateMe, type User } from "@/api/users"
 import { getBilling, startCheckout, openBillingPortal } from "@/api/billing"
 import {
@@ -25,7 +26,6 @@ import {
   updateWorkspaceSettings,
   type ClientWorkspaceMe,
 } from "@/api/workspace"
-import { StartWorkspaceButton } from "@/components/ui/FeatureEmptyState"
 import { sendPasswordResetEmail } from "firebase/auth"
 import { auth } from "@/lib/firebase"
 import { AppButton } from "@/components/ui/AppButton"
@@ -65,7 +65,7 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <PageShell eyebrow="Account" title="Settings" subtitle="Manage your workspace preferences">
+      <PageShell eyebrow="Account" title="Settings">
         <Box display="flex" alignItems="center" gap={2} py={6}>
           <Spinner size="sm" color="green.500" />
           <Text fontSize="sm" color={APP_MUTED}>Loading…</Text>
@@ -75,7 +75,19 @@ export default function SettingsPage() {
   }
 
   return (
-    <PageShell eyebrow="Account" title="Settings" subtitle="Manage your workspace and account">
+    <PageShell
+      eyebrow="Account"
+      title="Settings"
+      intro={{
+        title: "Your workspace, billing, and how people reach you",
+        bullets: [
+          "Set contact details so clients know how to get hold of you",
+          "Workspace name, weekly hours, currency, and email live here",
+          "Subscribe when you’re ready — invited companies never pay Co-Helper",
+        ],
+        mockup: <AdminInquiryMockup />,
+      }}
+    >
       <Stack gap={5}>
         <ContactSection profile={profile} />
 
@@ -231,6 +243,7 @@ function WorkspaceSettingsSection() {
   const [currency, setCurrency] = useState("EUR")
   const [timezone, setTimezone] = useState("Europe/Istanbul")
   const [name, setName] = useState("")
+  const [weeklyHours, setWeeklyHours] = useState("20")
   const [saved, setSaved] = useState(false)
   useEffect(() => {
     getMyWorkspace().then((ws) => {
@@ -238,6 +251,7 @@ function WorkspaceSettingsSection() {
         setName(ws.workspace.name)
         setCurrency(ws.workspace.currency || "EUR")
         setTimezone(ws.workspace.timezone || "Europe/Istanbul")
+        setWeeklyHours(String(ws.workspace.weeklyHours || 20))
       }
     }).catch(() => null)
   }, [])
@@ -261,8 +275,12 @@ function WorkspaceSettingsSection() {
           <FieldLabel>Timezone</FieldLabel>
           <FormInput value={timezone} onChange={(e) => setTimezone(e.target.value)} />
         </Box>
+        <Box>
+          <FieldLabel>Hours you normally work per week</FieldLabel>
+          <FormInput type="number" step="0.5" min="1" max="168" value={weeklyHours} onChange={(e) => setWeeklyHours(e.target.value)} />
+        </Box>
       </Grid>
-      <AppButton size="sm" mt={5} onClick={() => updateWorkspaceSettings({ name, currency, timezone }).then(() => { setSaved(true); setTimeout(() => setSaved(false), 2000) })}>
+      <AppButton size="sm" mt={5} onClick={() => updateWorkspaceSettings({ name, currency, timezone, weeklyHours: Number(weeklyHours) || 20 }).then(() => { setSaved(true); setTimeout(() => setSaved(false), 2000) })}>
         Save workspace
       </AppButton>
       {saved && <Text fontSize="sm" color="#047857" fontWeight="600" mt={2}>Saved</Text>}

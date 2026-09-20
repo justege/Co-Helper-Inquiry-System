@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form"
 import { Field } from "@/components/ui/field"
 import { FormInput } from "@/components/ui/form-controls"
 import { PageShell } from "@/components/ui/PageShell"
+import { PartnerMockup } from "@/components/ui/FeatureEmptyState"
 import { AppButton } from "@/components/ui/AppButton"
 import {
   APP_BG_SUBTLE,
@@ -75,7 +76,19 @@ export default function ProfilePage() {
   }
 
   return (
-    <PageShell eyebrow="Account" title="Profile" subtitle="How you appear to clients and collaborators">
+    <PageShell
+      eyebrow="Account"
+      title="Profile"
+      intro={{
+        title: "How you appear to clients and collaborators",
+        bullets: [
+          "Your name and company show on invites and shared projects",
+          "Keep this current so people know who they’re working with",
+          "Email stays on your account — change it from login settings if needed",
+        ],
+        mockup: <PartnerMockup />,
+      }}
+    >
       <Box {...APP_CARD} overflow="hidden">
         <Box px={5} py={3.5} borderBottom={`1px solid ${APP_BORDER}`} bg={APP_BG_SUBTLE}>
           <Text fontSize="0.875rem" fontWeight="700" color={APP_INK}>Personal details</Text>

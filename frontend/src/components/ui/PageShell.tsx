@@ -1,6 +1,18 @@
-import { Box } from "@chakra-ui/react"
-import { PageHeader, PageBody } from "./PageHeader"
+import { Box, Text } from "@chakra-ui/react"
+import { Link } from "react-router-dom"
+import { LuChevronLeft } from "react-icons/lu"
+import { INK, MUTED } from "@/theme/tokens"
+import { PageBody } from "./PageHeader"
+import { WelcomeBanner } from "./WelcomeBanner"
+import { FeatureEmptyState, InquiryMockup } from "./FeatureEmptyState"
 import type { ReactNode } from "react"
+
+export interface PageIntro {
+  title: string
+  bullets: string[]
+  cta?: ReactNode
+  mockup?: ReactNode
+}
 
 interface PageShellProps {
   title: string
@@ -9,33 +21,68 @@ interface PageShellProps {
   backHref?: string
   backLabel?: string
   action?: ReactNode
+  intro?: PageIntro
   wide?: boolean
-  headerBgImage?: string
   children: ReactNode
 }
 
-/** Compatible wrapper — light page header instead of dark island. */
 export function PageShell({
   title,
   subtitle,
+  eyebrow = "Workspace",
   backHref,
   backLabel = "Back",
   action,
-  wide,
+  intro,
+  wide = true,
   children,
 }: PageShellProps) {
+  const island: PageIntro | null = intro ?? (subtitle
+    ? {
+        title: subtitle,
+        bullets: [
+          "This page follows the same workspace flow as the rest of Co-Helper",
+          "Use the island above to jump into the next action",
+          "Everything you add here stays with this workspace",
+        ],
+        mockup: <InquiryMockup />,
+      }
+    : null)
+
   return (
     <PageBody wide={wide}>
-      <PageHeader
-        title={title}
-        subtitle={subtitle}
-        action={action}
-        backHref={backHref}
-        backLabel={backLabel}
-      />
+      {backHref && (
+        <Link to={backHref} style={{ textDecoration: "none" }}>
+          <Text
+            fontSize="0.8125rem"
+            color={MUTED}
+            display="inline-flex"
+            alignItems="center"
+            gap="4px"
+            mb={3}
+            _hover={{ color: INK }}
+          >
+            <LuChevronLeft size={14} /> {backLabel}
+          </Text>
+        </Link>
+      )}
+
+      <WelcomeBanner eyebrow={eyebrow} title={title} action={action} />
+
+      {island && (
+        <Box mb={6}>
+          <FeatureEmptyState
+            title={island.title}
+            bullets={island.bullets}
+            cta={island.cta}
+            mockup={island.mockup ?? <InquiryMockup />}
+          />
+        </Box>
+      )}
+
       <Box>{children}</Box>
     </PageBody>
   )
 }
 
-export const PAGE_MAX_W = "960px"
+export const PAGE_MAX_W = "1280px"

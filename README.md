@@ -2,7 +2,7 @@
 
 **A private workspace for one-person businesses and the companies they already work with.**
 
-Co-Helper is not a marketplace. Solo operators invite clients, run jobs on a shared board, chat, attach files, agree rates, log hours, and keep a payment ledger — with optional Trello import and AI-assisted briefs.
+Co-Helper is not a marketplace. Solo operators invite clients, run projects from a workbench (one Now, to-dos in project accordions), log hours, show clients remaining work and weekly pace, and send invoices from unbilled hours.
 
 Repository: [github.com/justege/outsourceSoft](https://github.com/justege/outsourceSoft)
 
@@ -33,15 +33,15 @@ Repository: [github.com/justege/outsourceSoft](https://github.com/justege/outsou
 ### For solo businesses (role `expert`)
 
 - Own a workspace and invite client companies by email/link
-- Group work into projects; run jobs on a four-column board
-- Agreements (hourly or fixed), hours, payment log, invoice PDF
-- Optional Trello import and Gemini “Edit with AI”
-- Workspace currency/timezone and Stripe subscription billing (when configured)
+- Work home: one Now, this week vs capacity, to-dos in project accordions
+- Hourly / fixed / hybrid rates, logged hours, remaining work, weekly pace
+- Invoices from unbilled hours (PDF, send, mark paid)
+- Workspace currency, timezone, weekly hours, and Stripe subscription billing (when configured)
 
 ### For invited companies (role `client`)
 
-- Accept an invite and share jobs in the freelancer’s workspace
-- Chat, files, approve pricing, and see finance summaries
+- Accept an invite and see only the projects shared with them
+- Always see current work (or honest “other client work”), remaining hours, weekly pace, and invoices
 
 ### Platform
 

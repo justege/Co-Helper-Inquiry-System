@@ -3,7 +3,7 @@ import { useNavigate, useParams, Link } from "react-router-dom"
 import { Box, Flex, Heading, Spinner, Text } from "@chakra-ui/react"
 import { useAuthContext } from "@/components/auth/AuthContext"
 import { getInvitePreview, acceptInvite, type InvitePreview } from "@/api/workspace"
-import { INK, MUTED, GREEN, AMBER, AMBER_HOVER } from "@/components/marketing/tokens"
+import { GREEN, INK, MUTED } from "@/components/marketing/tokens"
 
 function freelancerName(freelancer: InvitePreview["freelancer"]) {
   if (!freelancer) return "the one-person business you work with"
@@ -41,7 +41,7 @@ export default function AcceptInvitePage() {
   if (!token) return null
 
   return (
-    <Flex minH="100vh" align="center" justify="center" bg="#F2F4F8" px={4}>
+    <Flex minH="100vh" align="center" justify="center" bg="#F3F6F4" px={4}>
       <Box
         w="full" maxW="440px" bg="white" borderRadius="16px"
         boxShadow="0 24px 64px rgba(0,0,0,0.12)" p={{ base: 6, md: 8 }}
@@ -83,9 +83,9 @@ export default function AcceptInvitePage() {
               as={Link}
               to={`/register?invite=${token}`}
               display="block" textAlign="center"
-              px={5} py="12px" borderRadius="8px" fontWeight="700" fontSize="0.9375rem"
-              bg={AMBER} color={INK} mb={3}
-              _hover={{ bg: AMBER_HOVER, textDecoration: "none" }}
+              px={5} py="12px" borderRadius="10px" fontWeight="700" fontSize="0.9375rem"
+              bg={GREEN} color="white" mb={3}
+              _hover={{ bg: "#0a5240", textDecoration: "none" }}
             >
               Create my account
             </Box>

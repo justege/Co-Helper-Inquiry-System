@@ -58,7 +58,7 @@ export default function LoginPage() {
       title="Sign in"
       subtitle="See the projects you share with the one-person business you work with."
       promo={{
-        tagline: "You were invited here — every job, rate, and payment, in one place.",
+        tagline: "You were invited here — current work, hours, and invoices in one place.",
         imageSrc: loginPng,
       }}
       footer={

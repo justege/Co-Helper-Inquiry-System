@@ -16,7 +16,7 @@ const config = defineConfig({
     tokens: {
       fonts: {
         body: { value: "'Inter', system-ui, -apple-system, sans-serif" },
-        heading: { value: "'Space Grotesk', Inter, system-ui, sans-serif" },
+        heading: { value: "'Inter', system-ui, -apple-system, sans-serif" },
       },
       colors: {
         green: {

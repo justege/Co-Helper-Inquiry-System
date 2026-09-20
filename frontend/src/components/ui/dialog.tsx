@@ -60,3 +60,10 @@ export const DialogTitle = ChakraDialog.Title
 export const DialogDescription = ChakraDialog.Description
 export const DialogTrigger = ChakraDialog.Trigger
 export const DialogActionTrigger = ChakraDialog.ActionTrigger
+
+export const DIALOG_PANEL_STYLE: React.CSSProperties = {
+  borderRadius: "16px",
+  border: "1px solid #D8DCE8",
+  overflow: "hidden",
+  boxShadow: "0 20px 60px rgba(11,21,40,0.18)",
+}

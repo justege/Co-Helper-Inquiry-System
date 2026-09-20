@@ -1,34 +1,12 @@
 import { Box, Flex, Grid, Stack, Text } from "@chakra-ui/react"
 import { Link } from "react-router-dom"
+import { BrandMark } from "@/components/brand/BrandMark"
 import { FOOTER_LINKS } from "./footerLinks"
-import { AMBER_HOVER, GOLD, INK, MUTED, NAVY, RULE, SKY, SURFACE } from "./tokens"
+import { AMBER_HOVER, GOLD, INK, MUTED, NAVY, RULE, SURFACE } from "./tokens"
 
 // ── Logo ──────────────────────────────────────────────────────────────────────
 export function Logo({ light = false }: { light?: boolean }) {
-  const text = light ? "white" : INK
-  return (
-    <Link to="/" style={{ textDecoration: "none" }}>
-      <Box display="flex" alignItems="center" gap="10px">
-        {/* Convergence Dot mark */}
-        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden>
-          {/* three thin lines converging to the center circle */}
-          <line x1="2"  y1="4"  x2="14" y2="14" stroke={light ? "rgba(255,255,255,0.6)" : SKY} strokeWidth="1.5" strokeLinecap="round" />
-          <line x1="26" y1="4"  x2="14" y2="14" stroke={light ? "rgba(255,255,255,0.6)" : SKY} strokeWidth="1.5" strokeLinecap="round" />
-          <line x1="14" y1="26" x2="14" y2="14" stroke={light ? "rgba(255,255,255,0.6)" : SKY} strokeWidth="1.5" strokeLinecap="round" />
-          {/* The central "PM" dot */}
-          <circle cx="14" cy="14" r="4.5" fill={light ? "white" : INK} />
-          <circle cx="14" cy="14" r="2"   fill={light ? INK     : "white"} />
-        </svg>
-        <Text
-          fontSize="0.9375rem" fontWeight="700" color={text}
-          letterSpacing="-0.01em"
-          fontFamily="var(--font-heading)"
-        >
-          Co-Helper
-        </Text>
-      </Box>
-    </Link>
-  )
+  return <BrandMark inverted={light} />
 }
 
 // ── Partner announce bar ──────────────────────────────────────────────────────
@@ -118,7 +96,7 @@ export function CTA({
     <Link to={to} style={{ textDecoration: "none" }}>
       <Box
         display="inline-flex" alignItems="center"
-        px={5} py="10px" borderRadius="6px" fontWeight="600" fontSize="0.875rem"
+        px={5} py="10px" borderRadius="10px" fontWeight="600" fontSize="0.875rem"
         transition="all 0.15s" fontFamily="var(--font-heading)"
         {...styles[variant]}
       >
@@ -148,12 +126,12 @@ export function Divider() {
 }
 
 // ── Check item ────────────────────────────────────────────────────────────────
-export function CheckItem({ children, accent = false }: { children: React.ReactNode; accent?: boolean }) {
+export function CheckItem({ children }: { children: React.ReactNode }) {
   return (
     <Box display="flex" gap={3} alignItems="flex-start">
       <Box
         w="18px" h="18px" flexShrink={0} mt="2px" borderRadius="50%"
-        bg={accent ? GOLD : NAVY}
+        bg={NAVY}
         display="flex" alignItems="center" justifyContent="center"
       >
         <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
@@ -172,7 +150,7 @@ export function StepNumber({ n }: { n: string }) {
       w="44px" h="44px" mb={5} borderRadius="8px"
       bg={NAVY}
       display="flex" alignItems="center" justifyContent="center"
-      fontSize="0.8125rem" fontWeight="700" color={GOLD}
+      fontSize="0.8125rem" fontWeight="700" color="#86efac"
       fontFamily="var(--font-heading)"
       letterSpacing="0.02em"
     >
@@ -220,10 +198,10 @@ export function MarketingFooter() {
             <Box maxW="300px">
               <Logo />
               <Text fontSize="0.875rem" color={MUTED} mt={4} lineHeight="1.75">
-                The shared workspace between a one-person business and the companies they work with — jobs, AI-clarified briefs, rates, hours, and payment logs.
+                The shared workspace between a one-person business and the companies they work with — to-dos, hours, remaining work, and invoices.
               </Text>
               <Flex gap={2} mt={6} flexWrap="wrap">
-                {["Invite clients", "Edit with AI", "Track hours"].map((b) => (
+                {["Invite clients", "One Now", "Invoice hours"].map((b) => (
                   <Box
                     key={b}
                     px={3}
@@ -361,7 +339,7 @@ export function ProseBlock({ children }: { children: React.ReactNode }) {
 
 export function InfoCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <Box p={6} bg="white" borderRadius="8px" border={`1px solid ${RULE}`}>
+    <Box p={6} bg="white" borderRadius="16px" border={`1px solid ${RULE}`} boxShadow="0 8px 28px rgba(14,27,23,0.06)">
       <Text fontSize="0.9375rem" fontWeight="600" color={INK} mb={2} fontFamily="var(--font-heading)">{title}</Text>
       <Text fontSize="0.875rem" color={MUTED} lineHeight="1.65">{children}</Text>
     </Box>

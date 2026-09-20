@@ -23,10 +23,9 @@ export default function PrivacyPage() {
           <p>We collect information you provide directly to us, including:</p>
           <ul>
             <li>Account information: name, email address, company name, and role (workspace owner or invited company)</li>
-            <li>Workspace data: invitations, membership, jobs (inquiries), requirements, documents, to-dos, and chat</li>
+            <li>Workspace data: invitations, membership, clients, projects, to-dos, hours, and invoices</li>
             <li>Commercial records you choose to keep: price agreements, logged hours, and payment status notes (not card numbers)</li>
-            <li>Optional integrations: if you connect Trello, we store the token you authorize and import boards, lists, and cards you select</li>
-            <li>AI inputs: text you send to Edit with AI or the job-brief helper, together with the job context needed to rewrite it</li>
+            <li>Optional email: if you configure SMTP, we store the host and encrypted password you provide</li>
           </ul>
           <p>We also automatically collect usage data such as IP address, browser type, pages visited, and device information. Authentication is provided by Firebase.</p>
 
@@ -34,7 +33,7 @@ export default function PrivacyPage() {
           <ul>
             <li>To provide, operate, and maintain each one-person business’s private workspace</li>
             <li>To show jobs only to the workspace owner and the invited company on that job</li>
-            <li>To run optional features you enable (Trello import, file storage, Edit with AI)</li>
+            <li>To run optional features you enable (file storage, outbound email)</li>
             <li>To send transactional notifications (for example invite or account emails) when configured</li>
             <li>To improve the product and to comply with legal obligations</li>
           </ul>

@@ -4,6 +4,8 @@ import { Link } from "react-router-dom"
 import { Box, Spinner, Stack, Text } from "@chakra-ui/react"
 import { LuCopy, LuPlus, LuTrash2, LuUsers } from "react-icons/lu"
 import { PageShell } from "@/components/ui/PageShell"
+import { WelcomeBannerAction } from "@/components/ui/WelcomeBanner"
+import { PartnerMockup } from "@/components/ui/FeatureEmptyState"
 import { Field } from "@/components/ui/field"
 import { FormInput } from "@/components/ui/form-controls"
 import {
@@ -98,12 +100,25 @@ export default function ClientsPage() {
     <PageShell
       eyebrow="Workspace"
       title="Clients"
-      subtitle="People you work for. Attach them to projects, then invite collaborators on each project."
       action={
-        <AppButton size="sm" onClick={() => { setInviteSent(null); setInviteOpen(true) }}>
-          <LuPlus size={14} /> Add client
-        </AppButton>
+        <WelcomeBannerAction onClick={() => { setInviteSent(null); setInviteOpen(true) }}>
+          <LuPlus size={15} /> Add client
+        </WelcomeBannerAction>
       }
+      intro={{
+        title: "Invite the companies you already work with",
+        bullets: [
+          "Add a client by email — they join at no extra cost",
+          "Attach them to projects so they only see their own jobs",
+          "Send or copy an invite link whenever they’re ready to log in",
+        ],
+        cta: (
+          <AppButton onClick={() => { setInviteSent(null); setInviteOpen(true) }}>
+            <LuPlus size={16} /> Add client
+          </AppButton>
+        ),
+        mockup: <PartnerMockup />,
+      }}
     >
       {loading ? (
         <Box display="flex" alignItems="center" gap={2} py={8}>
@@ -121,7 +136,7 @@ export default function ClientsPage() {
             <Box p={5}>
               {(data?.clients.length ?? 0) === 0 ? (
                 <Text fontSize="0.875rem" color={APP_MUTED}>
-                  No clients yet. Add someone by email — they can join when you send the invite.
+                  No clients yet. Use the island above to add the first company.
                 </Text>
               ) : (
                 <Stack gap={3}>

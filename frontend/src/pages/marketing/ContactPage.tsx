@@ -37,7 +37,7 @@ export default function ContactPage() {
       <PageHero
         label="Support"
         title="Contact"
-        subtitle="Questions about your workspace, an invite, Trello, or Edit with AI — we’ll help you get set up."
+        subtitle="Questions about your workspace, an invite, hours, or invoices — we’ll help you get set up."
       />
 
       <ContentSection>
@@ -58,7 +58,7 @@ export default function ContactPage() {
               </Box>
               <Box>
                 <Text fontSize="0.8125rem" fontWeight="600" color={INK} mb={1.5}>Subject</Text>
-                <FormInput placeholder="Workspace, invite, Trello, billing, press…" {...register("subject")} />
+                <FormInput placeholder="Workspace, invite, invoices, billing, press…" {...register("subject")} />
               </Box>
               <Box>
                 <Text fontSize="0.8125rem" fontWeight="600" color={INK} mb={1.5}>Message</Text>

@@ -1,6 +1,9 @@
 import pg from "pg";
 
-const { Pool } = pg;
+const { Pool, types } = pg;
+
+// Keep DATE columns as YYYY-MM-DD so timezone conversion cannot shift the calendar day.
+types.setTypeParser(1082, (value) => value);
 
 function sslOption() {
   if (process.env.DATABASE_SSL === "disable") return false;

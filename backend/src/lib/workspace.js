@@ -106,6 +106,15 @@ export function mapClient(row) {
   };
 }
 
+function mapSqlDate(value) {
+  if (value == null) return null;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString().slice(0, 10);
+  }
+  const s = String(value);
+  return s.length >= 10 ? s.slice(0, 10) : s;
+}
+
 export function mapProject(row) {
   if (!row) return null;
   return {
@@ -114,7 +123,18 @@ export function mapProject(row) {
     clientId: row.client_id,
     name: row.name,
     description: row.description ?? null,
+    status: row.status || "backlog",
+    priority: row.priority || "medium",
+    startAt: mapSqlDate(row.start_at),
+    dueAt: mapSqlDate(row.due_at),
+    currentMilestoneId: row.current_milestone_id ?? null,
+    billingType: row.billing_type || "hourly",
+    hourlyRate: row.hourly_rate != null ? Number(row.hourly_rate) : null,
+    fixedPrice: row.fixed_price != null ? Number(row.fixed_price) : null,
+    estimatedHours: row.estimated_hours != null ? Number(row.estimated_hours) : null,
+    weeklyHoursTarget: row.weekly_hours_target != null ? Number(row.weekly_hours_target) : null,
     createdAt: row.created_at,
+    updatedAt: row.updated_at ?? null,
     client: row.client ? mapClient(row.client) : row.client_email
       ? {
           id: row.client_id,
@@ -154,6 +174,60 @@ export async function getProjectAccess(projectId, user) {
   );
   if (member) return { project, role: "collaborator" };
   return null;
+}
+
+export async function listProjectPeople(project) {
+  const people = [];
+  const seen = new Set();
+  const owner = project.owner_id
+    ? await queryOne(`SELECT * FROM users WHERE id = $1`, [project.owner_id])
+    : null;
+  if (owner) {
+    seen.add(owner.id);
+    people.push({ ...mapUserBrief(owner), role: "owner" });
+  }
+  const members = await query(
+    `SELECT u.*, pm.created_at AS member_since
+     FROM project_members pm
+     JOIN users u ON u.id = pm.user_id
+     WHERE pm.project_id = $1
+     ORDER BY pm.created_at ASC`,
+    [project.id]
+  );
+  for (const member of members) {
+    if (seen.has(member.id)) continue;
+    seen.add(member.id);
+    people.push({ ...mapUserBrief(member), role: "collaborator", memberSince: member.member_since });
+  }
+  if (project.client_user_id && !seen.has(project.client_user_id)) {
+    const client = await queryOne(`SELECT * FROM users WHERE id = $1`, [project.client_user_id]);
+    if (client) {
+      seen.add(client.id);
+      people.push({ ...mapUserBrief(client), role: "client" });
+    }
+  }
+  return people;
+}
+
+export async function listProjectWatcherIds(project, extraIds = []) {
+  const ids = new Set(extraIds.filter(Boolean));
+  if (project.owner_id) ids.add(project.owner_id);
+  if (project.client_user_id) ids.add(project.client_user_id);
+  const members = await query(`SELECT user_id FROM project_members WHERE project_id = $1`, [project.id]);
+  for (const row of members) ids.add(row.user_id);
+  return [...ids];
+}
+
+export async function assertProjectAssignee(project, userId) {
+  if (!userId) return null;
+  const people = await listProjectPeople(project);
+  const person = people.find((item) => item.id === userId);
+  if (!person) {
+    const err = new Error("That person is not on this project");
+    err.status = 400;
+    throw err;
+  }
+  return person;
 }
 
 export async function listProjectsForUser(user) {

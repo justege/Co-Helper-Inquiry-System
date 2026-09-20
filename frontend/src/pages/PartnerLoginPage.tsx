@@ -48,7 +48,7 @@ export default function PartnerLoginPage() {
       title="Workspace sign in"
       subtitle="Access your workspace — clients, projects, and collaborators."
       promo={{
-        tagline: "Your workspace, your clients — every job, rate, and payment tracked in one place.",
+        tagline: "Your workspace, your clients — to-dos, hours, and invoices in one place.",
         imageSrc: loginPng,
       }}
       footer={

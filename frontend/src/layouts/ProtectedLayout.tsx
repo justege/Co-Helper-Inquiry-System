@@ -12,13 +12,25 @@ import {
   LuEllipsis,
   LuBell,
   LuSearch,
-  LuX,
+  LuUser,
+  LuReceipt,
 } from "react-icons/lu"
 import type { IconType } from "react-icons"
-import { GREEN, INK, LABEL, MUTED, PAPER, RULE, SURFACE } from "@/theme/tokens"
+import { GREEN, INK, MUTED, PAPER, RULE, SURFACE } from "@/theme/tokens"
 import { AppInput } from "@/components/ui/AppInput"
 import { searchWorkspace, type WorkspaceSearchResult } from "@/api/workspace"
 import { getNotifications, markAllNotificationsRead, markNotificationRead, type AppNotification } from "@/api/notifications"
+import { BrandMark } from "@/components/brand/BrandMark"
+import { TodoCardProvider, useTodoCard } from "@/components/work/TodoCardContext"
+import {
+  DialogBody,
+  DialogCloseTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogRoot,
+  DialogTitle,
+  DIALOG_PANEL_STYLE,
+} from "@/components/ui/dialog"
 
 interface NavItem {
   to: string
@@ -26,22 +38,59 @@ interface NavItem {
   label: string
 }
 
-const ownerNav: NavItem[] = [
-  { to: "/app", icon: LuHouse, label: "Home" },
-  { to: "/app/projects", icon: LuFolderKanban, label: "Projects" },
-  { to: "/app/clients", icon: LuUsers, label: "Clients" },
-  { to: "/app/settings", icon: LuSettings, label: "Settings" },
-]
+interface NavGroup {
+  label: string
+  items: NavItem[]
+}
 
-const memberNav: NavItem[] = [
-  { to: "/app", icon: LuHouse, label: "Home" },
-  { to: "/app/projects", icon: LuFolderKanban, label: "Projects" },
-  { to: "/app/settings", icon: LuSettings, label: "Settings" },
-]
+function navGroups(isOwner: boolean): NavGroup[] {
+  return [
+    {
+      label: "Overview",
+      items: [{ to: "/app", icon: LuHouse, label: "Home" }],
+    },
+    {
+      label: "Workspace",
+      items: [
+        { to: "/app/projects", icon: LuFolderKanban, label: "Projects" },
+        { to: "/app/invoices", icon: LuReceipt, label: "Invoices" },
+        ...(isOwner ? [{ to: "/app/clients", icon: LuUsers, label: "Clients" }] : []),
+      ],
+    },
+    {
+      label: "Account",
+      items: [
+        { to: "/app/profile", icon: LuUser, label: "Profile" },
+        { to: "/app/settings", icon: LuSettings, label: "Settings" },
+      ],
+    },
+  ]
+}
 
 export default function ProtectedLayout() {
-  const { user, loading, logout } = useAuthContext()
+  const { user, loading } = useAuthContext()
+
+  if (loading) {
+    return (
+      <Flex minH="100vh" align="center" justify="center" bg={PAPER}>
+        <Spinner size="lg" color="green.500" borderWidth="3px" />
+      </Flex>
+    )
+  }
+
+  if (!user) return <Navigate to="/login" replace />
+
+  return (
+    <TodoCardProvider>
+      <ProtectedApp />
+    </TodoCardProvider>
+  )
+}
+
+function ProtectedApp() {
+  const { user, logout } = useAuthContext()
   const navigate = useNavigate()
+  const { openTodo } = useTodoCard()
   const [profile, setProfile] = useState<User | null>(null)
   const [moreOpen, setMoreOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
@@ -72,18 +121,11 @@ export default function ProtectedLayout() {
     }, 220)
   }, [query])
 
-  if (loading) {
-    return (
-      <Flex minH="100vh" align="center" justify="center" bg={PAPER}>
-        <Spinner size="lg" color="green.500" borderWidth="3px" />
-      </Flex>
-    )
-  }
-
-  if (!user) return <Navigate to="/login" replace />
-
   const isOwner = profile?.role === "expert"
-  const nav = isOwner ? ownerNav : memberNav
+  const groups = navGroups(isOwner)
+  const mobileItems = groups.flatMap((g) => g.items)
+
+  if (!user) return null
 
   async function handleLogout() {
     await logout()
@@ -96,38 +138,32 @@ export default function ProtectedLayout() {
         as="aside"
         display={{ base: "none", lg: "flex" }}
         flexDir="column"
-        w="240px"
+        w="248px"
         flexShrink={0}
-        bg={SURFACE}
-        borderRight={`1px solid ${RULE}`}
+        bg={INK}
         position="fixed"
         top={0}
         left={0}
         h="100vh"
         zIndex={10}
       >
-        <Box px={5} py={5} display="flex" alignItems="center" gap={2.5} borderBottom={`1px solid ${RULE}`}>
-          <Box w="28px" h="28px" bg={GREEN} rounded="md" display="flex" alignItems="center" justifyContent="center">
-            <Box w="9px" h="9px" bg="white" rounded="sm" transform="rotate(45deg)" />
-          </Box>
-          <Text fontSize="0.75rem" fontWeight="800" color={INK} letterSpacing="0.05em" textTransform="uppercase">
-            Co-Helper
-          </Text>
+        <Box px={5} py={6} display="flex" alignItems="center">
+          <BrandMark inverted to="/app" />
         </Box>
 
-        <Box px={3} pt={4}>
+        <Box px={3} pb={4}>
           <Box
             as="button"
             w="100%"
             display="flex"
             alignItems="center"
             gap={2}
-            h="44px"
+            h="40px"
             px="14px"
-            border={`1px solid ${RULE}`}
+            border="1px solid rgba(255,255,255,0.08)"
             borderRadius="10px"
-            bg={PAPER}
-            color={MUTED}
+            bg="rgba(255,255,255,0.04)"
+            color="rgba(255,255,255,0.48)"
             fontSize="0.8125rem"
             onClick={() => setSearchOpen(true)}
           >
@@ -135,41 +171,65 @@ export default function ProtectedLayout() {
           </Box>
         </Box>
 
-        <Box flex="1" overflowY="auto" px={3} py={4}>
-          {nav.map((item) => (
-            <SidebarItem key={item.to} item={item} />
+        <Box flex="1" overflowY="auto" px={3} pb={4}>
+          {groups.map((group) => (
+            <Box key={group.label} mb={5}>
+              <Text
+                px={3}
+                mb={1.5}
+                fontSize="0.625rem"
+                fontWeight="700"
+                letterSpacing="0.14em"
+                textTransform="uppercase"
+                color="rgba(255,255,255,0.32)"
+              >
+                {group.label}
+              </Text>
+              {group.items.map((item) => (
+                <SidebarItem key={item.to} item={item} />
+              ))}
+            </Box>
           ))}
         </Box>
 
-        <Box px={4} py={4} borderTop={`1px solid ${RULE}`}>
-          <Text fontSize="0.75rem" color={MUTED} mb={2} overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
+        <Box px={5} py={5} borderTop="1px solid rgba(255,255,255,0.06)">
+          <Text fontSize="0.75rem" color="rgba(255,255,255,0.45)" mb={2} overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
             {user.email}
           </Text>
-          <Box as="button" display="inline-flex" alignItems="center" gap={1.5} color={MUTED} fontSize="0.75rem" fontWeight="600" onClick={handleLogout} _hover={{ color: INK }}>
+          <Box
+            as="button"
+            display="inline-flex"
+            alignItems="center"
+            gap={1.5}
+            color="rgba(255,255,255,0.5)"
+            fontSize="0.75rem"
+            fontWeight="600"
+            onClick={handleLogout}
+            _hover={{ color: "white" }}
+          >
             <LuLogOut size={13} /> Sign out
           </Box>
         </Box>
       </Box>
 
-      <Box as="main" flex="1" ml={{ base: 0, lg: "240px" }} minH="100vh" position="relative">
+      <Box as="main" flex="1" ml={{ base: 0, lg: "248px" }} minH="100vh" position="relative">
         <Box
           display={{ base: "flex", lg: "none" }}
           alignItems="center"
           justifyContent="space-between"
           px={4}
           h="56px"
-          borderBottom={`1px solid ${RULE}`}
-          bg={SURFACE}
+          bg={INK}
           position="sticky"
           top={0}
           zIndex={8}
         >
-          <Text fontSize="0.75rem" fontWeight="800" letterSpacing="0.05em" textTransform="uppercase">Co-Helper</Text>
-          <Box display="flex" gap={2}>
-            <Box as="button" w="44px" h="44px" display="flex" alignItems="center" justifyContent="center" onClick={() => setSearchOpen(true)} aria-label="Search">
+          <BrandMark inverted size="sm" to="/app" />
+          <Box display="flex" gap={1}>
+            <Box as="button" w="44px" h="44px" display="flex" alignItems="center" justifyContent="center" color="white" onClick={() => setSearchOpen(true)} aria-label="Search">
               <LuSearch size={18} />
             </Box>
-            <Box as="button" w="44px" h="44px" display="flex" alignItems="center" justifyContent="center" position="relative" onClick={() => setBellOpen(true)} aria-label="Notifications">
+            <Box as="button" w="44px" h="44px" display="flex" alignItems="center" justifyContent="center" color="white" position="relative" onClick={() => setBellOpen(true)} aria-label="Notifications">
               <LuBell size={18} />
               {unread > 0 && <Box position="absolute" top="10px" right="10px" w="7px" h="7px" bg={GREEN} rounded="full" />}
             </Box>
@@ -197,48 +257,67 @@ export default function ProtectedLayout() {
         alignItems="center"
         justifyContent="space-around"
         px={2}
-        bg="rgba(255,255,255,0.94)"
-        borderTop={`1px solid ${RULE}`}
+        bg={INK}
       >
-        {nav.slice(0, 3).map((item) => (
+        {mobileItems.slice(0, 3).map((item) => (
           <MobileNavItem key={item.to} item={item} />
         ))}
         <Box as="button" flex="1" display="flex" flexDir="column" alignItems="center" gap="3px" onClick={() => setMoreOpen(true)}>
-          <LuEllipsis size={21} color={LABEL} />
-          <Text fontSize="0.6rem" fontWeight="500" color={LABEL}>More</Text>
+          <LuEllipsis size={21} color="rgba(255,255,255,0.45)" />
+          <Text fontSize="0.6rem" fontWeight="500" color="rgba(255,255,255,0.45)">More</Text>
         </Box>
       </Box>
 
       {moreOpen && (
-        <Box position="fixed" inset={0} zIndex={200} bg="rgba(14,27,23,0.4)" onClick={() => setMoreOpen(false)}>
-          <Box position="absolute" bottom={0} left={0} right={0} bg={SURFACE} borderTopRadius="18px" p={5} onClick={(e) => e.stopPropagation()}>
-            <Text fontWeight="700" mb={3}>More</Text>
-            {(isOwner ? [
-              { to: "/app/clients", label: "Clients" },
-              { to: "/app/profile", label: "Profile" },
-              { to: "/app/settings", label: "Settings" },
-            ] : [
-              { to: "/app/profile", label: "Profile" },
-              { to: "/app/settings", label: "Settings" },
-            ]).map((item) => (
-              <Link key={item.to} to={item.to} onClick={() => setMoreOpen(false)} style={{ textDecoration: "none" }}>
-                <Box py={3} borderBottom={`1px solid ${RULE}`} color={INK} fontWeight="600">{item.label}</Box>
-              </Link>
-            ))}
-          </Box>
-        </Box>
+        <DialogRoot open={moreOpen} onOpenChange={({ open }) => setMoreOpen(open)} size="sm" placement="center">
+          <DialogContent style={DIALOG_PANEL_STYLE}>
+            <Box bg="#0B1A15" px={6} py={4} display="flex" alignItems="center" justifyContent="space-between">
+              <DialogTitle style={{ color: "white", fontWeight: 700, fontSize: "0.9375rem", margin: 0 }}>More</DialogTitle>
+              <DialogCloseTrigger style={{ color: "rgba(255,255,255,0.5)" }} />
+            </Box>
+            <DialogHeader display="none" />
+            <DialogBody px={6} py={2} pb={5}>
+              {(isOwner ? [
+                { to: "/app/invoices", label: "Invoices" },
+                { to: "/app/clients", label: "Clients" },
+                { to: "/app/profile", label: "Profile" },
+                { to: "/app/settings", label: "Settings" },
+              ] : [
+                { to: "/app/invoices", label: "Invoices" },
+                { to: "/app/profile", label: "Profile" },
+                { to: "/app/settings", label: "Settings" },
+              ]).map((item) => (
+                <Link key={item.to} to={item.to} onClick={() => setMoreOpen(false)} style={{ textDecoration: "none" }}>
+                  <Box py={3} borderBottom={`1px solid ${RULE}`} color={INK} fontWeight="600">{item.label}</Box>
+                </Link>
+              ))}
+            </DialogBody>
+          </DialogContent>
+        </DialogRoot>
       )}
 
-      {searchOpen && (
-        <Box position="fixed" inset={0} zIndex={220} bg="rgba(14,27,23,0.45)" onClick={() => setSearchOpen(false)}>
-          <Box maxW="560px" mx="auto" mt={{ base: 16, md: 24 }} bg={SURFACE} borderRadius="14px" p={5} onClick={(e) => e.stopPropagation()}>
-            <Box display="flex" justifyContent="space-between" mb={3}>
-              <Text fontWeight="700">Search</Text>
-              <Box as="button" onClick={() => setSearchOpen(false)}><LuX /></Box>
-            </Box>
-            <AppInput autoFocus placeholder="Projects and clients…" value={query} onChange={(e) => setQuery(e.target.value)} />
+      <DialogRoot open={searchOpen} onOpenChange={({ open }) => { setSearchOpen(open); if (!open) { setQuery(""); setResults(null) } }} size="md" placement="center">
+        <DialogContent style={DIALOG_PANEL_STYLE}>
+          <Box bg="#0B1A15" px={6} py={4} display="flex" alignItems="center" justifyContent="space-between">
+            <DialogTitle style={{ color: "white", fontWeight: 700, fontSize: "0.9375rem", margin: 0 }}>Search</DialogTitle>
+            <DialogCloseTrigger style={{ color: "rgba(255,255,255,0.5)" }} />
+          </Box>
+          <DialogHeader display="none" />
+          <DialogBody px={6} py={5}>
+            <AppInput autoFocus placeholder="To-dos, projects, clients…" value={query} onChange={(e) => setQuery(e.target.value)} />
             {results && (
               <Box mt={4} display="flex" flexDir="column" gap={3}>
+                {(results.todos ?? []).map((t) => (
+                  <Box
+                    key={t.id}
+                    as="button"
+                    textAlign="left"
+                    onClick={() => { openTodo(t.id); setSearchOpen(false) }}
+                  >
+                    <Text fontWeight="600" color={INK}>{t.title}</Text>
+                    <Text fontSize="0.75rem" color={MUTED}>To-do{t.projectName ? ` · ${t.projectName}` : ""}</Text>
+                  </Box>
+                ))}
                 {results.projects.map((p) => (
                   <Link key={p.id} to={`/app/projects/${p.id}`} onClick={() => setSearchOpen(false)} style={{ textDecoration: "none" }}>
                     <Text fontWeight="600" color={INK}>{p.name}</Text>
@@ -251,14 +330,14 @@ export default function ProtectedLayout() {
                     <Text fontSize="0.75rem" color={MUTED}>Client</Text>
                   </Link>
                 ))}
-                {results.projects.length === 0 && results.clients.length === 0 && (
+                {results.projects.length === 0 && results.clients.length === 0 && (results.todos ?? []).length === 0 && (
                   <Text fontSize="0.875rem" color={MUTED}>No matches.</Text>
                 )}
               </Box>
             )}
-          </Box>
-        </Box>
-      )}
+          </DialogBody>
+        </DialogContent>
+      </DialogRoot>
 
       {bellOpen && (
         <Box position="fixed" inset={0} zIndex={220} onClick={() => setBellOpen(false)}>
@@ -269,7 +348,7 @@ export default function ProtectedLayout() {
             w={{ base: "calc(100% - 24px)", md: "360px" }}
             bg={SURFACE}
             border={`1px solid ${RULE}`}
-            borderRadius="14px"
+            borderRadius="16px"
             boxShadow="0 12px 40px rgba(14,27,23,0.12)"
             onClick={(e) => e.stopPropagation()}
           >
@@ -294,8 +373,12 @@ export default function ProtectedLayout() {
                     markNotificationRead(n.id).catch(() => null)
                     setNotes((prev) => prev.map((x) => x.id === n.id ? { ...x, readAt: x.readAt ?? new Date().toISOString() } : x))
                     setUnread((u) => Math.max(0, u - (n.readAt ? 0 : 1)))
+                    const todoId = n.payload?.todoId
+                    const invoiceId = n.payload?.invoiceId
                     const projectId = n.payload?.projectId
-                    if (typeof projectId === "string") navigate(`/app/projects/${projectId}`)
+                    if (typeof todoId === "string") openTodo(todoId, n.type === "todo.comment" ? "discuss" : "card")
+                    else if (typeof invoiceId === "string") navigate(`/app/invoices/${invoiceId}`)
+                    else if (typeof projectId === "string") navigate(`/app/projects/${projectId}`)
                     setBellOpen(false)
                   }}
                 >
@@ -323,14 +406,14 @@ function SidebarItem({ item }: { item: NavItem }) {
           alignItems="center"
           gap={2.5}
           px={3}
-          py="10px"
+          py="9px"
           mb="2px"
           borderRadius="10px"
           fontSize="0.875rem"
           fontWeight={isActive ? "600" : "500"}
-          color={isActive ? GREEN : MUTED}
-          bg={isActive ? "rgba(15,110,86,0.08)" : "transparent"}
-          _hover={{ bg: isActive ? "rgba(15,110,86,0.08)" : PAPER, color: isActive ? GREEN : INK }}
+          color={isActive ? "white" : "rgba(255,255,255,0.58)"}
+          bg={isActive ? "rgba(15,110,86,0.55)" : "transparent"}
+          _hover={{ bg: isActive ? "rgba(15,110,86,0.55)" : "rgba(255,255,255,0.05)", color: "white" }}
         >
           <Icon size={16} />
           {item.label}
@@ -346,8 +429,8 @@ function MobileNavItem({ item }: { item: NavItem }) {
     <NavLink to={item.to} end={item.to === "/app"} style={{ flex: 1 }}>
       {({ isActive }: { isActive: boolean }) => (
         <Box as="span" display="flex" flexDir="column" alignItems="center" gap="3px">
-          <Icon size={21} color={isActive ? GREEN : LABEL} />
-          <Text fontSize="0.6rem" fontWeight={isActive ? "700" : "500"} color={isActive ? GREEN : LABEL}>{item.label}</Text>
+          <Icon size={21} color={isActive ? "#86efac" : "rgba(255,255,255,0.45)"} />
+          <Text fontSize="0.6rem" fontWeight={isActive ? "700" : "500"} color={isActive ? "#86efac" : "rgba(255,255,255,0.45)"}>{item.label}</Text>
         </Box>
       )}
     </NavLink>

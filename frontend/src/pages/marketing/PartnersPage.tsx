@@ -11,9 +11,9 @@ const REQUIREMENTS = [
 
 const BENEFITS = [
   "Invite companies directly — no approval queue, no waiting to get matched",
-  "Edit with AI on every requirement, chat message, and to-do",
+  "Work from one Now — to-dos grouped by project, not a CRM dashboard",
   "Propose hourly or fixed rates and keep a record of what was agreed",
-  "Log hours and payments per job, per company, and across your workspace",
+  "Log hours and send invoices per project, per company, and across your workspace",
   "$9 USD per month until 31 December 2026, then $49 — nothing else",
 ]
 
@@ -23,7 +23,7 @@ export default function PartnersPage() {
       <PageHero
         label="For one-person businesses"
         title="Your own client workspace"
-        subtitle="Set up a workspace, invite the companies you already work with, and run every job — requirements, chat, rates, hours, and payments — in one place."
+        subtitle="Set up a workspace, invite the companies you already work with, and run every project — to-dos, hours, remaining work, and invoices — in one place."
       />
 
       <ContentSection>

@@ -38,6 +38,7 @@ export interface FreelancerWorkspaceMe {
     smtpUser?: string | null;
     smtpFrom?: string | null;
     smtpConfigured?: boolean;
+    weeklyHours?: number;
     createdAt: string;
   };
   clients: WorkspaceClient[];
@@ -78,7 +79,18 @@ export interface WorkspaceProject {
   clientId: string;
   name: string;
   description?: string | null;
+  status?: "backlog" | "in_progress" | "waiting_on_client" | "done";
+  priority?: "low" | "medium" | "high";
+  startAt?: string | null;
+  dueAt?: string | null;
+  currentMilestoneId?: string | null;
+  billingType?: "hourly" | "fixed" | "hybrid";
+  hourlyRate?: number | null;
+  fixedPrice?: number | null;
+  estimatedHours?: number | null;
+  weeklyHoursTarget?: number | null;
   createdAt: string;
+  updatedAt?: string | null;
   client: {
     id: string;
     email: string;
@@ -89,24 +101,138 @@ export interface WorkspaceProject {
   collaboratorCount: number;
 }
 
+export interface ProjectGoal {
+  id: string;
+  projectId: string;
+  title: string;
+  done: boolean;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface ProjectMilestone {
+  id: string
+  projectId: string
+  title: string
+  dueAt: string | null
+  done: boolean
+  completedAt?: string | null
+  late?: boolean
+  delayedDays?: number | null
+  sortOrder: number
+  createdAt: string
+  todoCount?: number
+  openTodoCount?: number
+  openBlockerCount?: number
+}
+
+export interface ProjectComment {
+  id: string
+  projectId: string
+  milestoneId?: string | null
+  body: string
+  createdAt: string
+  author: WorkspaceUserBrief | null
+}
+
+export type ProjectBlockerKind = "client" | "scope" | "dependency" | "internal" | "other"
+
+export interface ProjectBlocker {
+  id: string
+  projectId: string
+  milestoneId: string | null
+  todoId: string | null
+  todoTitle?: string | null
+  title: string
+  body: string | null
+  kind: ProjectBlockerKind
+  status: "open" | "resolved"
+  delayedDays: number | null
+  createdAt: string
+  resolvedAt: string | null
+  author: WorkspaceUserBrief | null
+}
+
+export interface MilestoneConversation {
+  id: string
+  source: "milestone" | "todo"
+  commentId: string
+  todoId: string | null
+  todoTitle: string | null
+  body: string
+  createdAt: string
+  author: WorkspaceUserBrief | null
+}
+
+export interface MilestoneDetail {
+  milestone: ProjectMilestone
+  todos: import("./work").WorkTodo[]
+  conversations: MilestoneConversation[]
+  blockers: ProjectBlocker[]
+}
+
+export interface ProjectAttachment {
+  id: string;
+  projectId: string;
+  fileName: string;
+  contentType: string | null;
+  byteSize: number | null;
+  createdAt: string;
+  uploadedBy: string | null;
+  downloadUrl: string | null;
+}
+
+export interface ProjectTicket {
+  project: WorkspaceProject;
+  client: WorkspaceClient;
+  collaborators: (WorkspaceUserBrief & { memberSince: string })[];
+  people?: (WorkspaceUserBrief & { role?: string; memberSince?: string })[];
+  pendingInvites: WorkspaceInvitation[];
+  role: "owner" | "client" | "collaborator" | "admin";
+  meId: string;
+  goals: ProjectGoal[];
+  milestones: ProjectMilestone[];
+  comments: ProjectComment[];
+  attachments: ProjectAttachment[];
+  blockers: ProjectBlocker[];
+}
+
 export const getWorkspaceProjects = () =>
   api.get<{ projects: WorkspaceProject[] }>("/api/workspace/projects");
 
 export const getWorkspaceProject = (id: string) =>
-  api.get<{
-    project: WorkspaceProject;
-    client: WorkspaceClient;
-    collaborators: (WorkspaceUserBrief & { memberSince: string })[];
-    pendingInvites: WorkspaceInvitation[];
-    role: "owner" | "client" | "collaborator" | "admin";
-  }>(`/api/workspace/projects/${id}`);
+  api.get<ProjectTicket>(`/api/workspace/projects/${id}`);
 
-export const createWorkspaceProject = (name: string, clientId: string, description?: string) =>
-  api.post<WorkspaceProject>("/api/workspace/projects", { name, clientId, description });
+export const createWorkspaceProject = (
+  name: string,
+  clientId: string,
+  description?: string,
+  extra?: {
+    billingType?: "hourly" | "fixed" | "hybrid"
+    hourlyRate?: number | null
+    estimatedHours?: number | null
+    weeklyHoursTarget?: number | null
+  }
+) =>
+  api.post<WorkspaceProject>("/api/workspace/projects", { name, clientId, description, ...extra });
 
 export const updateWorkspaceProject = (
   id: string,
-  data: { name: string; description?: string; clientId?: string }
+  data: {
+    name?: string
+    description?: string
+    clientId?: string
+    status?: "backlog" | "in_progress" | "waiting_on_client" | "done"
+    priority?: "low" | "medium" | "high"
+    startAt?: string | null
+    dueAt?: string | null
+    currentMilestoneId?: string | null
+    billingType?: "hourly" | "fixed" | "hybrid"
+    hourlyRate?: number | null
+    fixedPrice?: number | null
+    estimatedHours?: number | null
+    weeklyHoursTarget?: number | null
+  }
 ) => api.patch<WorkspaceProject>(`/api/workspace/projects/${id}`, data);
 
 export const deleteWorkspaceProject = (id: string) =>
@@ -117,6 +243,92 @@ export const inviteProjectCollaborator = (projectId: string, email: string) =>
 
 export const removeProjectCollaborator = (projectId: string, userId: string) =>
   api.delete<void>(`/api/workspace/projects/${projectId}/collaborators/${userId}`);
+
+export const addProjectComment = (projectId: string, body: string, milestoneId?: string | null) =>
+  api.post<ProjectComment>(`/api/workspace/projects/${projectId}/comments`, { body, milestoneId });
+
+export const deleteProjectComment = (projectId: string, commentId: string) =>
+  api.delete<void>(`/api/workspace/projects/${projectId}/comments/${commentId}`);
+
+export const addProjectGoal = (projectId: string, title: string) =>
+  api.post<ProjectGoal>(`/api/workspace/projects/${projectId}/goals`, { title });
+
+export const updateProjectGoal = (
+  projectId: string,
+  goalId: string,
+  data: { title?: string; done?: boolean }
+) => api.patch<ProjectGoal>(`/api/workspace/projects/${projectId}/goals/${goalId}`, data);
+
+export const deleteProjectGoal = (projectId: string, goalId: string) =>
+  api.delete<void>(`/api/workspace/projects/${projectId}/goals/${goalId}`);
+
+export const addProjectMilestone = (projectId: string, data: { title: string; dueAt?: string | null }) =>
+  api.post<ProjectMilestone>(`/api/workspace/projects/${projectId}/milestones`, data);
+
+export const updateProjectMilestone = (
+  projectId: string,
+  milestoneId: string,
+  data: { title?: string; dueAt?: string | null; done?: boolean; completedAt?: string | null }
+) => api.patch<ProjectMilestone>(`/api/workspace/projects/${projectId}/milestones/${milestoneId}`, data);
+
+export const deleteProjectMilestone = (projectId: string, milestoneId: string) =>
+  api.delete<void>(`/api/workspace/projects/${projectId}/milestones/${milestoneId}`);
+
+export const getProjectMilestone = (projectId: string, milestoneId: string) =>
+  api.get<MilestoneDetail>(`/api/workspace/projects/${projectId}/milestones/${milestoneId}`);
+
+export const addProjectBlocker = (
+  projectId: string,
+  data: {
+    title: string
+    body?: string | null
+    kind?: ProjectBlockerKind
+    delayedDays?: number | null
+    milestoneId?: string | null
+    todoId?: string | null
+  }
+) => api.post<ProjectBlocker>(`/api/workspace/projects/${projectId}/blockers`, data);
+
+export const updateProjectBlocker = (
+  projectId: string,
+  blockerId: string,
+  data: {
+    title?: string
+    body?: string | null
+    kind?: ProjectBlockerKind
+    status?: "open" | "resolved"
+    delayedDays?: number | null
+    milestoneId?: string | null
+    todoId?: string | null
+  }
+) => api.patch<ProjectBlocker>(`/api/workspace/projects/${projectId}/blockers/${blockerId}`, data);
+
+export const deleteProjectBlocker = (projectId: string, blockerId: string) =>
+  api.delete<void>(`/api/workspace/projects/${projectId}/blockers/${blockerId}`);
+
+export const deleteProjectAttachment = (projectId: string, attachmentId: string) =>
+  api.delete<void>(`/api/workspace/projects/${projectId}/attachments/${attachmentId}`);
+
+export async function uploadProjectAttachment(projectId: string, file: File): Promise<ProjectAttachment> {
+  const signed = await api.post<{ uploadUrl: string; filePath: string; fileName: string }>(
+    `/api/workspace/projects/${projectId}/attachments/sign`,
+    {
+      fileName: file.name,
+      contentType: file.type || "application/octet-stream",
+      size: file.size,
+    }
+  );
+  const headers: HeadersInit = {};
+  if (file.type) headers["Content-Type"] = file.type;
+  const put = await fetch(signed.uploadUrl, { method: "PUT", body: file, headers });
+  if (!put.ok) throw new Error("Could not upload the file");
+  return api.post<ProjectAttachment>(`/api/workspace/projects/${projectId}/attachments`, {
+    filePath: signed.filePath,
+    fileName: signed.fileName,
+    contentType: file.type || "application/octet-stream",
+    size: file.size,
+  });
+}
 
 export const getWorkspaceClients = () =>
   api.get<{ clients: WorkspaceClient[] }>("/api/workspace/clients");
@@ -175,6 +387,7 @@ export const updateWorkspaceSettings = (data: {
   smtpUser?: string;
   smtpFrom?: string;
   smtpPassword?: string;
+  weeklyHours?: number;
 }) =>
   api.patch<{
     id: string;
@@ -195,6 +408,7 @@ export const sendWorkspaceTestEmail = (to?: string) =>
 export interface WorkspaceSearchResult {
   projects: { id: string; name: string }[];
   clients: WorkspaceClient[];
+  todos?: { id: string; title: string; projectName: string }[];
 }
 
 export const searchWorkspace = (q: string) =>

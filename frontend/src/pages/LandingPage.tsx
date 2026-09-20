@@ -9,7 +9,8 @@ import {
   ScrollReveal,
   TypewriterSubline,
 } from "@/components/landing/LandingEffects"
-import { AMBER, AMBER_HOVER, BLUE, GREEN, INK, MUTED, RULE } from "@/components/marketing/tokens"
+import { BrandMark } from "@/components/brand/BrandMark"
+import { GREEN, INK, MUTED, RULE } from "@/components/marketing/tokens"
 import programmer1 from "@/assets/Programmer1.png"
 import programmer2 from "@/assets/Programmer2.png"
 
@@ -26,23 +27,7 @@ const NAV_LINKS = [
 ]
 
 function LogoMark({ light = false }: { light?: boolean }) {
-  return (
-    <Link to="/" style={{ textDecoration: "none" }}>
-      <Flex align="center" gap="10px">
-        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden>
-          <line x1="2"  y1="4"  x2="14" y2="14" stroke={light ? "rgba(255,255,255,0.55)" : BLUE} strokeWidth="1.5" strokeLinecap="round" />
-          <line x1="26" y1="4"  x2="14" y2="14" stroke={light ? "rgba(255,255,255,0.55)" : BLUE} strokeWidth="1.5" strokeLinecap="round" />
-          <line x1="14" y1="26" x2="14" y2="14" stroke={light ? "rgba(255,255,255,0.55)" : BLUE} strokeWidth="1.5" strokeLinecap="round" />
-          <circle cx="14" cy="14" r="4.5" fill={light ? "white" : INK} />
-          <circle cx="14" cy="14" r="2"   fill={light ? INK : "white"} />
-        </svg>
-        <Text fontSize="0.9375rem" fontWeight="700" color={light ? "white" : INK}
-          letterSpacing="-0.01em" fontFamily="var(--font-heading)">
-          Co-Helper
-        </Text>
-      </Flex>
-    </Link>
-  )
+  return <BrandMark inverted={light} />
 }
 
 function NavBar({ light = false }: { light?: boolean }) {
@@ -75,7 +60,7 @@ function NavBar({ light = false }: { light?: boolean }) {
       <Flex align="center" gap={2}>
         <Link to="/login" style={{ textDecoration: "none" }}>
           <Box
-            px={4} py="8px" borderRadius="6px" fontSize="0.875rem" fontWeight="600"
+            px={4} py="8px" borderRadius="10px" fontSize="0.875rem" fontWeight="600"
             transition="all 0.15s" {...ctaOutline}
           >
             Sign in
@@ -83,10 +68,10 @@ function NavBar({ light = false }: { light?: boolean }) {
         </Link>
         <Link to="/partner/register" style={{ textDecoration: "none" }}>
           <Box
-            px={4} py="8px" borderRadius="6px" fontSize="0.875rem" fontWeight="700"
-            bg={AMBER} color={INK} border={`1px solid ${AMBER}`}
+            px={4} py="8px" borderRadius="10px" fontSize="0.875rem" fontWeight="700"
+            bg="white" color={INK} border="1px solid white"
             transition="all 0.15s"
-            _hover={{ bg: AMBER_HOVER, textDecoration: "none" }}
+            _hover={{ bg: "#F0FAF5", textDecoration: "none" }}
           >
             Start your workspace
           </Box>
@@ -120,7 +105,7 @@ function GetStartedCard() {
       </Heading>
       <Text fontSize="0.875rem" color="rgba(255,255,255,0.55)" lineHeight="1.65" mb={6}>
         No project posting, no matching. Co-Helper is where you and the companies you already
-        work with keep every job, rate, and payment in one place.
+        work with keep every project, to-do, hour, and invoice in one place.
       </Text>
 
       <Stack gap={3}>
@@ -128,9 +113,9 @@ function GetStartedCard() {
           <Flex
             align="center" justify="space-between" gap={3}
             p={4} borderRadius="12px"
-            bg={AMBER} border={`1px solid ${AMBER}`}
+            bg="white" border="1px solid white"
             transition="all 0.15s"
-            _hover={{ bg: AMBER_HOVER }}
+            _hover={{ bg: "#F0FAF5" }}
           >
             <Box>
               <Text fontSize="0.9375rem" fontWeight="700" color={INK}>I run a one-person business</Text>
@@ -153,7 +138,7 @@ function GetStartedCard() {
             <Box>
               <Text fontSize="0.9375rem" fontWeight="700" color="white">I was invited by a one-person business</Text>
               <Text fontSize="0.75rem" color="rgba(255,255,255,0.5)" mt="2px">
-                Sign in to see your jobs, rates, and payments
+                Sign in to see your projects, hours, and invoices
               </Text>
             </Box>
             <Text fontSize="1.125rem" color="white">→</Text>
@@ -199,24 +184,24 @@ function ClientStrip() {
 // ─── Stats ────────────────────────────────────────────────────────────────────
 const STATS = [
   { value: "1",      unit: "workspace", label: "Shared between you and every client you invite" },
-  { value: "AI",     unit: "",          label: "Rewrites requirements, chat, and to-dos for clarity" },
-  { value: "Hourly", unit: "or fixed",  label: "Agree the pricing model that fits each job" },
-  { value: "100%",   unit: "",          label: "Of hours and payments logged in one place" },
+  { value: "Now",    unit: "",          label: "One current to-do — you and the client see the same fact" },
+  { value: "Hourly", unit: "or fixed",  label: "Agree the pricing model that fits each project" },
+  { value: "100%",   unit: "",          label: "Of hours and invoices logged in one place" },
 ]
 
 // ─── Comparison matrix ────────────────────────────────────────────────────────
-const MATRIX_COLS = ["Setup time", "Client visibility", "AI clarity", "Hours tracking", "Payment tracking", "Cost", "Ownership", "Your branding"]
+const MATRIX_COLS = ["Setup time", "Client visibility", "Live remaining hours", "Hours tracking", "Invoices from work", "Cost", "Ownership", "Your branding"]
 
 const MATRIX_ROWS = [
   {
     name: "Co-Helper",
-    desc: "Your own workspace — invite clients, agree rates, track hours and payments, clarify everything with AI.",
+    desc: "Your own workspace — invite clients, run to-dos from a workbench, track hours, and invoice from the same record.",
     highlight: true,
     scores: [true, true, true, true, true, true, true, true],
   },
   {
     name: "Email + spreadsheets",
-    desc: "Familiar, but scattered across inboxes and files. No shared view, no AI help, and totals are manual.",
+    desc: "Familiar, but scattered across inboxes and files. No shared view, and totals are manual.",
     scores: [true, false, false, false, false, true, true, true],
   },
   {
@@ -251,7 +236,7 @@ function CheckIcon({ pass }: { pass: boolean }) {
 // ─── Testimonials ─────────────────────────────────────────────────────────────
 const TESTIMONIALS = [
   {
-    quote: "I used to keep client requirements spread across three Slack channels and a Google Doc. Now every job has one thread, and Edit with AI turns my rushed notes into something my client actually understands.",
+    quote: "I used to keep client work spread across three Slack channels and a Google Doc. Now every project has to-dos and hours in one place, and my client can see what I’m on without asking.",
     name: "Sarah K.",
     role: "Independent web developer",
     initials: "SK",
@@ -269,7 +254,7 @@ const TESTIMONIALS = [
     initials: "EV",
   },
   {
-    quote: "AI cleaned up my messy brief into something our partner could actually scope. We agreed a fixed price the same afternoon, in writing, inside the job.",
+    quote: "We agreed a fixed price the same afternoon, in writing, on the project — then the hours and invoice came from that same record.",
     name: "Tom R.",
     role: "Product lead, small SaaS team",
     initials: "TR",
@@ -309,9 +294,9 @@ const PILLARS = [
         <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke={INK} strokeWidth="1.5" strokeLinecap="round" />
       </svg>
     ),
-    tag: "AI-assisted",
-    title: "Edit with AI, everywhere",
-    body: "Turn a rushed note into a clear requirement, tidy up a chat message, or sharpen a to-do — using the full context of that job.",
+    tag: "Always current",
+    title: "Clients see Now and remaining hours",
+    body: "They know what you’re working on, how many hours are left, and how a normal week usually lands — without a status email.",
   },
   {
     icon: (
@@ -355,7 +340,7 @@ const PILLARS = [
     ),
     tag: "One record",
     title: "An activity log for everything",
-    body: "Every agreement, logged hour, payment, and AI edit is timestamped — so nobody has to ask what was decided.",
+    body: "Every logged hour and invoice is on the project — so nobody has to ask what was decided.",
   },
 ]
 
@@ -450,20 +435,20 @@ export default function LandingPage() {
                 color="rgba(255,255,255,0.58)"
                 lineHeight="1.65" maxW="420px" mb={6}
               >
-                Invite the companies you work with, agree how you're paid, and let AI keep requirements,
-                chat, and to-dos clear for both sides — with hours and payments tracked automatically.
+                Invite the companies you work with, run to-dos from one workbench, and let both sides
+                see hours, remaining work, and invoices — without rebuilding a spreadsheet.
               </Text>
 
               <Flex gap={2.5} flexWrap="wrap" mb={8}>
                 <Link to="/partner/register" style={{ textDecoration: "none" }}>
-                  <Box px={4} py="9px" borderRadius="6px" fontWeight="700" fontSize="0.875rem"
-                    bg={AMBER} color={INK} border={`1px solid ${AMBER}`}
-                    _hover={{ bg: AMBER_HOVER }} transition="all 0.15s">
+                  <Box px={4} py="9px" borderRadius="10px" fontWeight="700" fontSize="0.875rem"
+                    bg="white" color={INK} border="1px solid white"
+                    _hover={{ bg: "#F0FAF5" }} transition="all 0.15s">
                     Start your workspace →
                   </Box>
                 </Link>
                 <Link to="/how-it-works" style={{ textDecoration: "none" }}>
-                  <Box px={4} py="9px" borderRadius="6px" fontWeight="600" fontSize="0.875rem"
+                  <Box px={4} py="9px" borderRadius="10px" fontWeight="600" fontSize="0.875rem"
                     bg="transparent" color="rgba(255,255,255,0.78)"
                     border="1px solid rgba(255,255,255,0.2)"
                     _hover={{ bg: "rgba(255,255,255,0.06)", color: "white" }}
@@ -481,8 +466,8 @@ export default function LandingPage() {
               >
                 {[
                   { v: "1 workspace", l: "Per company you work with" },
-                  { v: "AI",          l: "Edit with AI, everywhere" },
-                  { v: "Hourly/fixed", l: "Rates, tracked either way" },
+                  { v: "Now",         l: "One current to-do, both sides" },
+                  { v: "Hourly/fixed", l: "Rates, then invoice from hours" },
                 ].map((s, i) => (
                   <Flex
                     key={s.l} align="center"
@@ -538,13 +523,13 @@ export default function LandingPage() {
             {[
               {
                 tag: "Clarity",
-                title: "One shared job, not five threads",
-                body: "Requirements, chat, and files live with the job — not scattered across email, WhatsApp, and messages neither of you can find again.",
+                title: "One shared project, not five threads",
+                body: "To-dos, hours, and the invoice live with the project — not scattered across email, WhatsApp, and a spreadsheet neither of you can find again.",
               },
               {
                 tag: "Understanding",
-                title: "AI keeps everyone on the same page",
-                body: "A rushed voice note or a vague client message becomes something both of you can act on — without a slow back-and-forth.",
+                title: "The client always sees the pace",
+                body: "Remaining hours, your normal week, and how much of that week this project usually gets — labeled as an estimate, never a fake date.",
               },
               {
                 tag: "Money",
@@ -596,8 +581,8 @@ export default function LandingPage() {
                 <TypewriterSubline
                   phrases={[
                     "One workspace instead of five tools.",
-                    "AI clarity on every requirement.",
-                    "Every hour and payment, logged.",
+                    "Now, remaining hours, and a finish window.",
+                    "Every hour and invoice, from the same record.",
                   ]}
                   fontSize={{ base: "1.125rem", md: "1.375rem", lg: "1.5rem" }}
                 />
@@ -606,14 +591,14 @@ export default function LandingPage() {
               <ScrollReveal delay={240}>
                 <Text fontSize={{ base: "0.9375rem", md: "1rem" }} color={MUTED} lineHeight="1.8" mb={6} mt={6}>
                   One-person businesses juggle company email, a spreadsheet for hours, an invoicing tool,
-                  and requirements buried in chat threads. Co-Helper puts all of it — chat,
-                  rates, hours, payments — inside a single shared job.
+                  and hours buried in chat threads. Co-Helper puts all of it — to-dos,
+                  rates, hours, invoices — inside a single shared project.
                 </Text>
               </ScrollReveal>
               <ScrollReveal delay={320}>
                 <Text fontSize={{ base: "0.9375rem", md: "1rem" }} color={MUTED} lineHeight="1.8" mb={8}>
                   Because every client is invited into their own workspace, nothing gets lost
-                  in a shared inbox — and AI can rewrite anything using the full context of that job.
+                  in a shared inbox — and both sides see the same Now, remaining hours, and pace.
                 </Text>
               </ScrollReveal>
               <ScrollReveal delay={400}>
@@ -638,8 +623,8 @@ export default function LandingPage() {
                 },
                 {
                   icon: "02",
-                  title: "Scope the job together",
-                  body: "Write requirements in plain language. Edit with AI turns them into something both sides understand.",
+                  title: "Put the work on the project",
+                  body: "Add to-dos with estimates. The client sees status, hours, and what’s left — not a private task list.",
                 },
                 {
                   icon: "03",
@@ -648,8 +633,8 @@ export default function LandingPage() {
                 },
                 {
                   icon: "04",
-                  title: "Track hours and payments",
-                  body: "Log time as you work and record payments as they land. Every job shows exactly where it stands.",
+                  title: "Track hours and invoice",
+                  body: "Log time as you work, then send an invoice from unbilled hours. Every project shows exactly where it stands.",
                 },
               ].map((item, i) => (
                 <ScrollReveal key={item.icon} delay={i * 90}>
@@ -706,9 +691,9 @@ export default function LandingPage() {
                 body: "There's no browsing or matching. You invite the clients you already work with — each one sees only their own jobs.",
               },
               {
-                tag: "AI-assisted",
-                title: "Clarity without extra effort",
-                body: "Edit with AI turns a messy note into a clear requirement or a clean chat message — using the context of that job.",
+                tag: "Work-first",
+                title: "Open the app and you’re already on the work",
+                body: "One Now, this week versus your normal hours, and to-dos in project accordions — not a CRM dashboard.",
               },
               {
                 tag: "Fully tracked",
@@ -948,7 +933,7 @@ export default function LandingPage() {
             </Box>
             <Box>
               <Text fontSize="0.9375rem" color={MUTED} lineHeight="1.8" mb={6}>
-                Every job — requirements, chat, rates, hours, payments — lives in one connected
+                Every project — to-dos, rates, hours, remaining work, invoices — lives in one connected
                 workspace. One platform, total clarity, for you and your client.
               </Text>
               <Flex gap={3} flexWrap="wrap">
@@ -986,11 +971,11 @@ export default function LandingPage() {
                 <Text fontSize="1.0625rem" fontWeight="700" color="white"
                   letterSpacing="-0.015em" mb={1.5}
                   fontFamily="var(--font-heading)">
-                  Your job command center
+                  Your work command center
                 </Text>
                 <Text fontSize="0.8125rem" color="rgba(255,255,255,0.45)" lineHeight="1.65" mb={6}>
-                  Run every job in one connected workspace. Requirements, chat, to-dos,
-                  and file sharing — all in one place.
+                  Run every project from one workbench. To-dos, hours, remaining work,
+                  and invoices — all in one place.
                 </Text>
               </Box>
 
@@ -1029,10 +1014,10 @@ export default function LandingPage() {
                     <Flex key={m.l} align="center" gap={2} mb={1.5}>
                       <Box w="12px" h="12px" borderRadius="50%" flexShrink={0}
                         bg={m.d ? GREEN : m.a ? "transparent" : "transparent"}
-                        border={m.a ? `1.5px solid ${BLUE}` : m.d ? "none" : "1px solid rgba(255,255,255,0.1)"}
+                        border={m.a ? `1.5px solid ${GREEN}` : m.d ? "none" : "1px solid rgba(255,255,255,0.1)"}
                         display="flex" alignItems="center" justifyContent="center">
                         {m.d && <svg width="6" height="4" viewBox="0 0 8 6" fill="none"><path d="M1 3L3 5L7 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-                        {m.a && <Box w="4px" h="4px" borderRadius="50%" bg={BLUE} />}
+                        {m.a && <Box w="4px" h="4px" borderRadius="50%" bg={GREEN} />}
                       </Box>
                       <Text fontSize="0.65rem" color={m.d ? "rgba(255,255,255,0.25)" : m.a ? "white" : "rgba(255,255,255,0.2)"}
                         fontWeight={m.a ? "600" : "400"} textDecoration={m.d ? "line-through" : "none"}>
@@ -1044,12 +1029,12 @@ export default function LandingPage() {
                     <Flex align="center" gap={1.5} mb={1}>
                       <Box w="14px" h="14px" borderRadius="50%" bg={`${GREEN}25`}
                         display="flex" alignItems="center" justifyContent="center">
-                        <Text fontSize="0.45rem" fontWeight="700" color={G_ON_DARK}>AI</Text>
+                        <Text fontSize="0.45rem" fontWeight="700" color={G_ON_DARK}>N</Text>
                       </Box>
-                      <Text fontSize="0.6rem" fontWeight="600" color="rgba(255,255,255,0.6)">Edit with AI</Text>
+                      <Text fontSize="0.6rem" fontWeight="600" color="rgba(255,255,255,0.6)">Now</Text>
                     </Flex>
                     <Text fontSize="0.62rem" color="rgba(255,255,255,0.38)">
-                      Rewrote client's message into a clear scope change. ✓
+                      Build in progress · 12.5h / 20h · ~1 week left if pace holds
                     </Text>
                   </Box>
                 </Box>
@@ -1126,7 +1111,7 @@ export default function LandingPage() {
               </Box>
             </Box>
 
-            {/* Card 3: AI clarity on every job — light blue */}
+            {/* Card 3: client always sees the work */}
             <Box
               gridRow={{ lg: "2" }} gridColumn={{ lg: "2" }}
               bg="#D9E8F5" borderRadius="16px" p={7}
@@ -1134,19 +1119,18 @@ export default function LandingPage() {
             >
               <svg aria-hidden style={{ position: "absolute", right: 0, top: 0, opacity: 0.07, pointerEvents: "none" }}
                 width="140" height="140" viewBox="0 0 140 140">
-                <circle cx="100" cy="40" r="80" fill={BLUE} />
+                <circle cx="100" cy="40" r="80" fill={GREEN} />
               </svg>
               <Text fontSize="1.0625rem" fontWeight="700" color={INK}
                 letterSpacing="-0.015em" mb={1.5} fontFamily="var(--font-heading)">
-                AI clarity on every job
+                The client always sees the work
               </Text>
               <Text fontSize="0.8125rem" color="#2A4D70" lineHeight="1.65" mb={6}>
-                Edit with AI rewrites requirements, chat messages, and to-dos using that job's
-                context — so nothing gets lost in translation between you and your client.
+                Now, remaining hours, your normal week, and how much of that week this project
+                usually gets — so nobody has to ask for a status update.
               </Text>
-              {/* Visual: stacked AI rewrite examples */}
               <Flex gap={2} flexWrap="wrap">
-                {["Requirement clarified", "Chat message tidied", "To-do simplified"].map((b, i) => (
+                {["Now visible", "Hours remaining", "Weekly pace"].map((b, i) => (
                   <Box key={b} px={2.5} py={1.5} borderRadius="6px"
                     bg="white" boxShadow="0 1px 6px rgba(0,0,0,0.07)"
                     opacity={1 - i * 0.18}>
@@ -1264,14 +1248,14 @@ export default function LandingPage() {
                 twenty, Co-Helper adapts to your business — not the other way around.
               </Text>
               <Text fontSize="0.9375rem" color={MUTED} lineHeight="1.8" mb={8}>
-                Set up your workspace once, invite companies as you take them on, and let AI and
+                Set up your workspace once, invite companies as you take them on, and let the workbench and
                 built-in tracking handle the busywork around every job.
               </Text>
               <Link to="/partner/register" style={{ textDecoration: "none" }}>
                 <Box display="inline-flex" alignItems="center"
-                  px={5} py="11px" borderRadius="6px" fontWeight="700" fontSize="0.875rem"
-                  bg={AMBER} color={INK} border={`1px solid ${AMBER}`}
-                  _hover={{ bg: AMBER_HOVER }} transition="all 0.15s">
+                  px={5} py="11px" borderRadius="10px" fontWeight="700" fontSize="0.875rem"
+                  bg={GREEN} color="white" border={`1px solid ${GREEN}`}
+                  _hover={{ bg: "#0a5240" }} transition="all 0.15s">
                   Start your workspace →
                 </Box>
               </Link>
@@ -1320,18 +1304,18 @@ export default function LandingPage() {
               <Text fontSize="0.9375rem" color="rgba(255,255,255,0.5)"
                 lineHeight="1.8" mb={8} maxW="420px">
                 One-person businesses use Co-Helper to invite companies into a shared workspace — one
-                place for requirements, chat, rates, hours, and payments.
+                place for to-dos, rates, hours, and invoices.
               </Text>
               <Flex gap={3} flexWrap="wrap">
                 <Link to="/partner/register" style={{ textDecoration: "none" }}>
-                  <Box px={5} py="11px" borderRadius="6px" fontWeight="700" fontSize="0.875rem"
-                    bg={AMBER} color={INK} border={`1px solid ${AMBER}`}
-                    _hover={{ bg: AMBER_HOVER }} transition="all 0.15s">
+                  <Box px={5} py="11px" borderRadius="10px" fontWeight="700" fontSize="0.875rem"
+                    bg="white" color={INK} border="1px solid white"
+                    _hover={{ bg: "#F0FAF5" }} transition="all 0.15s">
                     Start your workspace →
                   </Box>
                 </Link>
                 <Link to="/contact" style={{ textDecoration: "none" }}>
-                  <Box px={5} py="11px" borderRadius="6px" fontWeight="600" fontSize="0.875rem"
+                  <Box px={5} py="11px" borderRadius="10px" fontWeight="600" fontSize="0.875rem"
                     bg="transparent" color="rgba(255,255,255,0.8)"
                     border="1px solid rgba(255,255,255,0.22)"
                     _hover={{ bg: "rgba(255,255,255,0.06)", color: "white" }}
@@ -1369,15 +1353,15 @@ export default function LandingPage() {
                 </Heading>
                 <Text fontSize="0.9375rem" color={MUTED}
                   lineHeight="1.78" mb={6} maxW="360px">
-                  Invite the companies you work with, agree how you're paid, and let AI keep requirements,
-                  chat, and to-dos clear for both sides.
+                  Invite the companies you work with, agree how you're paid, and keep to-dos,
+                  hours, and invoices clear for both sides.
                 </Text>
                 <Stack gap={2.5} mb={7}>
                   {[
                     "Invite companies in seconds — no approval queue",
-                    "Edit with AI on every requirement, message, and to-do",
+                    "One Now — you and the client see the same current to-do",
                     "Hourly or fixed rate, agreed and on record",
-                    "Every hour and payment logged automatically",
+                    "Invoice from unbilled hours — mark paid when money lands",
                   ].map((item) => (
                     <Flex key={item} gap={2.5} align="flex-start">
                       <Box w="14px" h="14px" borderRadius="50%" flexShrink={0} mt="2px"
