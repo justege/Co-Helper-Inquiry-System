@@ -4,12 +4,8 @@ import { getAuth } from "firebase-admin/auth";
 const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID;
 
 if (!PROJECT_ID) {
-  throw new Error("Missing FIREBASE_PROJECT_ID (or VITE_FIREBASE_PROJECT_ID) in the environment");
-}
-
-// Initialize firebase-admin once — only the projectId is needed to verify tokens.
-// No service account JSON required; the SDK fetches Firebase's public keys itself.
-if (!getApps().length) {
+  console.error("[auth] Missing FIREBASE_PROJECT_ID (or VITE_FIREBASE_PROJECT_ID)");
+} else if (!getApps().length) {
   initializeApp({ projectId: PROJECT_ID });
 }
 
@@ -18,6 +14,9 @@ if (!getApps().length) {
  * and attaches `req.uid` and `req.firebaseUser` (the decoded token) to the request.
  */
 export async function requireAuth(req, res, next) {
+  if (!PROJECT_ID) {
+    return res.status(503).json({ error: "Auth is not configured" });
+  }
   const header = req.headers.authorization ?? "";
   if (!header.startsWith("Bearer ")) {
     return res.status(401).json({ error: "Missing Bearer token" });

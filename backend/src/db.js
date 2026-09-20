@@ -40,10 +40,14 @@ function poolConfig() {
   const port = Number(process.env.PGPORT || process.env.DATABASE_PORT || 25060);
 
   if (!host || !user || !password || !database) {
-    throw new Error(
-      "Database is not configured. Set DATABASE_URL (DigitalOcean connection URI) " +
-        "or PGHOST, PGPORT, PGUSER, PGPASSWORD, and PGDATABASE in backend/.env"
+    console.error(
+      "[db] Database is not configured. Set DATABASE_URL or PGHOST/PGUSER/PGPASSWORD/PGDATABASE."
     );
+    return {
+      connectionString: "postgresql://127.0.0.1:1/postgres",
+      connectionTimeoutMillis: 1000,
+      max: 1,
+    };
   }
 
   return { host, port, user, password, database, ssl: sslOption(), max: 10 };

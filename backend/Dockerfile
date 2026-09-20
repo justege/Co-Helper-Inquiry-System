@@ -14,8 +14,10 @@ WORKDIR /src/frontend
 RUN npm ci && npm run build
 
 FROM node:20-alpine AS production
+RUN apk add --no-cache libc6-compat
 WORKDIR /app/backend
 ENV NODE_ENV=production
+ENV BUILD_STAMP=20260920-health-boot
 
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
@@ -24,4 +26,4 @@ COPY src ./src
 COPY --from=frontend-build /src/frontend/dist /app/frontend/dist
 
 EXPOSE 8000
-CMD ["node", "src/index.js"]
+CMD ["node", "src/boot.js"]

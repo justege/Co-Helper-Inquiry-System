@@ -74,14 +74,19 @@ if (isProduction) {
   });
 }
 
-const server = app.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
-});
-server.on("error", (err) => {
-  console.error("[listen]", err);
-  process.exit(1);
-});
-
 ensureStorageBuckets().catch((err) => {
   console.error("[storage]", err);
 });
+
+export { app };
+
+const startedAsMain = (process.argv[1] || "").endsWith("index.js");
+if (startedAsMain) {
+  const server = app.listen(PORT, () => {
+    console.log(`Server listening on port ${PORT}`);
+  });
+  server.on("error", (err) => {
+    console.error("[listen]", err);
+    process.exit(1);
+  });
+}
