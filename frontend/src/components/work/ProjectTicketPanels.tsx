@@ -1,13 +1,25 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 import { Link } from "react-router-dom"
 import { Box, Text } from "@chakra-ui/react"
-import { LuCheck, LuPaperclip, LuPlus, LuTrash2, LuX } from "react-icons/lu"
+import { LuCircleAlert, LuCheck, LuPaperclip, LuPlus, LuTrash2, LuX } from "react-icons/lu"
 import { AppButton } from "@/components/ui/AppButton"
 import { AppTabs } from "@/components/ui/AppTabs"
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog"
 import { FormInput, FormNativeSelect, FormTextarea } from "@/components/ui/form-controls"
-import { APP_ACCENT, APP_BG_SUBTLE, APP_BORDER, APP_INK, APP_MUTED, APP_SURFACE } from "@/components/ui/appUi"
+import {
+  APP_ACCENT,
+  APP_BG_SUBTLE,
+  APP_BORDER,
+  APP_CARD,
+  APP_INK,
+  APP_MUTED,
+  APP_SHADOW_CARD,
+  APP_SURFACE,
+  AppCard,
+} from "@/components/ui/appUi"
 import { displayName, formatPeopleList, peopleOnTodo } from "@/lib/people"
+import { isOverdue } from "@/lib/todoStyle"
+import { AvatarStack, DueChip } from "./todoUi"
 import {
   BLOCKER_KIND_LABEL,
   formatDate,
@@ -56,28 +68,30 @@ export function projectStatusColor(status?: string) {
 
 export function StatusChip({ status }: { status?: string }) {
   const value = status || "backlog"
+  const tone =
+    value === "in_progress"
+      ? { bg: "rgba(232,245,239,0.95)", color: APP_ACCENT, border: "rgba(15,110,86,0.2)" }
+      : value === "waiting_on_client"
+        ? { bg: "rgba(255,247,237,0.95)", color: "#C2410C", border: "rgba(194,65,12,0.18)" }
+        : value === "done"
+          ? { bg: "rgba(255,255,255,0.14)", color: "rgba(255,255,255,0.85)", border: "rgba(255,255,255,0.2)" }
+          : { bg: "rgba(255,255,255,0.1)", color: "white", border: "rgba(255,255,255,0.15)" }
   return (
     <Box
       display="inline-flex"
       alignItems="center"
-      h="28px"
+      h="30px"
       px={3}
       borderRadius="999px"
-      bg="rgba(255,255,255,0.12)"
-      color="white"
+      bg={tone.bg}
+      color={tone.color}
+      border={`1px solid ${tone.border}`}
       fontSize="0.75rem"
-      fontWeight="700"
+      fontWeight="600"
+      letterSpacing="-0.01em"
     >
       {PROJECT_STATUS_LABEL[value] || value}
     </Box>
-  )
-}
-
-function SectionLabel({ children }: { children: string }) {
-  return (
-    <Text fontSize="0.75rem" fontWeight="700" color={APP_MUTED} letterSpacing="0.06em" textTransform="uppercase" mb={2}>
-      {children}
-    </Text>
   )
 }
 
@@ -108,186 +122,697 @@ function CheckButton({
   )
 }
 
-export function DetailsSidebar({
+function SidebarField({
+  label,
+  children,
+}: {
+  label: string
+  children: ReactNode
+}) {
+  return (
+    <Box>
+      <Text fontSize="0.6875rem" fontWeight="600" color={APP_MUTED} letterSpacing="0.04em" textTransform="uppercase" mb={1.5}>
+        {label}
+      </Text>
+      {children}
+    </Box>
+  )
+}
+
+export function ProjectDetailsPanel({
   data,
   work,
   canEdit,
   canManage,
   onChanged,
+  onOpenView,
+  unbilledHours,
+  onCreateInvoice,
 }: {
   data: ProjectTicket
   work: WorkProject
   canEdit: boolean
   canManage: boolean
   onChanged: () => void
+  onOpenView?: (view: string) => void
+  unbilledHours?: number | null
+  onCreateInvoice?: () => void
 }) {
   const project = data.project
   const eta = formatEta(work.remainingHours, work.weeklyPace)
+  const [name, setName] = useState(project.name)
+  const current = data.milestones.find((milestone) => milestone.id === project.currentMilestoneId)
+  const teamCount = data.collaborators.length + data.pendingInvites.length + 1
+
+  useEffect(() => {
+    setName(project.name)
+  }, [project.name])
 
   function patch(fields: Parameters<typeof updateWorkspaceProject>[1]) {
     return updateWorkspaceProject(project.id, fields).then(onChanged)
   }
 
+  function saveName() {
+    const next = name.trim()
+    if (!next || next === project.name) return
+    void patch({ name: next })
+  }
+
   return (
-    <Box bg={APP_SURFACE} border={`1px solid ${APP_BORDER}`} borderRadius="14px" overflow="hidden">
-      <Box px={5} py={3.5} borderBottom={`1px solid ${APP_BORDER}`}>
-        <Text fontWeight="700" color={APP_INK}>Details</Text>
-      </Box>
-      <Box px={5} py={2}>
-        <Box py={3} borderBottom={`1px solid ${APP_BORDER}`}>
-          <SectionLabel>Status</SectionLabel>
+    <Box display="grid" gridTemplateColumns={{ base: "1fr", lg: "1fr 1fr" }} gap={4} alignItems="start">
+      <Box display="grid" gap={4}>
+      <AppCard label="Project">
+        <Box display="grid" gap={4}>
           {canEdit ? (
-            <FormNativeSelect
-              value={project.status || "backlog"}
-              onChange={(e) => void patch({ status: e.target.value as WorkspaceProject["status"] })}
-            >
-              <option value="backlog">Backlog</option>
-              <option value="in_progress">In progress</option>
-              <option value="waiting_on_client">Waiting on client</option>
-              <option value="done">Done</option>
-            </FormNativeSelect>
-          ) : (
-            <Text fontWeight="700" color={projectStatusColor(project.status)}>
-              {PROJECT_STATUS_LABEL[project.status || "backlog"]}
-            </Text>
-          )}
-        </Box>
-        <Box py={3} borderBottom={`1px solid ${APP_BORDER}`}>
-          <SectionLabel>Priority</SectionLabel>
-          {canEdit ? (
-            <FormNativeSelect
-              value={project.priority || "medium"}
-              onChange={(e) => void patch({ priority: e.target.value as WorkspaceProject["priority"] })}
-            >
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-            </FormNativeSelect>
-          ) : (
-            <Text fontWeight="600" color={APP_INK}>{PROJECT_PRIORITY_LABEL[project.priority || "medium"]}</Text>
-          )}
-        </Box>
-        <Box py={3} borderBottom={`1px solid ${APP_BORDER}`}>
-          <SectionLabel>Client</SectionLabel>
-          {canManage ? (
-            <Link to={`/app/clients/${data.client.id}`} style={{ textDecoration: "none" }}>
-              <Text fontWeight="700" color={APP_INK}>{displayName(data.client)}</Text>
-              <Text fontSize="0.8125rem" color={APP_MUTED}>{data.client.email}</Text>
-            </Link>
-          ) : (
-            <>
-              <Text fontWeight="700" color={APP_INK}>{displayName(data.client)}</Text>
-              <Text fontSize="0.8125rem" color={APP_MUTED}>{data.client.email}</Text>
-            </>
-          )}
-        </Box>
-        <Box py={3} borderBottom={`1px solid ${APP_BORDER}`}>
-          <SectionLabel>Start</SectionLabel>
-          {canEdit ? (
-            <FormInput
-              type="date"
-              value={project.startAt ?? ""}
-              onChange={(e) => void patch({ startAt: e.target.value || null })}
-            />
-          ) : (
-            <Text color={APP_INK}>{formatDate(project.startAt)}</Text>
-          )}
-        </Box>
-        <Box py={3} borderBottom={`1px solid ${APP_BORDER}`}>
-          <SectionLabel>Due</SectionLabel>
-          {canEdit ? (
-            <FormInput
-              type="date"
-              value={project.dueAt ?? ""}
-              onChange={(e) => void patch({ dueAt: e.target.value || null })}
-            />
-          ) : (
-            <Text color={APP_INK}>{formatDate(project.dueAt)}</Text>
-          )}
-        </Box>
-        {data.milestones.length > 0 && (
-          <Box py={3} borderBottom={`1px solid ${APP_BORDER}`}>
-            <SectionLabel>Current milestone</SectionLabel>
-            {(() => {
-              const current = data.milestones.find((milestone) => milestone.id === project.currentMilestoneId)
-              if (!current) {
-                return (
-                  <Link to={`/app/projects/${project.id}?view=plan`} style={{ textDecoration: "none" }}>
-                    <Text fontSize="0.875rem" color={APP_MUTED}>None yet — pick one on Plan</Text>
-                  </Link>
-                )
-              }
-              return (
-                <Link
-                  to={`/app/projects/${project.id}?view=plan&milestone=${current.id}`}
-                  style={{ textDecoration: "none" }}
+            <SidebarField label="Name">
+              <FormInput
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onBlur={() => saveName()}
+                fontWeight="600"
+              />
+            </SidebarField>
+          ) : null}
+          <Box display="grid" gridTemplateColumns="1fr 1fr" gap={3}>
+            <SidebarField label="Status">
+              {canEdit ? (
+                <FormNativeSelect
+                  value={project.status || "backlog"}
+                  onChange={(e) => void patch({ status: e.target.value as WorkspaceProject["status"] })}
                 >
-                  <Text fontWeight="700" color={APP_INK}>{current.title}</Text>
-                  <Text fontSize="0.75rem" color={current.late ? "#B91C1C" : APP_MUTED} mt={1}>
-                    {current.late && current.delayedDays != null ? `${current.delayedDays}d late · ` : ""}
-                    Open in Plan
-                  </Text>
-                </Link>
-              )
-            })()}
+                  <option value="backlog">Backlog</option>
+                  <option value="in_progress">In progress</option>
+                  <option value="waiting_on_client">Waiting on client</option>
+                  <option value="done">Done</option>
+                </FormNativeSelect>
+              ) : (
+                <Text fontWeight="600" color={projectStatusColor(project.status)}>
+                  {PROJECT_STATUS_LABEL[project.status || "backlog"]}
+                </Text>
+              )}
+            </SidebarField>
+            <SidebarField label="Priority">
+              {canEdit ? (
+                <FormNativeSelect
+                  value={project.priority || "medium"}
+                  onChange={(e) => void patch({ priority: e.target.value as WorkspaceProject["priority"] })}
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </FormNativeSelect>
+              ) : (
+                <Text fontWeight="600" color={APP_INK}>{PROJECT_PRIORITY_LABEL[project.priority || "medium"]}</Text>
+              )}
+            </SidebarField>
           </Box>
-        )}
-        <Box py={3} borderBottom={`1px solid ${APP_BORDER}`}>
-          <SectionLabel>Time</SectionLabel>
-          <Text fontSize="0.875rem" color={APP_INK} lineHeight="1.55">
-            {formatHours(work.loggedHours)} logged
-            {work.estimatedHours != null ? ` · ${formatHours(work.estimatedHours)} estimated` : ""}
-            {work.remainingHours != null ? ` · ${formatHours(work.remainingHours)} left` : ""}
-          </Text>
-          <Text fontSize="0.75rem" color={APP_MUTED} mt={1}>
-            {formatHours(work.thisWeekHours)} this week
-            {work.weeklyPace != null ? ` · ~${formatHours(work.weeklyPace)}/week` : ""}
-            {eta ? ` · ${eta}` : ""}
-          </Text>
+          <SidebarField label="Client">
+            {canManage ? (
+              <Link to={`/app/clients/${data.client.id}`} style={{ textDecoration: "none" }}>
+                <Text fontWeight="600" color={APP_INK}>{displayName(data.client)}</Text>
+                <Text fontSize="0.8125rem" color={APP_MUTED} mt="2px">{data.client.email}</Text>
+              </Link>
+            ) : (
+              <>
+                <Text fontWeight="600" color={APP_INK}>{displayName(data.client)}</Text>
+                <Text fontSize="0.8125rem" color={APP_MUTED} mt="2px">{data.client.email}</Text>
+              </>
+            )}
+          </SidebarField>
         </Box>
-        <Box py={3}>
-          <SectionLabel>People</SectionLabel>
-          <Text fontSize="0.875rem" color={APP_INK}>
-            {data.collaborators.length
-              ? `${data.collaborators.length} collaborator${data.collaborators.length === 1 ? "" : "s"}`
-              : "Just you and the client"}
-          </Text>
-          {data.pendingInvites.length > 0 && (
-            <Text fontSize="0.75rem" color={APP_MUTED} mt={1}>
-              {data.pendingInvites.length} invite{data.pendingInvites.length === 1 ? "" : "s"} pending
+      </AppCard>
+
+      <AppCard label="Time & team">
+        <Box display="grid" gap={4}>
+          <Box>
+            <Text fontSize="0.875rem" color={APP_INK} fontWeight="600" lineHeight="1.55">
+              {formatHours(work.loggedHours)} logged
+              {work.estimatedHours != null ? ` · ${formatHours(work.estimatedHours)} estimated` : ""}
             </Text>
-          )}
+            <Text fontSize="0.75rem" color={APP_MUTED} mt={1}>
+              {formatHours(work.thisWeekHours)} this week
+              {work.weeklyPace != null ? ` · ~${formatHours(work.weeklyPace)}/week` : ""}
+              {work.remainingHours != null ? ` · ${formatHours(work.remainingHours)} left` : ""}
+              {eta ? ` · ${eta}` : ""}
+            </Text>
+          </Box>
+          <Box display="flex" alignItems="center" justifyContent="space-between" gap={2}>
+            <Box>
+              <Text fontSize="0.875rem" fontWeight="600" color={APP_INK}>
+                {teamCount} {teamCount === 1 ? "person" : "people"}
+              </Text>
+              <Text fontSize="0.75rem" color={APP_MUTED} mt="2px">
+                {data.collaborators.length
+                  ? `${data.collaborators.length} collaborator${data.collaborators.length === 1 ? "" : "s"}`
+                  : "Just you and the client"}
+                {data.pendingInvites.length > 0
+                  ? ` · ${data.pendingInvites.length} pending invite${data.pendingInvites.length === 1 ? "" : "s"}`
+                  : ""}
+              </Text>
+            </Box>
+            {onOpenView ? (
+              <AppButton size="sm" variant="secondary" onClick={() => onOpenView("people")}>
+                View team
+              </AppButton>
+            ) : null}
+          </Box>
+        </Box>
+      </AppCard>
+      </Box>
+
+      <Box display="grid" gap={4}>
+      <AppCard
+        label="Schedule"
+        action={
+          onOpenView ? (
+            <Box as="button" fontSize="0.75rem" fontWeight="600" color={APP_ACCENT} onClick={() => onOpenView("plan")}>
+              Open plan
+            </Box>
+          ) : undefined
+        }
+      >
+        <Box display="grid" gridTemplateColumns="1fr 1fr" gap={3} mb={current || data.milestones.length ? 4 : 0}>
+          <SidebarField label="Start">
+            {canEdit ? (
+              <FormInput
+                type="date"
+                value={project.startAt ?? ""}
+                onChange={(e) => void patch({ startAt: e.target.value || null })}
+              />
+            ) : (
+              <Text fontWeight="600" color={APP_INK}>{formatDate(project.startAt)}</Text>
+            )}
+          </SidebarField>
+          <SidebarField label="Due">
+            {canEdit ? (
+              <FormInput
+                type="date"
+                value={project.dueAt ?? ""}
+                onChange={(e) => void patch({ dueAt: e.target.value || null })}
+              />
+            ) : (
+              <Text fontWeight="600" color={APP_INK}>{formatDate(project.dueAt)}</Text>
+            )}
+          </SidebarField>
+        </Box>
+        {data.milestones.length > 0 ? (
+          <SidebarField label="Current milestone">
+            {current ? (
+              <Link
+                to={`/app/projects/${project.id}?view=plan&milestone=${current.id}`}
+                style={{ textDecoration: "none" }}
+              >
+                <Text fontWeight="600" color={APP_INK}>{current.title}</Text>
+                <Text fontSize="0.75rem" color={current.late ? "#B91C1C" : APP_MUTED} mt="2px">
+                  {current.late && current.delayedDays != null ? `${current.delayedDays}d late · ` : ""}
+                  Due {formatDate(current.dueAt)}
+                </Text>
+              </Link>
+            ) : (
+              <Text fontSize="0.875rem" color={APP_MUTED}>Pick a milestone on Plan</Text>
+            )}
+          </SidebarField>
+        ) : (
+          <Text fontSize="0.8125rem" color={APP_MUTED}>
+            No milestones yet — break the work into slices on Plan.
+          </Text>
+        )}
+      </AppCard>
+
+      {canManage ? (
+        <AppCard label="Business">
+          <Text fontSize="0.8125rem" color={APP_MUTED} mb={3}>
+            Pricing, pace, and invoicing for this project.
+          </Text>
+          <Box display="grid" gap={2}>
+            <AppButton size="sm" variant="secondary" onClick={() => onOpenView?.("pricing")}>
+              Pricing & pace
+            </AppButton>
+            <AppButton size="sm" variant="secondary" onClick={() => onOpenView?.("finance")}>
+              Open finance
+            </AppButton>
+            {unbilledHours ? (
+              <AppButton size="sm" variant="secondary" onClick={() => onCreateInvoice?.()}>
+                Invoice {formatHours(unbilledHours)} unbilled
+              </AppButton>
+            ) : null}
+          </Box>
+        </AppCard>
+      ) : null}
+      </Box>
+    </Box>
+  )
+}
+
+/** @deprecated Use ProjectDetailsPanel in the Details tab */
+export const DetailsSidebar = ProjectDetailsPanel
+
+type OverviewAction = {
+  id: string
+  tone: "danger" | "amber" | "accent"
+  title: string
+  detail?: string
+  actionLabel: string
+  onAction: () => void
+}
+
+function scrollToProjectSection(id: string) {
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+}
+
+function overviewActionTone(tone: OverviewAction["tone"]) {
+  if (tone === "danger") return { bg: "rgba(185,28,28,0.06)", border: "rgba(185,28,28,0.2)", icon: "#B91C1C" }
+  if (tone === "amber") return { bg: "rgba(180,83,9,0.08)", border: "rgba(180,83,9,0.22)", icon: "#B45309" }
+  return { bg: "rgba(15,110,86,0.06)", border: "rgba(15,110,86,0.18)", icon: APP_ACCENT }
+}
+
+function buildOverviewNarrative({
+  data,
+  work,
+  openTodos,
+  inProgressTodos,
+  waitingTodos,
+  currentMilestone,
+}: {
+  data: ProjectTicket
+  work: WorkProject
+  openTodos: WorkTodo[]
+  inProgressTodos: WorkTodo[]
+  waitingTodos: WorkTodo[]
+  currentMilestone: ProjectMilestone | undefined
+}) {
+  const status = data.project.status || "backlog"
+  const lateMilestones = data.milestones.filter((m) => m.late && !m.done)
+
+  if (status === "done") {
+    return "This project is marked done. Review goals and billing before archiving."
+  }
+  if (waitingTodos.length > 0 && inProgressTodos.length === 0) {
+    return `${waitingTodos.length} item${waitingTodos.length === 1 ? "" : "s"} waiting on ${displayName(data.client)} — follow up or unblock on the board.`
+  }
+  if (lateMilestones.length > 0) {
+    const first = lateMilestones[0]
+    return `"${first.title}" is late${first.delayedDays != null ? ` by ${first.delayedDays}d` : ""} — log why and adjust the plan.`
+  }
+  if (currentMilestone && inProgressTodos.length > 0) {
+    return `Working on "${currentMilestone.title}" with ${inProgressTodos.length} active to-do${inProgressTodos.length === 1 ? "" : "s"}.`
+  }
+  if (currentMilestone) {
+    return `Focused on "${currentMilestone.title}" — pick up or add to-dos on the board.`
+  }
+  if (status === "in_progress" && openTodos.length > 0) {
+    return `${openTodos.length} open to-do${openTodos.length === 1 ? "" : "s"} — nothing marked in progress yet.`
+  }
+  if (status === "backlog" && openTodos.length === 0 && data.milestones.length === 0) {
+    return "Project is in backlog. Set dates, break it into milestones, and add the first to-do."
+  }
+  if (status === "backlog" && openTodos.length > 0) {
+    return `${openTodos.length} to-do${openTodos.length === 1 ? "" : "s"} ready — move the project to In progress when work starts.`
+  }
+  if (openTodos.length === 0 && data.milestones.length > 0) {
+    return "Plan is set but there is no open work — add to-dos on the board."
+  }
+  if (work.loggedHours > 0) {
+    return `${formatHours(work.loggedHours)} logged so far${work.remainingHours != null ? ` · ${formatHours(work.remainingHours)} estimated left` : ""}.`
+  }
+  return "Set up the plan, define goals, and add work on the board to get moving."
+}
+
+function buildOverviewActions({
+  data,
+  work,
+  canEdit,
+  canManage,
+  openTodos,
+  overdueTodos,
+  waitingTodos,
+  currentMilestone,
+  onOpenPlan,
+  onOpenBoard,
+  onOpenPeople,
+  onOpenPricing,
+  onOpenFinance,
+  onStartProject,
+  onOpenDetails,
+}: {
+  data: ProjectTicket
+  work: WorkProject
+  canEdit: boolean
+  canManage: boolean
+  openTodos: WorkTodo[]
+  overdueTodos: WorkTodo[]
+  waitingTodos: WorkTodo[]
+  currentMilestone: ProjectMilestone | undefined
+  onOpenPlan: () => void
+  onOpenBoard: () => void
+  onOpenPeople: () => void
+  onOpenPricing: () => void
+  onOpenFinance: () => void
+  onStartProject: () => void
+  onOpenDetails: () => void
+}): OverviewAction[] {
+  const actions: OverviewAction[] = []
+  const openBlockers = (data.blockers ?? []).filter((b) => b.status === "open")
+  const lateMilestones = data.milestones.filter((m) => m.late && !m.done)
+  const doneGoals = data.goals.filter((g) => g.done).length
+  const hasDates = Boolean(data.project.startAt && data.project.dueAt)
+
+  for (const milestone of lateMilestones) {
+    const blockers = openBlockers.filter((b) => b.milestoneId === milestone.id)
+    actions.push({
+      id: `late-${milestone.id}`,
+      tone: "danger",
+      title: `"${milestone.title}" is late`,
+      detail: milestone.delayedDays != null ? `${milestone.delayedDays} days past due` : "Past due date",
+      actionLabel: blockers.length ? "Review blockers" : "Log why late",
+      onAction: onOpenPlan,
+    })
+  }
+
+  for (const todo of overdueTodos.slice(0, 3)) {
+    actions.push({
+      id: `overdue-${todo.id}`,
+      tone: "danger",
+      title: `Overdue: ${todo.title}`,
+      detail: todo.dueAt ? `Due ${formatDate(todo.dueAt)}` : undefined,
+      actionLabel: "Open to-do",
+      onAction: () => {},
+    })
+  }
+
+  if (waitingTodos.length > 0) {
+    actions.push({
+      id: "waiting-client",
+      tone: "amber",
+      title: `${waitingTodos.length} waiting on ${displayName(data.client)}`,
+      detail: waitingTodos.slice(0, 2).map((t) => t.title).join(" · "),
+      actionLabel: "View on board",
+      onAction: onOpenBoard,
+    })
+  }
+
+  if (openBlockers.length > 0 && lateMilestones.length === 0) {
+    actions.push({
+      id: "blockers",
+      tone: "amber",
+      title: `${openBlockers.length} open blocker${openBlockers.length === 1 ? "" : "s"}`,
+      detail: openBlockers[0]?.title,
+      actionLabel: "Review on plan",
+      onAction: onOpenPlan,
+    })
+  }
+
+  if (canEdit && !hasDates) {
+    actions.push({
+      id: "set-dates",
+      tone: "accent",
+      title: "Set project start and due dates",
+      detail: "Dates drive the timeline and milestone planning",
+      actionLabel: "Set dates",
+      onAction: onOpenDetails,
+    })
+  }
+
+  if (canEdit && data.milestones.length === 0) {
+    actions.push({
+      id: "add-milestones",
+      tone: "accent",
+      title: "Break the project into milestones",
+      detail: "Slice the work into due dates with to-dos and blockers",
+      actionLabel: "Create plan",
+      onAction: onOpenPlan,
+    })
+  }
+
+  if (canEdit && data.milestones.length > 0 && !currentMilestone) {
+    actions.push({
+      id: "pick-milestone",
+      tone: "accent",
+      title: "Choose what you are working on now",
+      detail: "Pick a current milestone so the team knows the focus",
+      actionLabel: "Open plan",
+      onAction: onOpenPlan,
+    })
+  }
+
+  if (canEdit && data.goals.length === 0) {
+    actions.push({
+      id: "add-goals",
+      tone: "accent",
+      title: "Define what done looks like",
+      detail: "Add goals — outcomes this project should hit",
+      actionLabel: "Add goals",
+      onAction: () => scrollToProjectSection("project-goals"),
+    })
+  }
+
+  if (canEdit && data.goals.length > 0 && doneGoals < data.goals.length) {
+    actions.push({
+      id: "open-goals",
+      tone: "accent",
+      title: `${data.goals.length - doneGoals} goal${data.goals.length - doneGoals === 1 ? "" : "s"} still open`,
+      detail: `${doneGoals}/${data.goals.length} complete`,
+      actionLabel: "Review goals",
+      onAction: () => scrollToProjectSection("project-goals"),
+    })
+  }
+
+  if (canEdit && !data.project.description?.trim()) {
+    actions.push({
+      id: "add-description",
+      tone: "accent",
+      title: "Add a project description",
+      detail: "Scope, constraints, and context the client should see",
+      actionLabel: "Add description",
+      onAction: () => scrollToProjectSection("project-about"),
+    })
+  }
+
+  if (canEdit && openTodos.length === 0) {
+    actions.push({
+      id: "add-todos",
+      tone: "accent",
+      title: "No open to-dos yet",
+      detail: "Add work on the board to track progress and time",
+      actionLabel: "Open board",
+      onAction: onOpenBoard,
+    })
+  }
+
+  if (canEdit && data.project.status === "backlog" && openTodos.length > 0) {
+    actions.push({
+      id: "start-project",
+      tone: "accent",
+      title: "Ready to start — move project to In progress",
+      detail: `${openTodos.length} to-do${openTodos.length === 1 ? "" : "s"} waiting to be picked up`,
+      actionLabel: "Start project",
+      onAction: onStartProject,
+    })
+  }
+
+  if (canManage && data.pendingInvites.length > 0) {
+    actions.push({
+      id: "pending-invites",
+      tone: "amber",
+      title: `${data.pendingInvites.length} invite${data.pendingInvites.length === 1 ? "" : "s"} pending`,
+      actionLabel: "View people",
+      onAction: onOpenPeople,
+    })
+  }
+
+  if (canManage && work.unbilledHours) {
+    actions.push({
+      id: "invoice",
+      tone: "accent",
+      title: `${formatHours(work.unbilledHours)} ready to invoice`,
+      detail: `Send to ${displayName(data.client)}`,
+      actionLabel: "Open finance",
+      onAction: onOpenFinance,
+    })
+  }
+
+  if (canManage && !work.hourlyRate && !work.fixedPrice) {
+    actions.push({
+      id: "pricing",
+      tone: "accent",
+      title: "Set pricing and pace",
+      detail: "Hourly rate, fixed price, or weekly hours target",
+      actionLabel: "Open details",
+      onAction: onOpenPricing,
+    })
+  }
+
+  return actions
+}
+
+function OverviewActionRow({
+  item,
+  onOpenTodo,
+}: {
+  item: OverviewAction
+  onOpenTodo?: (id: string) => void
+}) {
+  const tone = overviewActionTone(item.tone)
+  const handleClick = () => {
+    if (item.id.startsWith("overdue-") && onOpenTodo) {
+      onOpenTodo(item.id.replace("overdue-", ""))
+      return
+    }
+    item.onAction()
+  }
+
+  return (
+    <Box
+      display="flex"
+      alignItems="center"
+      justifyContent="space-between"
+      gap={3}
+      p={3}
+      borderRadius="12px"
+      bg={tone.bg}
+      border={`1px solid ${tone.border}`}
+    >
+      <Box display="flex" alignItems="flex-start" gap={2.5} minW={0}>
+        <Box mt="2px" color={tone.icon} flexShrink={0}>
+          <LuCircleAlert size={16} />
+        </Box>
+        <Box minW={0}>
+          <Text fontSize="0.875rem" fontWeight="600" color={APP_INK}>{item.title}</Text>
+          {item.detail ? (
+            <Text fontSize="0.75rem" color={APP_MUTED} mt="2px" lineClamp={2}>{item.detail}</Text>
+          ) : null}
         </Box>
       </Box>
+      <AppButton size="sm" variant="secondary" flexShrink={0} onClick={handleClick}>
+        {item.actionLabel}
+      </AppButton>
+    </Box>
+  )
+}
+
+function OverviewTodoRow({
+  todo,
+  onOpen,
+  first,
+}: {
+  todo: WorkTodo
+  onOpen: () => void
+  first?: boolean
+}) {
+  return (
+    <Box
+      as="button"
+      w="100%"
+      textAlign="left"
+      display="flex"
+      alignItems="center"
+      justifyContent="space-between"
+      gap={3}
+      py={3}
+      borderTop={first ? "none" : `1px solid ${APP_BORDER}`}
+      onClick={onOpen}
+    >
+      <Box minW={0}>
+        <Text fontWeight="600" fontSize="0.875rem" color={APP_INK}>{todo.title}</Text>
+        <Text fontSize="0.75rem" color={APP_MUTED} mt="2px">
+          {TODO_STATUS_LABEL[todo.status] || todo.status}
+          {" · "}
+          {formatPeopleList(peopleOnTodo(todo))}
+        </Text>
+      </Box>
+      <Box display="flex" alignItems="center" gap={2} flexShrink={0}>
+        <DueChip dueAt={todo.dueAt} status={todo.status} />
+        <AvatarStack people={peopleOnTodo(todo)} size={22} />
+      </Box>
+    </Box>
+  )
+}
+
+function OverviewMetric({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <Box>
+      <Text fontSize="0.6875rem" fontWeight="600" color="rgba(255,255,255,0.55)" letterSpacing="0.04em" textTransform="uppercase">
+        {label}
+      </Text>
+      <Text fontSize="1rem" fontWeight="700" color="white" mt={1}>{value}</Text>
+      {hint ? <Text fontSize="0.75rem" color="rgba(255,255,255,0.5)" mt="2px">{hint}</Text> : null}
     </Box>
   )
 }
 
 export function OverviewPanel({
   data,
+  work,
+  todos,
   canEdit,
+  canManage,
   onChanged,
   onOpenPlan,
+  onOpenView,
+  onOpenTodo,
+  unbilledHours,
+  onCreateInvoice,
 }: {
   data: ProjectTicket
+  work: WorkProject
+  todos: WorkTodo[]
   canEdit: boolean
+  canManage: boolean
   onChanged: () => void
   onOpenPlan: () => void
+  onOpenView: (view: string) => void
+  onOpenTodo: (id: string) => void
+  unbilledHours?: number | null
+  onCreateInvoice?: () => void
 }) {
-  const [title, setTitle] = useState(data.project.name)
   const [description, setDescription] = useState(data.project.description ?? "")
   const [goalTitle, setGoalTitle] = useState("")
   const [busy, setBusy] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [aboutOpen, setAboutOpen] = useState(!data.project.description?.trim())
+
   const doneGoals = data.goals.filter((g) => g.done).length
-  const nextMilestone = data.milestones.find((m) => !m.done)
   const currentMilestone = data.milestones.find((m) => m.id === data.project.currentMilestoneId)
-  const openBlockers = (data.blockers ?? []).filter((blocker) => blocker.status === "open").length
+  const openTodos = todos.filter((t) => t.status !== "done" && t.status !== "invoiced")
+  const inProgressTodos = openTodos.filter((t) => t.status === "in_progress")
+  const waitingTodos = openTodos.filter((t) => t.status === "waiting_on_client")
+  const overdueTodos = openTodos.filter((t) => isOverdue(t.dueAt, t.status))
+  const backlogTodos = openTodos.filter((t) => t.status === "backlog").slice(0, 5)
+  const hasDates = Boolean(data.project.startAt || data.project.dueAt)
+  const eta = formatEta(work.remainingHours, work.weeklyPace)
+
+  const narrative = buildOverviewNarrative({
+    data,
+    work,
+    openTodos,
+    inProgressTodos,
+    waitingTodos,
+    currentMilestone,
+  })
+
+  const actions = buildOverviewActions({
+    data,
+    work,
+    canEdit,
+    canManage,
+    openTodos,
+    overdueTodos,
+    waitingTodos,
+    currentMilestone,
+    onOpenPlan,
+    onOpenBoard: () => onOpenView("work"),
+    onOpenPeople: () => onOpenView("people"),
+    onOpenPricing: () => onOpenView("details"),
+    onOpenFinance: () => onOpenView("finance"),
+    onOpenDetails: () => onOpenView("details"),
+    onStartProject: () => {
+      void updateWorkspaceProject(data.project.id, { status: "in_progress" }).then(onChanged)
+    },
+  })
 
   useEffect(() => {
-    setTitle(data.project.name)
     setDescription(data.project.description ?? "")
-  }, [data.project.name, data.project.description])
+  }, [data.project.description])
 
   async function saveDescription() {
     setBusy(true)
@@ -301,105 +826,193 @@ export function OverviewPanel({
     }
   }
 
-  async function saveTitle() {
-    const next = title.trim()
-    if (!next || next === data.project.name) return
-    await updateWorkspaceProject(data.project.id, { name: next })
-    onChanged()
-  }
-
   return (
-    <Box bg={APP_SURFACE} border={`1px solid ${APP_BORDER}`} borderRadius="14px" p={5}>
-      {canEdit ? (
-        <FormInput
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          onBlur={() => void saveTitle()}
-          fontWeight="700"
-          mb={4}
-        />
-      ) : (
-        <Text fontWeight="700" color={APP_INK} mb={4}>{data.project.name}</Text>
-      )}
-
-      <SectionLabel>Description</SectionLabel>
-      {canEdit ? (
-        <>
-          <FormTextarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="What this project is, who it is for, and what done looks like. Scope, constraints, and anything the client should see."
-            minH="180px"
+    <Box display="grid" gap={4} minW={0}>
+        <Box
+          position="relative"
+          overflow="hidden"
+          bg={APP_INK}
+          borderRadius="18px"
+          boxShadow={APP_SHADOW_CARD}
+          p={{ base: 4, md: 5 }}
+        >
+          <Box
+            position="absolute"
+            inset="0"
+            background="radial-gradient(ellipse at 85% 40%, rgba(15,110,86,0.45) 0%, transparent 55%)"
+            pointerEvents="none"
           />
-          <Box display="flex" alignItems="center" gap={3} mt={3} mb={6}>
-            <AppButton size="sm" loading={busy} onClick={() => void saveDescription()}>Save description</AppButton>
-            {saved && <Text fontSize="0.8125rem" color="#047857" fontWeight="600">Saved</Text>}
+          <Box position="relative">
+          <Box display="flex" flexWrap="wrap" alignItems="center" gap={2} mb={3}>
+            <StatusChip status={data.project.status} />
+            <Text fontSize="0.8125rem" color="rgba(255,255,255,0.6)" fontWeight="500">
+              {PROJECT_PRIORITY_LABEL[data.project.priority || "medium"]} priority
+            </Text>
+            <Text fontSize="0.8125rem" color="rgba(255,255,255,0.35)">·</Text>
+            <Text fontSize="0.8125rem" color="rgba(255,255,255,0.6)" fontWeight="500">
+              {displayName(data.client)}
+            </Text>
           </Box>
-        </>
-      ) : (
-        <Text fontSize="0.875rem" color={data.project.description ? APP_INK : APP_MUTED} whiteSpace="pre-wrap" mb={6}>
-          {data.project.description || "No description yet."}
-        </Text>
-      )}
-
-      <Box display="flex" justifyContent="space-between" gap={3} mb={2}>
-        <SectionLabel>Goals</SectionLabel>
-        <Text fontSize="0.75rem" color={APP_MUTED}>{doneGoals}/{data.goals.length}</Text>
-      </Box>
-      {data.goals.length === 0 && (
-        <Text fontSize="0.8125rem" color={APP_MUTED} mb={3}>
-          Outcomes this project should hit — like a definition of done.
-        </Text>
-      )}
-      {data.goals.map((goal) => (
-        <GoalRow key={goal.id} projectId={data.project.id} goal={goal} canEdit={canEdit} onChanged={onChanged} />
-      ))}
-      {canEdit && (
-        <Box display="flex" gap={2} mt={3} mb={6}>
-          <FormInput
-            placeholder="Add a goal"
-            value={goalTitle}
-            onChange={(e) => setGoalTitle(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key !== "Enter") return
-              e.preventDefault()
-              const next = goalTitle.trim()
-              if (!next) return
-              addProjectGoal(data.project.id, next).then(() => { setGoalTitle(""); onChanged() })
-            }}
-          />
-          <AppButton
-            size="sm"
-            onClick={() => {
-              const next = goalTitle.trim()
-              if (!next) return
-              addProjectGoal(data.project.id, next).then(() => { setGoalTitle(""); onChanged() })
-            }}
-          >
-            Add
-          </AppButton>
+          <Text fontSize={{ base: "1rem", md: "1.0625rem" }} fontWeight="500" color="white" lineHeight="1.55" mb={4} letterSpacing="-0.01em">
+            {narrative}
+          </Text>
+          <Box display="grid" gridTemplateColumns={{ base: "1fr 1fr", md: "repeat(4, 1fr)" }} gap={4}>
+            <OverviewMetric
+              label="Schedule"
+              value={hasDates ? `${formatDate(data.project.startAt)} → ${formatDate(data.project.dueAt)}` : "Not set"}
+              hint={currentMilestone ? `Now: ${currentMilestone.title}` : data.milestones.length ? `${data.milestones.length} milestone${data.milestones.length === 1 ? "" : "s"}` : "No plan yet"}
+            />
+            <OverviewMetric
+              label="Work"
+              value={`${openTodos.length} open`}
+              hint={inProgressTodos.length ? `${inProgressTodos.length} in progress` : waitingTodos.length ? `${waitingTodos.length} waiting on client` : "Nothing active"}
+            />
+            <OverviewMetric
+              label="Time"
+              value={formatHours(work.loggedHours)}
+              hint={`${formatHours(work.thisWeekHours)} this week${work.weeklyPace != null ? ` · ~${formatHours(work.weeklyPace)}/wk` : ""}${eta ? ` · ${eta}` : ""}`}
+            />
+            <OverviewMetric
+              label="Goals"
+              value={data.goals.length ? `${doneGoals}/${data.goals.length}` : "None yet"}
+              hint={data.goals.length ? (doneGoals === data.goals.length ? "All complete" : `${data.goals.length - doneGoals} open`) : "Define done"}
+            />
+          </Box>
+          </Box>
         </Box>
-      )}
 
-      <SectionLabel>Time plan</SectionLabel>
-      <Box bg={APP_BG_SUBTLE} borderRadius="12px" p={4}>
-        <Text fontSize="0.875rem" color={APP_INK}>
-          {formatDate(data.project.startAt)} → {formatDate(data.project.dueAt)}
-        </Text>
-        <Text fontSize="0.8125rem" color={APP_MUTED} mt={1}>
-          {currentMilestone
-            ? `Working on ${currentMilestone.title}${currentMilestone.late ? " — late" : ""}`
-            : nextMilestone
-              ? `Up next: ${nextMilestone.title}${nextMilestone.dueAt ? ` · ${formatDate(nextMilestone.dueAt)}` : ""}`
-              : data.milestones.length
-                ? "All milestones marked done"
-                : "No milestones yet"}
-          {openBlockers > 0 ? ` · ${openBlockers} open blocker${openBlockers === 1 ? "" : "s"}` : ""}
-        </Text>
-        <AppButton size="sm" variant="secondary" mt={3} onClick={onOpenPlan}>
-          Open plan
-        </AppButton>
-      </Box>
+        {actions.length > 0 && (
+          <AppCard label="Needs attention">
+            <Box display="grid" gap={2}>
+              {actions.slice(0, 6).map((item) => (
+                <OverviewActionRow key={item.id} item={item} onOpenTodo={onOpenTodo} />
+              ))}
+            </Box>
+          </AppCard>
+        )}
+
+        <AppCard
+          label="In progress now"
+          action={
+            openTodos.length > 0 ? (
+              <Box as="button" fontSize="0.75rem" fontWeight="600" color={APP_ACCENT} onClick={() => onOpenView("work")}>
+                Open board
+              </Box>
+            ) : undefined
+          }
+        >
+          {inProgressTodos.length === 0 ? (
+            <Text fontSize="0.875rem" color={APP_MUTED}>
+              {openTodos.length
+                ? "Nothing marked in progress — open the board and start a to-do."
+                : "No open work yet — add the first to-do on the board."}
+            </Text>
+          ) : (
+            inProgressTodos.map((todo, index) => (
+              <OverviewTodoRow key={todo.id} todo={todo} first={index === 0} onOpen={() => onOpenTodo(todo.id)} />
+            ))
+          )}
+        </AppCard>
+
+        {(waitingTodos.length > 0 || backlogTodos.length > 0) && (
+          <AppCard label={waitingTodos.length ? "Waiting & up next" : "Up next"}>
+            {[...waitingTodos, ...backlogTodos.filter((t) => !waitingTodos.some((w) => w.id === t.id))].map((todo, index) => (
+              <OverviewTodoRow key={todo.id} todo={todo} first={index === 0} onOpen={() => onOpenTodo(todo.id)} />
+            ))}
+          </AppCard>
+        )}
+
+        <Box id="project-goals" scrollMarginTop="80px">
+        <AppCard
+          label="Goals"
+          action={data.goals.length > 0 ? (
+            <Text fontSize="0.75rem" fontWeight="600" color={APP_MUTED}>
+              {doneGoals}/{data.goals.length} done
+            </Text>
+          ) : undefined}
+        >
+          {data.goals.length === 0 ? (
+            <Text fontSize="0.8125rem" color={APP_MUTED} mb={3}>
+              Outcomes this project should hit — like a definition of done.
+            </Text>
+          ) : null}
+          {data.goals.map((goal, index) => (
+            <GoalRow
+              key={goal.id}
+              projectId={data.project.id}
+              goal={goal}
+              canEdit={canEdit}
+              onChanged={onChanged}
+              first={index === 0}
+            />
+          ))}
+          {canEdit && (
+            <Box display="flex" gap={2} mt={data.goals.length ? 3 : 0}>
+              <FormInput
+                placeholder="Add a goal"
+                value={goalTitle}
+                onChange={(e) => setGoalTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter") return
+                  e.preventDefault()
+                  const next = goalTitle.trim()
+                  if (!next) return
+                  addProjectGoal(data.project.id, next).then(() => { setGoalTitle(""); onChanged() })
+                }}
+              />
+              <AppButton
+                size="sm"
+                onClick={() => {
+                  const next = goalTitle.trim()
+                  if (!next) return
+                  addProjectGoal(data.project.id, next).then(() => { setGoalTitle(""); onChanged() })
+                }}
+              >
+                Add
+              </AppButton>
+            </Box>
+          )}
+        </AppCard>
+        </Box>
+
+        <Box id="project-about" scrollMarginTop="80px">
+        <AppCard
+          label="About"
+          action={
+            data.project.description ? (
+              <Box as="button" fontSize="0.75rem" fontWeight="600" color={APP_MUTED} onClick={() => setAboutOpen((v) => !v)}>
+                {aboutOpen ? "Hide" : "Show"}
+              </Box>
+            ) : undefined
+          }
+        >
+          {(aboutOpen || !data.project.description) && (
+            canEdit ? (
+              <>
+                <FormTextarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="What this project is, who it is for, and what done looks like."
+                  minH="100px"
+                />
+                <Box display="flex" alignItems="center" gap={3} mt={3}>
+                  <AppButton size="sm" loading={busy} onClick={() => void saveDescription()}>Save</AppButton>
+                  {saved && <Text fontSize="0.8125rem" color="#047857" fontWeight="600">Saved</Text>}
+                </Box>
+              </>
+            ) : (
+              <Text fontSize="0.875rem" color={data.project.description ? APP_INK : APP_MUTED} whiteSpace="pre-wrap">
+                {data.project.description || "No description yet."}
+              </Text>
+            )
+          )}
+          {!aboutOpen && data.project.description ? (
+            <Text fontSize="0.875rem" color={APP_INK} whiteSpace="pre-wrap" lineClamp={2}>
+              {data.project.description}
+            </Text>
+          ) : null}
+        </AppCard>
+        </Box>
     </Box>
   )
 }
@@ -409,14 +1022,22 @@ function GoalRow({
   goal,
   canEdit,
   onChanged,
+  first,
 }: {
   projectId: string
   goal: ProjectGoal
   canEdit: boolean
   onChanged: () => void
+  first?: boolean
 }) {
   return (
-    <Box display="flex" alignItems="center" gap={2} py={2} borderTop={`1px solid ${APP_BORDER}`}>
+    <Box
+      display="flex"
+      alignItems="center"
+      gap={2}
+      py={2}
+      borderTop={first ? "none" : `1px solid ${APP_BORDER}`}
+    >
       <CheckButton
         done={goal.done}
         onToggle={() => {

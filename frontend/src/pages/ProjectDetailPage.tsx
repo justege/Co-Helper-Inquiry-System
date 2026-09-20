@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, type FormEvent } from "react"
 import { useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { Box, Spinner, Text } from "@chakra-ui/react"
-import { useForm } from "react-hook-form"
 import {
   getWorkspaceProject,
-  inviteProjectCollaborator,
+  inviteProjectCollaborators,
   removeProjectCollaborator,
   revokeInvitation,
   updateWorkspaceProject,
@@ -12,11 +11,10 @@ import {
 } from "@/api/workspace"
 import { createInvoice, getProjectWork, type ProjectWork } from "@/api/work"
 import { PageShell } from "@/components/ui/PageShell"
-import { APP_ACCENT, APP_BORDER, APP_INK, APP_MUTED, APP_SURFACE } from "@/components/ui/appUi"
+import { APP_BORDER, APP_INK, APP_MUTED, APP_SURFACE } from "@/components/ui/appUi"
 import { AppButton } from "@/components/ui/AppButton"
 import { AppTabs } from "@/components/ui/AppTabs"
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog"
-import { Field } from "@/components/ui/field"
 import { FormInput, FormNativeSelect } from "@/components/ui/form-controls"
 import {
   DialogBody,
@@ -28,23 +26,26 @@ import {
   DialogTitle,
   DIALOG_PANEL_STYLE,
 } from "@/components/ui/dialog"
+import { InviteEmailsField } from "@/components/workspace/InviteEmailsField"
+import { EMPTY_INVITE_EMAILS, normalizeInviteEmails } from "@/lib/inviteEmails"
 import { displayName, formatPeopleList, peopleOnTodo } from "@/lib/people"
 import { TODO_STATUS_LABEL } from "@/lib/hours"
+import { ProjectFinancePanel } from "@/components/work/ProjectFinancePanel"
 import { WorkBoard } from "@/components/work/WorkBoard"
 import { WorkTimeline } from "@/components/work/WorkTimeline"
 import { useTodoCard } from "@/components/work/TodoCardContext"
 import { AvatarStack, DueChip } from "@/components/work/todoUi"
 import {
-  DetailsSidebar,
   DiscussPanel,
+  ProjectDetailsPanel,
   FilesPanel,
   OverviewPanel,
   PlanPanel,
   StatusChip,
 } from "@/components/work/ProjectTicketPanels"
-import { LuReceipt, LuTrash2, LuUsers } from "react-icons/lu"
+import { LuTrash2, LuUsers } from "react-icons/lu"
 
-const PROJECT_VIEWS = ["overview", "work", "timeline", "plan", "files", "discuss", "people", "pricing", "billing"] as const
+const PROJECT_VIEWS = ["overview", "work", "timeline", "plan", "files", "discuss", "people", "details", "finance", "pricing"] as const
 type ProjectView = (typeof PROJECT_VIEWS)[number]
 
 function parseView(value: string | null): ProjectView {
@@ -63,17 +64,12 @@ export default function ProjectDetailPage() {
   const [invoiceError, setInvoiceError] = useState<string | null>(null)
   const [invoiceBusy, setInvoiceBusy] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
+  const [inviteBusy, setInviteBusy] = useState(false)
+  const [inviteEmails, setInviteEmails] = useState<string[]>(EMPTY_INVITE_EMAILS)
   const [invoiceOpen, setInvoiceOpen] = useState(false)
   const [removeId, setRemoveId] = useState<string | null>(null)
   const tab = parseView(params.get("view"))
   const { openTodo } = useTodoCard()
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { isSubmitting },
-  } = useForm<{ email: string }>({ defaultValues: { email: "" } })
 
   function load() {
     if (!id) return
@@ -107,16 +103,29 @@ export default function ProjectDetailPage() {
     }, { replace: true })
   }
 
-  async function onInvite(values: { email: string }) {
+  async function onInvite(event: FormEvent) {
+    event.preventDefault()
     if (!id) return
+    const collected = normalizeInviteEmails(inviteEmails)
+    if (collected.error) {
+      setInviteError(collected.error)
+      return
+    }
+    if (collected.emails.length === 0) {
+      setInviteError("Add at least one email")
+      return
+    }
     setInviteError(null)
+    setInviteBusy(true)
     try {
-      await inviteProjectCollaborator(id, values.email.trim())
-      reset()
+      await inviteProjectCollaborators(id, collected.emails)
+      setInviteEmails([...EMPTY_INVITE_EMAILS])
       setInviteOpen(false)
       load()
     } catch (e: unknown) {
       setInviteError(e instanceof Error ? e.message : "Could not invite")
+    } finally {
+      setInviteBusy(false)
     }
   }
 
@@ -127,8 +136,8 @@ export default function ProjectDetailPage() {
   const canWork = data.role === "owner" || data.role === "admin" || data.role === "collaborator"
   const canEdit = canWork
   const openTodos = work.project.todos.filter((t) => t.status !== "done" && t.status !== "invoiced")
-  const doneGoals = data.goals.filter((g) => g.done).length
-  const activeView = !canManage && (tab === "pricing" || tab === "billing") ? "overview" : tab
+  const financeCount = work.project.todos.filter((t) => t.status === "done" || t.status === "invoiced").length
+  const activeView = !canManage && tab === "pricing" ? "overview" : tab === "billing" ? "finance" : tab
   const selectedMilestone =
     params.get("milestone") ||
     data.project.currentMilestoneId ||
@@ -142,39 +151,39 @@ export default function ProjectDetailPage() {
       backHref="/app"
       action={<StatusChip status={data.project.status} />}
     >
-      <Box
-        display="grid"
-        gridTemplateColumns={{ base: "1fr", lg: "minmax(0, 1fr) 300px" }}
-        gap={5}
-        alignItems="start"
-      >
-        <Box minW={0}>
-          <Box mb={5}>
+      <Box minW={0}>
+          <Box mb={4}>
             <AppTabs
               value={activeView}
               onChange={setTab}
               items={[
                 { value: "overview", label: "Overview" },
                 { value: "work", label: "Board", badge: openTodos.length },
-                { value: "timeline", label: "Timeline" },
                 { value: "plan", label: "Plan", badge: data.milestones.length },
-                { value: "files", label: "Files", badge: data.attachments.length },
+                { value: "timeline", label: "Timeline" },
+                { value: "files", label: "Files", badge: data.attachments.length, dividerBefore: true },
                 { value: "discuss", label: "Discussion", badge: data.comments.length },
                 { value: "people", label: "People", badge: data.collaborators.length + data.pendingInvites.length },
-                ...(canManage ? [
-                  { value: "pricing", label: "Pricing" },
-                  { value: "billing", label: "Billing" },
-                ] : []),
+                { value: "finance", label: "Finance", badge: financeCount || (work.project.unbilledHours ? 1 : 0), dividerBefore: true },
+                ...(canManage ? [{ value: "details", label: "Details" }] : []),
               ]}
             />
           </Box>
 
+          <Box minW={0}>
           {activeView === "overview" && (
             <OverviewPanel
               data={data}
+              work={work.project}
+              todos={work.project.todos}
               canEdit={canEdit}
+              canManage={canManage}
               onChanged={load}
               onOpenPlan={() => setTab("plan")}
+              onOpenView={setTab}
+              onOpenTodo={openTodo}
+              unbilledHours={work.project.unbilledHours}
+              onCreateInvoice={() => setInvoiceOpen(true)}
             />
           )}
 
@@ -187,13 +196,21 @@ export default function ProjectDetailPage() {
               canWork={canWork}
               canSetNow={canManage}
               onChanged={load}
+              onOpenFinance={() => setTab("finance")}
             />
           )}
 
           {activeView === "timeline" && (
             <WorkTimeline
               todos={work.project.todos}
+              projectId={work.project.id}
+              milestones={data.milestones}
+              projectStartAt={data.project.startAt}
+              projectDueAt={data.project.dueAt}
+              currentMilestoneId={data.project.currentMilestoneId}
+              canEdit={canEdit}
               onOpen={(todoId) => openTodo(todoId)}
+              onChanged={load}
             />
           )}
 
@@ -266,7 +283,7 @@ export default function ProjectDetailPage() {
                     <Text fontWeight="700" color={APP_INK}>People on this project</Text>
                   </Box>
                   {canManage && (
-                    <AppButton size="sm" onClick={() => { setInviteError(null); setInviteOpen(true) }}>Invite</AppButton>
+                    <AppButton size="sm" onClick={() => { setInviteError(null); setInviteEmails([...EMPTY_INVITE_EMAILS]); setInviteOpen(true) }}>Invite</AppButton>
                   )}
                 </Box>
                 <Box p={5}>
@@ -315,7 +332,21 @@ export default function ProjectDetailPage() {
             </Box>
           )}
 
+          {activeView === "details" && (
+            <ProjectDetailsPanel
+              data={data}
+              work={work.project}
+              canEdit={canEdit}
+              canManage={canManage}
+              onChanged={load}
+              onOpenView={setTab}
+              unbilledHours={work.project.unbilledHours}
+              onCreateInvoice={() => setInvoiceOpen(true)}
+            />
+          )}
+
           {activeView === "pricing" && canManage && (
+            <Box display="grid" gap={3}>
             <PricingCard
               projectId={data.project.id}
               billingType={work.project.billingType}
@@ -325,59 +356,36 @@ export default function ProjectDetailPage() {
               weeklyHoursTarget={work.project.weeklyHoursTarget}
               onSaved={load}
             />
-          )}
-
-          {activeView === "billing" && canManage && (
-            <Box bg={APP_SURFACE} border={`1px solid ${APP_BORDER}`} borderRadius="14px" p={5}>
-              <Text fontSize="0.8125rem" color={APP_MUTED} mb={3}>
-                {work.project.unbilledHours
-                  ? `${work.project.unbilledHours}h unbilled — invoice when the work is ready to bill.`
-                  : "Hours on this project invoice from here when you want them billed."}
-              </Text>
-              {invoiceError && <Text fontSize="0.8125rem" color="#B91C1C" mb={2}>{invoiceError}</Text>}
-              <AppButton
-                size="sm"
-                variant="secondary"
-                disabled={!work.project.unbilledHours}
-                onClick={() => setInvoiceOpen(true)}
-              >
-                <LuReceipt size={14} /> Create invoice
-              </AppButton>
             </Box>
           )}
-        </Box>
 
-        <Box position={{ lg: "sticky" }} top={{ lg: "24px" }}>
-          <DetailsSidebar
-            data={data}
-            work={work.project}
-            canEdit={canEdit}
-            canManage={canManage}
-            onChanged={load}
-          />
-          {data.goals.length > 0 && (
-            <Text fontSize="0.75rem" color={APP_MUTED} mt={3} px={1}>
-              Goals {doneGoals}/{data.goals.length}
-            </Text>
+          {activeView === "finance" && (
+            <ProjectFinancePanel
+              project={work.project}
+              todos={work.project.todos}
+              currency={work.currency}
+              canManage={canManage}
+              onChanged={load}
+              onCreateInvoice={() => setInvoiceOpen(true)}
+            />
           )}
-        </Box>
+          </Box>
       </Box>
 
-      <DialogRoot open={inviteOpen} onOpenChange={({ open }) => { setInviteOpen(open); if (!open) { reset(); setInviteError(null) } }} size="sm" placement="center">
+      <DialogRoot open={inviteOpen} onOpenChange={({ open }) => { setInviteOpen(open); if (!open) { setInviteEmails([...EMPTY_INVITE_EMAILS]); setInviteError(null) } }} size="md" placement="center">
         <DialogContent style={DIALOG_PANEL_STYLE}>
           <Box bg="#0B1A15" px={6} py={4} display="flex" alignItems="center" justifyContent="space-between">
-            <DialogTitle style={{ color: "white", fontWeight: 700, fontSize: "0.9375rem", margin: 0 }}>Invite collaborator</DialogTitle>
+            <DialogTitle style={{ color: "white", fontWeight: 700, fontSize: "0.9375rem", margin: 0 }}>Invite people</DialogTitle>
             <DialogCloseTrigger style={{ color: "rgba(255,255,255,0.5)" }} />
           </Box>
           <DialogHeader display="none" />
-          <Box as="form" onSubmit={handleSubmit(onInvite)}>
-            <DialogBody px={6} py={5}>
-              <Field label="Invite by email" invalid={!!inviteError} errorText={inviteError ?? undefined}>
-                <FormInput type="email" placeholder="alex@studio.com" {...register("email", { required: true })} />
-              </Field>
+          <Box as="form" onSubmit={onInvite}>
+            <DialogBody px={6} py={5} display="grid" gap={3}>
+              <InviteEmailsField emails={inviteEmails} onChange={setInviteEmails} />
+              {inviteError && <Text fontSize="0.8125rem" color="#B91C1C">{inviteError}</Text>}
             </DialogBody>
             <DialogFooter px={6} pb={5} pt={0} display="flex" gap={2}>
-              <AppButton type="submit" loading={isSubmitting} flex={1}>Send invite</AppButton>
+              <AppButton type="submit" loading={inviteBusy} flex={1}>Send invites</AppButton>
               <AppButton variant="ghost" onClick={() => setInviteOpen(false)}>Cancel</AppButton>
             </DialogFooter>
           </Box>

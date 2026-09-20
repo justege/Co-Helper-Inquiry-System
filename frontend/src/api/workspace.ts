@@ -212,6 +212,7 @@ export const createWorkspaceProject = (
     hourlyRate?: number | null
     estimatedHours?: number | null
     weeklyHoursTarget?: number | null
+    emails?: string[]
   }
 ) =>
   api.post<WorkspaceProject>("/api/workspace/projects", { name, clientId, description, ...extra });
@@ -240,6 +241,12 @@ export const deleteWorkspaceProject = (id: string) =>
 
 export const inviteProjectCollaborator = (projectId: string, email: string) =>
   api.post<WorkspaceInvitation>(`/api/workspace/projects/${projectId}/collaborators`, { email });
+
+export const inviteProjectCollaborators = (projectId: string, emails: string[]) =>
+  api.post<{ invitations: WorkspaceInvitation[] }>(
+    `/api/workspace/projects/${projectId}/collaborators`,
+    { emails }
+  );
 
 export const removeProjectCollaborator = (projectId: string, userId: string) =>
   api.delete<void>(`/api/workspace/projects/${projectId}/collaborators/${userId}`);

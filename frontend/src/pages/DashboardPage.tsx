@@ -81,7 +81,7 @@ export default function DashboardPage() {
       title={title}
       action={
         owner ? (
-          <WelcomeBannerAction to="/app/projects">
+          <WelcomeBannerAction to="/app/projects?new=1">
             <LuPlus size={15} /> New project
           </WelcomeBannerAction>
         ) : undefined

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Box } from "@chakra-ui/react"
 import { AppButton } from "@/components/ui/AppButton"
 import {
@@ -20,22 +20,36 @@ export function AddTodoDialog({
   open,
   projectId,
   milestoneId,
+  defaultStartAt,
+  defaultDueAt,
   onClose,
   onCreated,
 }: {
   open: boolean
   projectId: string
   milestoneId?: string | null
+  defaultStartAt?: string
+  defaultDueAt?: string
   onClose: () => void
   onCreated: (todo: WorkTodo) => void
 }) {
   const [title, setTitle] = useState("")
   const [estimate, setEstimate] = useState("")
   const [criterion, setCriterion] = useState("")
-  const [startAt, setStartAt] = useState(isoToday())
-  const [dueAt, setDueAt] = useState(addDaysIso(isoToday(), 5))
+  const [startAt, setStartAt] = useState(defaultStartAt ?? isoToday())
+  const [dueAt, setDueAt] = useState(defaultDueAt ?? addDaysIso(isoToday(), 5))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!open) return
+    setTitle("")
+    setEstimate("")
+    setCriterion("")
+    setError(null)
+    setStartAt(defaultStartAt ?? isoToday())
+    setDueAt(defaultDueAt ?? addDaysIso(defaultStartAt ?? isoToday(), 5))
+  }, [open, defaultStartAt, defaultDueAt])
 
   async function submit() {
     if (!title.trim()) return

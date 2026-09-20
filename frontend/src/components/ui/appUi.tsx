@@ -2,8 +2,8 @@ import { Box, Grid, Spinner, Text } from "@chakra-ui/react"
 import { Link } from "react-router-dom"
 import { LuArrowRight } from "react-icons/lu"
 import {
-  GREEN, INK, MUTED, LABEL, RULE, SURFACE, LIGHT, AMBER, PAPER,
-  RADIUS_CARD, RADIUS_CONTROL, FOCUS_RING,
+  GREEN, INK, MUTED, LABEL, RULE, SURFACE, LIGHT, AMBER, PAPER, MINT, PEACH, PEACH_INK,
+  RADIUS_CARD, RADIUS_CONTROL, FOCUS_RING, SHADOW_CARD, MOTION,
 } from "@/theme/tokens"
 
 export const APP_INK = INK
@@ -15,6 +15,11 @@ export const APP_BG_SUBTLE = LIGHT
 export const APP_ACCENT = GREEN
 export const APP_AMBER = AMBER
 export const APP_PAPER = PAPER
+export const APP_MINT = MINT
+export const APP_PEACH = PEACH
+export const APP_PEACH_INK = PEACH_INK
+export const APP_SHADOW_CARD = SHADOW_CARD
+export const APP_MOTION = MOTION
 
 export const APP_CARD = {
   bg: APP_SURFACE,

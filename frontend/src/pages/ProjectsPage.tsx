@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState, useEffect } from "react"
-import { Link } from "react-router-dom"
+import { Link, useSearchParams } from "react-router-dom"
 import { Box, Grid, Spinner, Text } from "@chakra-ui/react"
 import { LuPencil, LuPlus, LuTrash2 } from "react-icons/lu"
 import { PageShell } from "@/components/ui/PageShell"
@@ -14,7 +14,10 @@ import {
   DialogBody,
   DialogFooter,
   DialogCloseTrigger,
+  DIALOG_PANEL_STYLE,
 } from "@/components/ui/dialog"
+import { InviteEmailsField } from "@/components/workspace/InviteEmailsField"
+import { EMPTY_INVITE_EMAILS, normalizeInviteEmails } from "@/lib/inviteEmails"
 import { APP_ACCENT, APP_BORDER, APP_INK, APP_MUTED } from "@/components/ui/appUi"
 import { AppButton } from "@/components/ui/AppButton"
 import { ProjectMockup } from "@/components/ui/FeatureEmptyState"
@@ -33,6 +36,7 @@ import { displayName } from "@/lib/people"
 type Filter = "all" | "active" | "waiting" | "done"
 
 export default function ProjectsPage() {
+  const [params, setParams] = useSearchParams()
   const [projects, setProjects] = useState<WorkProject[]>([])
   const [clients, setClients] = useState<WorkspaceClient[]>([])
   const [canManage, setCanManage] = useState(false)
@@ -43,6 +47,7 @@ export default function ProjectsPage() {
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [clientId, setClientId] = useState("")
+  const [emails, setEmails] = useState<string[]>(EMPTY_INVITE_EMAILS)
   const [filter, setFilter] = useState<Filter>("all")
   const [busy, setBusy] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -64,11 +69,28 @@ export default function ProjectsPage() {
 
   useEffect(() => { void load() }, [load])
 
-  function openCreate() {
+  useEffect(() => {
+    if (loading || !canManage || clients.length === 0) return
+    if (params.get("new") !== "1") return
+    openCreate(params.get("client"))
+    setParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.delete("new")
+      next.delete("client")
+      return next
+    }, { replace: true })
+  }, [loading, canManage, clients, params, setParams])
+
+  function openCreate(preferredClientId?: string | null) {
     setActive(null)
     setName("")
     setDescription("")
-    setClientId(clients[0]?.id ?? "")
+    setClientId(
+      preferredClientId && clients.some((client) => client.id === preferredClientId)
+        ? preferredClientId
+        : (clients[0]?.id ?? "")
+    )
+    setEmails([...EMPTY_INVITE_EMAILS])
     setFormError(null)
     setDialog("create")
   }
@@ -113,6 +135,15 @@ export default function ProjectsPage() {
       setFormError("Pick a client for this project")
       return
     }
+    let inviteEmails: string[] = []
+    if (dialog === "create") {
+      const collected = normalizeInviteEmails(emails)
+      if (collected.error) {
+        setFormError(collected.error)
+        return
+      }
+      inviteEmails = collected.emails
+    }
     setBusy(true)
     setFormError(null)
     try {
@@ -120,7 +151,7 @@ export default function ProjectsPage() {
         const updated = await updateWorkspaceProject(active.id, { name: next, description, clientId })
         mergeProject(updated)
       } else {
-        await createWorkspaceProject(next, clientId, description)
+        await createWorkspaceProject(next, clientId, description, inviteEmails.length ? { emails: inviteEmails } : undefined)
         await load()
       }
       setDialog(null)
@@ -173,7 +204,7 @@ export default function ProjectsPage() {
               <LuPlus size={15} /> Add a client
             </WelcomeBannerAction>
           ) : (
-            <WelcomeBannerAction onClick={openCreate}>
+            <WelcomeBannerAction onClick={() => openCreate()}>
               <LuPlus size={15} /> New project
             </WelcomeBannerAction>
           )
@@ -194,7 +225,7 @@ export default function ProjectsPage() {
               </AppButton>
             </Link>
           ) : (
-            <AppButton onClick={openCreate}>
+            <AppButton onClick={() => openCreate()}>
               <LuPlus size={16} /> New project
             </AppButton>
           )
@@ -275,9 +306,9 @@ export default function ProjectsPage() {
       <DialogRoot
         open={dialog === "create" || dialog === "rename"}
         onOpenChange={({ open }) => { if (!open) setDialog(null) }}
-        size="sm"
+        size={dialog === "create" ? "md" : "sm"}
       >
-        <DialogContent style={{ borderRadius: "16px", border: "1px solid #D8DCE8", overflow: "hidden", boxShadow: "0 20px 60px rgba(11,21,40,0.18)" }}>
+        <DialogContent style={{ ...DIALOG_PANEL_STYLE, maxHeight: "90vh" }}>
           <Box bg="#0B1A15" px={6} py={4} display="flex" alignItems="center" justifyContent="space-between">
             <DialogTitle style={{ color: "white", fontWeight: 700, fontSize: "0.9375rem", margin: 0 }}>
               {dialog === "rename" ? "Edit project" : "New project"}
@@ -286,8 +317,8 @@ export default function ProjectsPage() {
           </Box>
           <DialogHeader display="none" />
           <Box as="form" onSubmit={(e) => { e.preventDefault(); void save() }}>
-            <DialogBody px={6} py={5}>
-              <Field label="Name" required errorText={formError ?? undefined} invalid={Boolean(formError)}>
+            <DialogBody px={6} py={5} display="grid" gap={4} maxH="70vh" overflowY="auto">
+              <Field label="Name" required>
                 <FormInput
                   autoFocus
                   value={name}
@@ -297,7 +328,7 @@ export default function ProjectsPage() {
                 />
               </Field>
               <Field label="Client" required>
-                <FormNativeSelect value={clientId} onChange={(e) => setClientId(e.target.value)} mt={4}>
+                <FormNativeSelect value={clientId} onChange={(e) => setClientId(e.target.value)}>
                   <option value="">Select a client</option>
                   {clients.map((c) => (
                     <option key={c.id} value={c.id}>{displayName(c)}</option>
@@ -309,9 +340,14 @@ export default function ProjectsPage() {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Optional description"
-                  mt={4}
                 />
               </Field>
+              {dialog === "create" && (
+                <Box pt={2} borderTop={`1px solid ${APP_BORDER}`}>
+                  <InviteEmailsField emails={emails} onChange={setEmails} />
+                </Box>
+              )}
+              {formError && <Text fontSize="0.8125rem" color="#B91C1C">{formError}</Text>}
             </DialogBody>
             <DialogFooter px={6} pb={5} pt={0} display="flex" gap={2}>
               <AppButton type="submit" loading={busy} flex={1}>

@@ -19,7 +19,7 @@ export function OnboardingChecklist({
   const items = [
     { done: hasWorkspace, label: "Create your workspace", to: "/app/settings" },
     { done: hasClients, label: "Add your first client", to: "/app/clients" },
-    { done: hasProjects, label: "Create a project", to: "/app/projects" },
+    { done: hasProjects, label: "Create a project", to: "/app/projects?new=1" },
   ]
   if (items.every((i) => i.done)) return null
 

@@ -52,7 +52,7 @@ export default function ClientDetailPage() {
           "Open a project to add collaborators for that work only",
         ],
         cta: (
-          <Link to="/app/projects" style={{ textDecoration: "none" }}>
+          <Link to={`/app/projects?new=1&client=${client.id}`} style={{ textDecoration: "none" }}>
             <AppButton>Create a project</AppButton>
           </Link>
         ),

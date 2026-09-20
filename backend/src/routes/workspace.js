@@ -62,6 +62,65 @@ function parseEmail(value) {
   return email;
 }
 
+function parseInviteEmails(body) {
+  const raw = Array.isArray(body?.emails)
+    ? body.emails
+    : body?.email != null
+      ? [body.email]
+      : [];
+  const filled = raw
+    .map((value) => (typeof value === "string" ? value.trim() : ""))
+    .filter(Boolean);
+  const emails = [];
+  for (const value of filled) {
+    const email = parseEmail(value);
+    if (!email) return { error: `"${value}" is not a valid email` };
+    if (!emails.includes(email)) emails.push(email);
+  }
+  if (emails.length > 20) return { error: "Invite at most 20 people at a time" };
+  return { emails };
+}
+
+function httpError(status, message) {
+  const err = new Error(message);
+  err.status = status;
+  return err;
+}
+
+async function inviteCollaboratorsToProject({ ws, user, project, emails, strict = false }) {
+  const client = await queryOne(`SELECT email FROM clients WHERE id = $1`, [project.client_id]);
+  const invitations = [];
+  for (const email of emails) {
+    if (email === user.email) {
+      if (strict) throw httpError(400, "You already own this project");
+      continue;
+    }
+    if (client?.email === email) {
+      if (strict) throw httpError(400, "That person is the client on this project");
+      continue;
+    }
+    const existingUser = await queryOne(`SELECT id FROM users WHERE lower(email) = $1`, [email]);
+    if (existingUser) {
+      const already = await queryOne(
+        `SELECT id FROM project_members WHERE project_id = $1 AND user_id = $2`,
+        [project.id, existingUser.id]
+      );
+      if (already) {
+        if (strict) throw httpError(409, "Already a collaborator");
+        continue;
+      }
+    }
+    invitations.push(await createInvitation({
+      ws,
+      user,
+      email,
+      kind: "collaborator",
+      projectId: project.id,
+    }));
+  }
+  return invitations;
+}
+
 function workspaceSettings(ws) {
   return {
     id: ws.id,
@@ -459,6 +518,8 @@ router.post("/projects", requireAuth, attachRole, async (req, res) => {
   if (!requireOwner(req, res)) return;
   const parsed = parseProjectFields(req.body);
   if (parsed.error) return res.status(400).json({ error: parsed.error });
+  const inviteEmails = parseInviteEmails(req.body);
+  if (inviteEmails.error) return res.status(400).json({ error: inviteEmails.error });
   const clientId = req.body?.clientId;
   if (typeof clientId !== "string") {
     return res.status(400).json({ error: "clientId is required" });
@@ -487,6 +548,14 @@ router.post("/projects", requireAuth, attachRole, async (req, res) => {
         parsed.weeklyHoursTarget.skip ? null : parsed.weeklyHoursTarget.value,
       ]
     );
+    if (inviteEmails.emails.length) {
+      await inviteCollaboratorsToProject({
+        ws,
+        user: req.dbUser,
+        project: row,
+        emails: inviteEmails.emails,
+      });
+    }
     res.status(201).json(mapProject({
       ...row,
       client_email: client.email,
@@ -496,8 +565,9 @@ router.post("/projects", requireAuth, attachRole, async (req, res) => {
       collaborator_count: 0,
     }));
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
+    const status = err.status || 500;
+    if (status >= 500) console.error(err);
+    res.status(status).json({ error: err.message });
   }
 });
 
@@ -676,8 +746,10 @@ router.delete("/projects/:id", requireAuth, attachRole, async (req, res) => {
 
 router.post("/projects/:id/collaborators", requireAuth, attachRole, async (req, res) => {
   if (!requireOwner(req, res)) return;
-  const email = parseEmail(req.body?.email);
-  if (!email) return res.status(400).json({ error: "A valid email is required" });
+  const parsed = parseInviteEmails(req.body);
+  if (parsed.error) return res.status(400).json({ error: parsed.error });
+  if (parsed.emails.length === 0) return res.status(400).json({ error: "A valid email is required" });
+  const bulk = Array.isArray(req.body?.emails);
   try {
     const access = await getProjectAccess(req.params.id, req.dbUser);
     if (!access || access.project.owner_id !== req.dbUser.id) {
@@ -685,32 +757,25 @@ router.post("/projects/:id/collaborators", requireAuth, attachRole, async (req, 
     }
     const ws = await getWorkspaceByIdOrOwner(req, access.project.workspace_id);
     if (!ws) return res.status(404).json({ error: "Workspace not found" });
-    if (email === req.dbUser.email) {
-      return res.status(400).json({ error: "You already own this project" });
-    }
-    const client = await queryOne(`SELECT email FROM clients WHERE id = $1`, [access.project.client_id]);
-    if (client?.email === email) {
-      return res.status(400).json({ error: "That person is the client on this project" });
-    }
-    const existingUser = await queryOne(`SELECT id FROM users WHERE lower(email) = $1`, [email]);
-    if (existingUser) {
-      const already = await queryOne(
-        `SELECT id FROM project_members WHERE project_id = $1 AND user_id = $2`,
-        [access.project.id, existingUser.id]
-      );
-      if (already) return res.status(409).json({ error: "Already a collaborator" });
-    }
-    const inv = await createInvitation({
+    const invitations = await inviteCollaboratorsToProject({
       ws,
       user: req.dbUser,
-      email,
-      kind: "collaborator",
-      projectId: access.project.id,
+      project: access.project,
+      emails: parsed.emails,
+      strict: !bulk,
     });
-    res.status(201).json(mapInvitation(inv));
+    if (bulk) {
+      if (invitations.length === 0) {
+        return res.status(400).json({ error: "Nobody new to invite" });
+      }
+      return res.status(201).json({ invitations: invitations.map(mapInvitation) });
+    }
+    if (!invitations[0]) return res.status(400).json({ error: "Could not invite that person" });
+    res.status(201).json(mapInvitation(invitations[0]));
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
+    const status = err.status || 500;
+    if (status >= 500) console.error(err);
+    res.status(status).json({ error: err.message });
   }
 });
 
