@@ -1,4 +1,6 @@
 import { useMemo, useRef, useState, type RefObject } from "react"
+import { AiWrite } from "@/components/assistant/AiWrite"
+import { useAssistantClaim } from "@/components/assistant/assistantClaims"
 import { useNavigate } from "react-router-dom"
 import { Box, Text } from "@chakra-ui/react"
 import { LuPlus, LuTrash2 } from "react-icons/lu"
@@ -553,6 +555,15 @@ function VendorDialog({
   const [picked, setPicked] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  useAssistantClaim(open ? {
+    id: "expense-note",
+    priority: 30,
+    accept: (draft) => draft.kind === "expense_note",
+    apply: (draft) => {
+      setNote((draft.text || draft.body || draft.description).slice(0, 500))
+      return "Filled the expense note"
+    },
+  } : null)
 
   function reset() {
     setName("")
@@ -609,6 +620,7 @@ function VendorDialog({
         <DialogBody px={6} py={5} display="grid" gap={3}>
           <FormInput placeholder="Supabase" value={name} onChange={(e) => setName(e.target.value)} />
           <FormInput placeholder="Note, e.g. 30% Sennheiser / 70% PushRecruit" value={note} onChange={(e) => setNote(e.target.value)} />
+          <AiWrite kind="expense_note" value={note} onText={setNote} />
           <Box display="flex" gap={2}>
             {(["split", "columns"] as const).map((value) => (
               <Box

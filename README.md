@@ -1,8 +1,8 @@
-# Co-Helper
+# EgemenOkur
 
 **A private workspace for one-person businesses and the companies they already work with.**
 
-Co-Helper is not a marketplace. Solo operators invite clients, run projects from a workbench (one Now, to-dos in project accordions), log hours, show clients remaining work and weekly pace, and send invoices from unbilled hours.
+EgemenOkur is not a marketplace. Solo operators invite clients, run projects from a workbench (one Now, to-dos in project accordions), log hours, show clients remaining work and weekly pace, and send invoices from unbilled hours.
 
 Repository: [github.com/justege/outsourceSoft](https://github.com/justege/outsourceSoft)
 
@@ -616,6 +616,6 @@ Private repository. All rights reserved.
 
 ## Contact
 
-- **General:** hello@co-helper.com
-- **Support:** support@co-helper.com
-- **Partnerships:** partners@co-helper.com
+- **General:** info@egemenokur.com
+- **Support:** info@egemenokur.com
+- **Partnerships:** info@egemenokur.com

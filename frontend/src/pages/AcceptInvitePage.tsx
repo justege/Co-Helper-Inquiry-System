@@ -53,7 +53,7 @@ export default function AcceptInvitePage() {
             </Heading>
             <Text fontSize="0.875rem" color={MUTED} mb={6}>{error}</Text>
             <Link to="/" style={{ color: GREEN, fontWeight: 700, fontSize: "0.875rem" }}>
-              ← Back to Co-Helper
+              ← Back to EgemenOkur
             </Link>
           </>
         ) : !preview || authLoading ? (
@@ -74,10 +74,10 @@ export default function AcceptInvitePage() {
             </Text>
             <Heading fontSize="1.375rem" fontWeight="800" color={INK} letterSpacing="-0.02em" mb={2}>
               {freelancerName(preview.freelancer)} invited you
-              {preview.projectName ? ` to ${preview.projectName}` : preview.workspaceName ? ` to ${preview.workspaceName}` : " to Co-Helper"}
+              {preview.projectName ? ` to ${preview.projectName}` : preview.workspaceName ? ` to ${preview.workspaceName}` : " to EgemenOkur"}
             </Heading>
             <Text fontSize="0.875rem" color={MUTED} lineHeight="1.65" mb={7}>
-              Accept the invite on Co-Helper to join the workspace
+              Accept the invite on EgemenOkur to join the workspace
               {preview.kind === "collaborator"
                 ? " and work on the project you were invited to."
                 : " and see the projects shared with you."}

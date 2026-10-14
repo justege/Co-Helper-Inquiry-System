@@ -1,11 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./components/auth/AuthContext";
+import { AssistantProvider } from "./components/assistant/AssistantDock";
 
 import PublicLayout from "./layouts/PublicLayout";
 import ProtectedLayout from "./layouts/ProtectedLayout";
 import { SetupBanner } from "./components/ui/SetupBanner";
 
 import LandingPage from "./pages/LandingPage";
+import ProjectRequestPage from "./pages/ProjectRequestPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import PartnerLoginPage from "./pages/PartnerLoginPage";
@@ -44,9 +46,11 @@ export default function App() {
     <AuthProvider>
       <SetupBanner />
       <BrowserRouter>
+        <AssistantProvider>
         <Routes>
           <Route element={<PublicLayout />}>
             <Route path="/" element={<LandingPage />} />
+            <Route path="/request" element={<ProjectRequestPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/partner/login" element={<PartnerLoginPage />} />
@@ -86,6 +90,7 @@ export default function App() {
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </AssistantProvider>
       </BrowserRouter>
     </AuthProvider>
   );

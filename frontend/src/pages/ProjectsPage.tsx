@@ -5,7 +5,9 @@ import { LuPencil, LuPlus, LuTrash2 } from "react-icons/lu"
 import { PageShell } from "@/components/ui/PageShell"
 import { WelcomeBannerAction } from "@/components/ui/WelcomeBanner"
 import { Field } from "@/components/ui/field"
-import { FormInput, FormNativeSelect } from "@/components/ui/form-controls"
+import { FormInput, FormNativeSelect, FormTextarea } from "@/components/ui/form-controls"
+import { AiWrite } from "@/components/assistant/AiWrite"
+import { useAssistantClaim } from "@/components/assistant/assistantClaims"
 import {
   DialogRoot,
   DialogContent,
@@ -186,6 +188,19 @@ export default function ProjectsPage() {
     return projects
   }, [filter, projects])
 
+  useAssistantClaim(canManage ? {
+    id: "projects-create",
+    priority: 20,
+    accept: (draft) => draft.kind === "new_project",
+    apply: (draft) => {
+      openCreate()
+      if (draft.name) setName(draft.name.slice(0, 80))
+      const notes = (draft.description || draft.text).trim()
+      if (notes) setDescription(notes)
+      return "Filled the new project form"
+    },
+  } : null)
+
   const counts = {
     all: projects.length,
     active: projects.filter((project) => !project.finished && project.status !== "done").length,
@@ -341,11 +356,22 @@ export default function ProjectsPage() {
                   ))}
                 </FormNativeSelect>
               </Field>
-              <Field label="Notes">
-                <FormInput
+              <Field label="Details">
+                <FormTextarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Optional description"
+                  placeholder="What this project is, who it is for, and what done looks like."
+                  minH="96px"
+                />
+                <AiWrite
+                  kind="project_description"
+                  value={description}
+                  context={{ surface: "projects" }}
+                  onText={setDescription}
+                  onDraft={(draft) => {
+                    if (draft.name) setName(draft.name.slice(0, 80))
+                    setDescription(draft.description || draft.text)
+                  }}
                 />
               </Field>
               {dialog === "create" && (

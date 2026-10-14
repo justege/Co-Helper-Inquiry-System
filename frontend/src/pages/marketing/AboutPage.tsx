@@ -22,7 +22,7 @@ export default function AboutPage() {
     <MarketingLayout>
       <PageHero
         label="Company"
-        title="About Co-Helper"
+        title="About EgemenOkur"
         subtitle="We build the shared workspace between a one-person business and the companies they work with — so the work, the rate, and the hours live in one place."
       />
 
@@ -30,7 +30,7 @@ export default function AboutPage() {
         <Grid templateColumns={{ base: "1fr", lg: "1fr 1fr" }} gap={12} mb={16}>
           <ProseBlock>
             <p>
-              Co-Helper started from a simple observation: one-person businesses already have companies
+              EgemenOkur started from a simple observation: one-person businesses already have companies
               they work with. What they lack is a calm, shared place to run the job — without posting a
               project into a marketplace or handing the relationship to a platform PM.
             </p>
@@ -41,7 +41,7 @@ export default function AboutPage() {
             </p>
             <p>
               We are based in Berlin and remote-first. We are not a staffing network, escrow agent, or
-              hiring marketplace. If you need someone to find developers for you, Co-Helper is the wrong tool.
+              hiring marketplace. If you need someone to find developers for you, EgemenOkur is the wrong tool.
             </p>
           </ProseBlock>
           <Grid templateColumns="repeat(2,1fr)" gap={4}>

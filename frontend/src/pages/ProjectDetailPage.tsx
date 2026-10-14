@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react"
 import { useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { Box, Spinner, Text } from "@chakra-ui/react"
 import {
+  addProjectGoal,
   getWorkspaceProject,
   inviteProjectCollaborators,
   removeProjectCollaborator,
@@ -9,7 +10,7 @@ import {
   updateWorkspaceProject,
   type ProjectTicket,
 } from "@/api/workspace"
-import { createInvoice, getProjectWork, type ProjectWork } from "@/api/work"
+import { createInvoice, createTodo, getProjectWork, type ProjectWork } from "@/api/work"
 import { PageShell } from "@/components/ui/PageShell"
 import { APP_BORDER, APP_INK, APP_MUTED, APP_SURFACE } from "@/components/ui/appUi"
 import { GREEN } from "@/theme/tokens"
@@ -45,6 +46,7 @@ import {
   StatusChip,
 } from "@/components/work/ProjectTicketPanels"
 import { LuTrash2, LuUsers } from "react-icons/lu"
+import { useAssistantClaim } from "@/components/assistant/assistantClaims"
 
 const PROJECT_VIEWS = ["overview", "work", "timeline", "plan", "files", "discuss", "people", "details", "finance", "pricing"] as const
 type ProjectView = (typeof PROJECT_VIEWS)[number]
@@ -129,6 +131,42 @@ export default function ProjectDetailPage() {
       setInviteBusy(false)
     }
   }
+
+  const canEditProject = Boolean(data && (data.role === "owner" || data.role === "admin" || data.role === "collaborator"))
+  useAssistantClaim(id && canEditProject ? {
+    id: `project-${id}`,
+    priority: 10,
+    accept: (draft) => draft.kind === "new_todo" || draft.kind === "project_description" || draft.kind === "project_goal",
+    apply: async (draft) => {
+      if (!id) return
+      if (draft.kind === "project_description") {
+        const description = (draft.description || draft.text).trim()
+        if (!description) return
+        await updateWorkspaceProject(id, { description })
+        setTab("overview")
+        load()
+        return "Saved the project description"
+      }
+      if (draft.kind === "project_goal") {
+        const title = (draft.title || draft.text).trim()
+        if (!title) return
+        await addProjectGoal(id, title.slice(0, 300))
+        setTab("overview")
+        load()
+        return "Added the goal"
+      }
+      const title = draft.title.trim()
+      if (!title) return
+      const created = await createTodo(id, {
+        title: title.slice(0, 300),
+        body: (draft.body || draft.description).trim() || undefined,
+        acceptanceCriteria: draft.acceptanceCriteria.trim() ? [draft.acceptanceCriteria.trim().slice(0, 300)] : undefined,
+      })
+      load()
+      openTodo(created.id)
+      return "Added the to-do"
+    },
+  } : null)
 
   if (error) return <PageShell eyebrow="Workspace" title="Project" backHref="/app"><Text color="#B91C1C">{error}</Text></PageShell>
   if (!data || !work) return <PageShell eyebrow="Workspace" title="Project" backHref="/app"><Spinner /></PageShell>

@@ -75,7 +75,7 @@ export default function PricingPage() {
               </Heading>
               <Text fontSize="0.875rem" color={MUTED} lineHeight="1.7" mb={6}>
                 The companies you work with see only the projects you share: to-dos, hours,
-                remaining work, weekly pace, and invoices. They do not pay Co-Helper.
+                remaining work, weekly pace, and invoices. They do not pay EgemenOkur.
               </Text>
               <CTA to="/login" variant="outline">I have an invite</CTA>
             </Box>
@@ -102,7 +102,7 @@ export default function PricingPage() {
             <Box>
               <Text fontSize="0.875rem" fontWeight="600" color={INK} mb={2}>Is this a marketplace?</Text>
               <Text fontSize="0.875rem" color={MUTED} lineHeight="1.65">
-                No. Co-Helper does not match you with strangers or take a cut of jobs. You invite the
+                No. EgemenOkur does not match you with strangers or take a cut of jobs. You invite the
                 companies you already work with.
               </Text>
             </Box>
@@ -110,7 +110,7 @@ export default function PricingPage() {
               <Text fontSize="0.875rem" fontWeight="600" color={INK} mb={2}>What does the client see?</Text>
               <Text fontSize="0.875rem" color={MUTED} lineHeight="1.65">
                 Current work (or an honest note if you’re on another client), remaining hours, your
-                normal week, hours on their project, and invoices you send. They never pay Co-Helper.
+                normal week, hours on their project, and invoices you send. They never pay EgemenOkur.
               </Text>
             </Box>
           </Grid>

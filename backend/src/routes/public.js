@@ -2,7 +2,9 @@ import { Router } from "express";
 import { queryOne, execute } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { registerPartner } from "../lib/partnerRegistration.js";
-import { sendEmail, contactEmail } from "../lib/email.js";
+import { sendEmail, contactEmail, projectRequestEmail } from "../lib/email.js";
+import { polishCopy } from "../lib/assistant.js";
+import { allowRequest, clientAddress, sendAssistantError } from "../lib/gemini.js";
 
 const router = Router();
 
@@ -53,7 +55,7 @@ router.post("/contact", async (req, res) => {
        VALUES ($1, $2, $3, $4, $5)`,
       [name, email, company || null, subject, message]
     );
-    const inbox = process.env.CONTACT_INBOX || "hello@co-helper.com";
+    const inbox = process.env.CONTACT_INBOX || "info@egemenokur.com";
     await sendEmail({
       to: inbox,
       replyTo: email,
@@ -63,6 +65,73 @@ router.post("/contact", async (req, res) => {
   } catch (err) {
     console.error("[contact]", err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/project-request", async (req, res) => {
+  const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
+  const email = typeof req.body?.email === "string" ? req.body.email.trim() : "";
+  const company = typeof req.body?.company === "string" ? req.body.company.trim() : "";
+  const role = typeof req.body?.role === "string" ? req.body.role.trim() : "";
+  const projectName = typeof req.body?.projectName === "string" ? req.body.projectName.trim() : "";
+  const projectType = typeof req.body?.projectType === "string" ? req.body.projectType.trim() : "";
+  const description = typeof req.body?.description === "string" ? req.body.description.trim() : "";
+  const timeline = typeof req.body?.timeline === "string" ? req.body.timeline.trim() : "";
+  const budget = typeof req.body?.budget === "string" ? req.body.budget.trim() : "";
+  const notes = typeof req.body?.notes === "string" ? req.body.notes.trim() : "";
+  if (name.length < 2) return res.status(400).json({ error: "Name is required" });
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: "A valid email is required" });
+  if (projectName.length < 2) return res.status(400).json({ error: "Project name is required" });
+  if (description.length < 20) return res.status(400).json({ error: "Tell me a bit more about the project" });
+
+  const message = [
+    `Project: ${projectName}`,
+    projectType ? `Type: ${projectType}` : null,
+    company ? `Company: ${company}` : null,
+    role ? `Role: ${role}` : null,
+    timeline ? `Timeline: ${timeline}` : null,
+    budget ? `Budget: ${budget}` : null,
+    "",
+    description,
+    notes ? `\nNotes: ${notes}` : null,
+  ].filter((line) => line !== null).join("\n");
+
+  try {
+    await execute(
+      `INSERT INTO contact_messages (name, email, company, subject, message)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [name, email, company || null, `New project request — ${projectName}`, message]
+    );
+    const inbox = process.env.PROJECT_INBOX || process.env.CONTACT_INBOX || "info@egemenokur.com";
+    const delivery = await sendEmail({
+      to: inbox,
+      replyTo: email,
+      ...projectRequestEmail({ name, email, company, role, projectName, projectType, description, timeline, budget, notes }),
+    });
+    if (delivery?.error) {
+      return res.status(502).json({ error: "The request was saved, but the email could not be sent." });
+    }
+    res.status(201).json({ success: true, delivered: !delivery?.skipped });
+  } catch (err) {
+    console.error("[project-request]", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/assistant/polish", async (req, res) => {
+  if (!allowRequest(`public:${clientAddress(req)}`, 12, 60 * 60 * 1000)) {
+    return res.status(429).json({ error: "Too many assistant requests. Try again later." });
+  }
+  try {
+    res.json(await polishCopy({
+      kind: req.body?.kind,
+      text: req.body?.text,
+      instruction: req.body?.instruction,
+      hint: req.body?.hint,
+      publicOnly: true,
+    }));
+  } catch (err) {
+    sendAssistantError(res, err);
   }
 });
 

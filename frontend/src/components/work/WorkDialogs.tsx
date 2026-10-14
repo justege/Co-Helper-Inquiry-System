@@ -12,7 +12,9 @@ import {
   DIALOG_PANEL_STYLE,
 } from "@/components/ui/dialog"
 import { Field } from "@/components/ui/field"
-import { FormInput } from "@/components/ui/form-controls"
+import { FormInput, FormTextarea } from "@/components/ui/form-controls"
+import { AiWrite } from "@/components/assistant/AiWrite"
+import { useAssistantClaim } from "@/components/assistant/assistantClaims"
 import { HoursField, HOUR_STEP, LOG_HOUR_MIN } from "./HoursField"
 import { createTodo, logTime, type WorkTodo } from "@/api/work"
 import { addDaysIso, isoToday } from "@/lib/todoStyle"
@@ -35,6 +37,7 @@ export function AddTodoDialog({
   onCreated: (todo: WorkTodo) => void
 }) {
   const [title, setTitle] = useState("")
+  const [body, setBody] = useState("")
   const [estimate, setEstimate] = useState("")
   const [criterion, setCriterion] = useState("")
   const [startAt, setStartAt] = useState(defaultStartAt ?? isoToday())
@@ -45,12 +48,26 @@ export function AddTodoDialog({
   useEffect(() => {
     if (!open) return
     setTitle("")
+    setBody("")
     setEstimate("")
     setCriterion("")
     setError(null)
     setStartAt(defaultStartAt ?? isoToday())
     setDueAt(defaultDueAt ?? addDaysIso(defaultStartAt ?? isoToday(), 5))
   }, [open, defaultStartAt, defaultDueAt])
+
+  useAssistantClaim(open ? {
+    id: `add-todo-${projectId}`,
+    priority: 50,
+    accept: (draft) => draft.kind === "new_todo",
+    apply: (draft) => {
+      if (draft.title) setTitle(draft.title.slice(0, 300))
+      const details = (draft.body || draft.description).trim()
+      if (details) setBody(details)
+      if (draft.acceptanceCriteria) setCriterion(draft.acceptanceCriteria.slice(0, 300))
+      return "Filled the new to-do"
+    },
+  } : null)
 
   async function submit() {
     if (!title.trim()) return
@@ -64,6 +81,7 @@ export function AddTodoDialog({
       const est = estimate ? Number(estimate) : null
       const created = await createTodo(projectId, {
         title: title.trim(),
+        body: body.trim() || undefined,
         estimatedHours: est && Number.isFinite(est) ? est : null,
         milestoneId: milestoneId || null,
         acceptanceCriteria: [criterion.trim()],
@@ -71,6 +89,7 @@ export function AddTodoDialog({
         dueAt: dueAt || null,
       })
       setTitle("")
+      setBody("")
       setEstimate("")
       setCriterion("")
       setStartAt(isoToday())
@@ -101,6 +120,18 @@ export function AddTodoDialog({
         <DialogHeader display="none" />
         <Box as="form" onSubmit={(e) => { e.preventDefault(); void submit() }}>
           <DialogBody px={6} py={5}>
+            <AiWrite
+              mode="write"
+              kind="new_todo"
+              value={[title, body, criterion].filter(Boolean).join("\n")}
+              context={{ surface: "project", projectId }}
+              onDraft={(draft) => {
+                if (draft.title) setTitle(draft.title.slice(0, 300))
+                const details = (draft.body || draft.description).trim()
+                if (details) setBody(details)
+                if (draft.acceptanceCriteria) setCriterion(draft.acceptanceCriteria.slice(0, 300))
+              }}
+            />
             <Field label="Title" required>
               <FormInput
                 autoFocus
@@ -108,6 +139,21 @@ export function AddTodoDialog({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 maxLength={300}
+              />
+            </Field>
+            <Field label="Details">
+              <FormTextarea
+                mt={4}
+                minH="88px"
+                placeholder="What this to-do covers"
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+              />
+              <AiWrite
+                kind="todo_description"
+                value={body}
+                context={{ surface: "project", projectId }}
+                onText={setBody}
               />
             </Field>
             <Field label="Estimated hours">
@@ -134,6 +180,12 @@ export function AddTodoDialog({
                 value={criterion}
                 onChange={(e) => setCriterion(e.target.value)}
                 maxLength={300}
+              />
+              <AiWrite
+                kind="acceptance"
+                value={criterion}
+                context={{ surface: "project", projectId }}
+                onText={setCriterion}
               />
             </Field>
           </DialogBody>

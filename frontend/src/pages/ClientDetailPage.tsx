@@ -10,6 +10,8 @@ import { FormInput, FormTextarea } from "@/components/ui/form-controls"
 import { APP_BORDER, APP_INK, APP_MUTED, APP_SURFACE, APP_BG_SUBTLE, APP_LABEL } from "@/components/ui/appUi"
 import { displayName } from "@/lib/people"
 import { AppButton } from "@/components/ui/AppButton"
+import { AiWrite } from "@/components/assistant/AiWrite"
+import { useAssistantClaim } from "@/components/assistant/assistantClaims"
 
 type BillingFields = {
   email: string
@@ -45,9 +47,22 @@ export default function ClientDetailPage() {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     setError: setFormError,
     formState: { errors, isSubmitting },
   } = useForm<BillingFields>()
+  const notes = watch("notes")
+
+  useAssistantClaim(id ? {
+    id: `client-notes-${id}`,
+    priority: 20,
+    accept: (draft) => draft.kind === "client_notes",
+    apply: (draft) => {
+      setValue("notes", (draft.text || draft.body || draft.description).slice(0, 8000), { shouldDirty: true })
+      return "Filled the client notes"
+    },
+  } : null)
 
   function load() {
     if (!id) return
@@ -237,6 +252,12 @@ export default function ClientDetailPage() {
           </Grid>
           <Field label="Notes" mt={4}>
             <FormTextarea rows={3} {...register("notes")} />
+            <AiWrite
+              kind="client_notes"
+              value={notes || ""}
+              context={{ surface: "client", clientId: id }}
+              onText={(text) => setValue("notes", text, { shouldDirty: true })}
+            />
           </Field>
           <Box display="flex" alignItems="center" gap={3} mt={5}>
             <AppButton type="submit" size="sm" loading={isSubmitting}>Save client</AppButton>

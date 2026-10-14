@@ -14,13 +14,13 @@ export default function TermsPage() {
         <ProseBlock>
           <h2>1. Agreement</h2>
           <p>
-            By accessing or using Co-Helper, you agree to these Terms of Service. If you do not agree,
+            By accessing or using EgemenOkur, you agree to these Terms of Service. If you do not agree,
             you may not use the service.
           </p>
 
-          <h2>2. What Co-Helper is</h2>
+          <h2>2. What EgemenOkur is</h2>
           <p>
-            Co-Helper is software for a workspace owned by a one-person business. You invite the companies
+            EgemenOkur is software for a workspace owned by a one-person business. You invite the companies
             you already work with and run projects with shared to-dos, hours, rates,
             agreements, time logs, and payment records. We do not match companies with operators, assign a
             project manager, hold escrow, or process payments. We are not a party to the commercial
@@ -53,14 +53,14 @@ export default function TermsPage() {
           <h2>6. Fees and payments</h2>
           <p>
             The workspace is $9 USD per month until 31 December 2026, then $49 USD per month with no discount,
-            as described on the Pricing page. There is no other plan. Payment records in Co-Helper are logs
+            as described on the Pricing page. There is no other plan. Payment records in EgemenOkur are logs
             only. You remain responsible for invoicing, tax, and transferring money outside the product.
-            Companies invited into a workspace do not pay Co-Helper.
+            Companies invited into a workspace do not pay EgemenOkur.
           </p>
 
           <h2>7. Intellectual property</h2>
           <p>
-            The Co-Helper product, branding, and software are owned by Co-Helper. You retain ownership of
+            The EgemenOkur product, branding, and software are owned by EgemenOkur. You retain ownership of
             content you upload (briefs, files, messages) and grant us a licence to host and display it as
             needed to operate the workspace, including sending text you choose to our AI provider when you
             use Edit with AI.
@@ -68,7 +68,7 @@ export default function TermsPage() {
 
           <h2>8. Limitation of liability</h2>
           <p>
-            Co-Helper is provided "as is". We do not guarantee the quality, delivery, or performance of any
+            EgemenOkur is provided "as is". We do not guarantee the quality, delivery, or performance of any
             one-person business or company, and we do not guarantee that recorded payments were actually made. Our
             liability is limited to the maximum extent permitted by applicable law.
           </p>
@@ -88,7 +88,7 @@ export default function TermsPage() {
           <h2>11. Contact</h2>
           <p>
             Questions about these terms:{" "}
-            <a href="mailto:legal@co-helper.com">legal@co-helper.com</a>
+            <a href="mailto:info@egemenokur.com">info@egemenokur.com</a>
           </p>
         </ProseBlock>
       </ContentSection>

@@ -7,7 +7,7 @@ const STEPS = [
   {
     n: "01",
     title: "Open a workspace",
-    body: "A one-person business creates an account and gets a private workspace. There is no marketplace browse, no matching, and no Co-Helper PM — you already have the companies you work with.",
+    body: "A one-person business creates an account and gets a private workspace. There is no marketplace browse, no matching, and no EgemenOkur PM — you already have the companies you work with.",
   },
   {
     n: "02",
@@ -60,7 +60,7 @@ export default function HowItWorksPage() {
             One project. Everything you used to scatter across email and a spreadsheet.
           </Heading>
           <Text fontSize="0.9375rem" color={MUTED} lineHeight="1.75" mb={8} maxW="640px">
-            You decide the work. Co-Helper is the shared record — not a staffing network and not an escrow agent.
+            You decide the work. EgemenOkur is the shared record — not a staffing network and not an escrow agent.
           </Text>
           <Grid templateColumns={{ base: "1fr", md: "repeat(2,1fr)", lg: "repeat(3,1fr)" }} gap={4}>
             {JOB_TYPES.map((cat) => (

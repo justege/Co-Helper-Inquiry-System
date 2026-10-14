@@ -46,7 +46,7 @@ export function PageShell({
     ? {
         title: subtitle,
         bullets: [
-          "This page follows the same workspace flow as the rest of Co-Helper",
+          "This page follows the same workspace flow as the rest of EgemenOkur",
           "Use the island above to jump into the next action",
           "Everything you add here stays with this workspace",
         ],

@@ -9,7 +9,7 @@ const POSTS = [
     category: "Product",
     date: "September 12, 2026",
     title: "Why we dropped marketplace matching",
-    excerpt: "Clients already come from you. Co-Helper is now a private workspace: invite, run the job, log the hours — no browsing, no PM, no escrow.",
+    excerpt: "Clients already come from you. EgemenOkur is now a private workspace: invite, run the job, log the hours — no browsing, no PM, no escrow.",
   },
   {
     category: "Guides",

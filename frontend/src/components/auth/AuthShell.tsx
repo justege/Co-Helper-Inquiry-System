@@ -1,6 +1,7 @@
 import { Box, Flex, Heading, Text, VStack } from "@chakra-ui/react"
 import { Link } from "react-router-dom"
 import { BrandMark } from "@/components/brand/BrandMark"
+import FilmBackdrop from "@/components/landing/FilmBackdrop"
 import { INK, PAPER } from "@/theme/tokens"
 
 export function LogoMark({ dark = true, size = "md" }: { dark?: boolean; size?: "sm" | "md" }) {
@@ -38,6 +39,7 @@ export function AuthShell({
   promo,
   wide = false,
   layout = "split",
+  videoSrc,
 }: {
   title: string
   subtitle: string
@@ -46,7 +48,49 @@ export function AuthShell({
   promo: AuthPromoProps
   wide?: boolean
   layout?: "split" | "centered"
+  videoSrc?: string
 }) {
+  const card = (
+    <Box
+      w="full"
+      maxW={wide ? "580px" : "440px"}
+      maxH={{ base: "none", md: "calc(100vh - 96px)" }}
+      overflowY={{ base: "visible", md: "auto" }}
+      bg="white"
+      borderRadius="16px"
+      boxShadow="0 32px 80px rgba(0,0,0,0.32), 0 8px 24px rgba(0,0,0,0.16)"
+      px={{ base: 6, md: 10 }}
+      py={{ base: 8, md: 10 }}
+    >
+      <AuthFormHeader title={title} subtitle={subtitle} />
+      {children}
+      <Text fontSize="0.8125rem" color="#94A3B8" fontWeight="500" mt={8}>
+        {footer}
+      </Text>
+    </Box>
+  )
+
+  if (videoSrc) {
+    return (
+      <FilmBackdrop src={videoSrc} dim={0.5}>
+        <Box position="absolute" top={{ base: 6, md: 10 }} left={{ base: 6, md: 10 }} zIndex={3}>
+          <Box as={Link} to="/" display="inline-flex" _hover={{ textDecoration: "none" }}>
+            <LogoMark dark={false} size="sm" />
+          </Box>
+        </Box>
+        <Flex
+          minH="100vh"
+          align="center"
+          justify="center"
+          px={{ base: 4, sm: 6 }}
+          py={{ base: 20, md: 12 }}
+        >
+          {card}
+        </Flex>
+      </FilmBackdrop>
+    )
+  }
+
   if (layout === "centered") {
     return (
       <Box minH="100vh" position="relative" overflow="hidden">
@@ -94,23 +138,7 @@ export function AuthShell({
           position="relative"
           zIndex={2}
         >
-          <Box
-            w="full"
-            maxW={wide ? "580px" : "440px"}
-            maxH={{ base: "none", md: "calc(100vh - 96px)" }}
-            overflowY={{ base: "visible", md: "auto" }}
-            bg="white"
-            borderRadius="16px"
-            boxShadow="0 32px 80px rgba(0,0,0,0.32), 0 8px 24px rgba(0,0,0,0.16)"
-            px={{ base: 6, md: 10 }}
-            py={{ base: 8, md: 10 }}
-          >
-            <AuthFormHeader title={title} subtitle={subtitle} />
-            {children}
-            <Text fontSize="0.8125rem" color="#94A3B8" fontWeight="500" mt={8}>
-              {footer}
-            </Text>
-          </Box>
+          {card}
         </Flex>
       </Box>
     )
@@ -191,7 +219,7 @@ export function AuthShell({
               <Box display="flex" alignItems="center" gap={2} mt={4}>
                 <Box w="20px" h="1px" bg="rgba(255,255,255,0.4)" />
                 <Text fontSize="0.75rem" color="rgba(255,255,255,0.4)" fontWeight="500" letterSpacing="0.04em">
-                  Co-Helper · One-person business workspace
+                  EgemenOkur · egemenokur.com
                 </Text>
               </Box>
             </Box>

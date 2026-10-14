@@ -38,6 +38,8 @@ import {
 } from "@/api/work"
 import { AvatarStack, DueChip, StatusBadge, SubtaskProgress } from "./todoUi"
 import type { TodoTab } from "./TodoCardContext"
+import { AiWrite } from "@/components/assistant/AiWrite"
+import { useAssistantClaim } from "@/components/assistant/assistantClaims"
 
 const STATUSES: TodoStatus[] = ["backlog", "in_progress", "waiting_on_client", "done"]
 
@@ -151,6 +153,36 @@ export function TodoCardDialog({
     }
   }
 
+  useAssistantClaim(todoId && !locked ? {
+    id: `todo-comment-${todoId}`,
+    priority: 35,
+    accept: (draft) => draft.kind === "comment",
+    apply: (draft) => {
+      setComment(draft.text || draft.body)
+      return "Filled the comment"
+    },
+  } : null)
+
+  useAssistantClaim(todoId && canEditMeta && !locked ? {
+    id: `todo-edit-${todoId}`,
+    priority: 40,
+    accept: (draft) => draft.kind === "todo_description" || draft.kind === "acceptance",
+    apply: async (draft) => {
+      if (!todoId) return
+      if (draft.kind === "todo_description") {
+        const body = (draft.body || draft.text).trim()
+        setDescription(body)
+        await patch({ body: body || null })
+        return "Updated the description"
+      }
+      const next = (draft.acceptanceCriteria || draft.text).trim()
+      if (!next) return
+      await addTodoItem(todoId, next.slice(0, 300), "acceptance")
+      load()
+      return "Added the acceptance criterion"
+    },
+  } : null)
+
   return (
     <>
       <DialogRoot
@@ -241,6 +273,7 @@ export function TodoCardDialog({
                     {todo.body || "No description yet."}
                   </Text>
                 ) : (
+                  <>
                   <FormTextarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
@@ -250,10 +283,21 @@ export function TodoCardDialog({
                     }}
                     placeholder="Add a description…"
                     minH="72px"
-                    mb={4}
                     border="none"
                     px={0}
                   />
+                  <Box mb={4}>
+                    <AiWrite
+                      kind="todo_description"
+                      value={description}
+                      context={{ surface: "todo", todoId, projectId: todo?.projectId }}
+                      onText={(text) => {
+                        setDescription(text)
+                        void patch({ body: text.trim() || null })
+                      }}
+                    />
+                  </Box>
+                  </>
                 )}
 
                 <MetaRow label="Due">
@@ -523,6 +567,14 @@ export function TodoCardDialog({
                       }}>Add</AppButton>
                     </Box>
                   )}
+                  {canEditMeta && !locked && (
+                    <AiWrite
+                      kind="acceptance"
+                      value={criterionTitle}
+                      context={{ surface: "todo", todoId, projectId: todo?.projectId }}
+                      onText={setCriterionTitle}
+                    />
+                  )}
                 </Box>
 
                 {canEditMeta && !locked && (
@@ -608,6 +660,7 @@ export function TodoCardDialog({
           {card && todoId && (
             <Box px={5} py={3} borderTop={`1px solid ${APP_BORDER}`} display="flex" gap={2} alignItems="center">
               <AvatarStack people={[{ firstName: "You", email: "" }]} size={28} />
+              <Box flex="1">
               <FormInput
                 placeholder="Write a comment…"
                 value={comment}
@@ -620,6 +673,13 @@ export function TodoCardDialog({
                   addTodoComment(todoId, body).then(() => { setComment(""); load() })
                 }}
               />
+              <AiWrite
+                kind="comment"
+                value={comment}
+                context={{ surface: "todo", todoId, projectId: todo?.projectId }}
+                onText={setComment}
+              />
+              </Box>
               <AppButton size="sm" onClick={() => {
                 const body = comment.trim()
                 if (!body) return

@@ -60,6 +60,8 @@ import {
 } from "@/api/workspace"
 import { updateTodo, type WorkProject, type WorkTodo } from "@/api/work"
 import { useTodoCard } from "./TodoCardContext"
+import { AiWrite } from "@/components/assistant/AiWrite"
+import { useAssistantClaim } from "@/components/assistant/assistantClaims"
 import { AddTodo, CardCounts } from "./WorkPanels"
 
 export function projectStatusColor(status?: string) {
@@ -1174,6 +1176,15 @@ export function OverviewPanel({
               </AppButton>
             </Box>
           )}
+          {canEdit && (
+            <AiWrite
+              kind="project_goal"
+              mode="write"
+              value={goalTitle}
+              context={{ surface: "project", projectId: data.project.id }}
+              onText={setGoalTitle}
+            />
+          )}
         </AppCard>
         </Box>
 
@@ -1196,6 +1207,12 @@ export function OverviewPanel({
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="What this project is, who it is for, and what done looks like."
                   minH="100px"
+                />
+                <AiWrite
+                  kind="project_description"
+                  value={description}
+                  context={{ surface: "project", projectId: data.project.id }}
+                  onText={(text) => { setAboutOpen(true); setDescription(text) }}
                 />
                 <Box display="flex" alignItems="center" gap={3} mt={3}>
                   <AppButton size="sm" loading={busy} onClick={() => void saveDescription()}>Save</AppButton>
@@ -1503,6 +1520,16 @@ function MilestoneWorkspace({
   const [busy, setBusy] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [pane, setPane] = useState<"work" | "blockers" | "discuss">("work")
+  useAssistantClaim({
+    id: `milestone-comment-${milestone.id}`,
+    priority: 30,
+    accept: (draft) => draft.kind === "comment",
+    apply: (draft) => {
+      setPane("discuss")
+      setComment(draft.text || draft.body)
+      return "Filled the milestone comment"
+    },
+  })
   const available = allTodos.filter((todo) => todo.milestoneId !== milestone.id)
   const unassigned = available.filter((todo) => !todo.milestoneId)
   const elsewhere = available.filter((todo) => todo.milestoneId && todo.milestoneId !== milestone.id)
@@ -1718,6 +1745,12 @@ function MilestoneWorkspace({
               minH="88px"
               mt={3}
             />
+            <AiWrite
+              kind="comment"
+              value={comment}
+              context={{ surface: "project", projectId: data.project.id }}
+              onText={setComment}
+            />
             <AppButton
               size="sm"
               mt={3}
@@ -1877,6 +1910,17 @@ function AddBlockerForm({
   const [days, setDays] = useState(suggestedDays != null ? String(suggestedDays) : "")
   const [todoId, setTodoId] = useState("")
   const [busy, setBusy] = useState(false)
+  useAssistantClaim({
+    id: `blocker-${milestoneId}`,
+    priority: 28,
+    accept: (draft) => draft.kind === "blocker",
+    apply: (draft) => {
+      setOpen(true)
+      if (draft.title) setTitle(draft.title.slice(0, 300))
+      setBody(draft.text || draft.body || draft.description)
+      return "Filled the blocker"
+    },
+  })
 
   useEffect(() => {
     if (!open && suggestedDays != null) setDays(String(suggestedDays))
@@ -1913,7 +1957,18 @@ function AddBlockerForm({
         ))}
       </Box>
       <FormInput placeholder="e.g. Waiting on copy from the client" value={title} onChange={(e) => setTitle(e.target.value)} mb={2} />
-      <FormTextarea placeholder="What unblocks it? (optional)" value={body} onChange={(e) => setBody(e.target.value)} minH="72px" mb={2} />
+      <FormTextarea placeholder="What unblocks it? (optional)" value={body} onChange={(e) => setBody(e.target.value)} minH="72px" />
+      <AiWrite
+        kind="blocker"
+        value={body}
+        context={{ surface: "project", projectId }}
+        onText={setBody}
+        onDraft={(draft) => {
+          if (draft.title) setTitle(draft.title.slice(0, 300))
+          setBody(draft.text || draft.body || draft.description)
+        }}
+      />
+      <Box mb={2} />
       <Box display="grid" gridTemplateColumns={{ base: "1fr", md: todos.length ? "110px 1fr" : "110px" }} gap={2} mb={3}>
         <FormInput type="number" min="0" max="3650" placeholder="Days late" value={days} onChange={(e) => setDays(e.target.value)} />
         {todos.length > 0 && (
@@ -2050,6 +2105,15 @@ export function DiscussPanel({
   const [comment, setComment] = useState("")
   const [busy, setBusy] = useState(false)
   const canModerate = data.role === "owner" || data.role === "admin"
+  useAssistantClaim({
+    id: `project-comment-${data.project.id}`,
+    priority: 30,
+    accept: (draft) => draft.kind === "comment",
+    apply: (draft) => {
+      setComment(draft.text || draft.body)
+      return "Filled the comment"
+    },
+  })
 
   return (
     <Box bg={APP_SURFACE} border={`1px solid ${APP_BORDER}`} borderRadius="14px" p={5}>
@@ -2098,6 +2162,12 @@ export function DiscussPanel({
         placeholder="Write a comment on this project"
         minH="96px"
         mt={3}
+      />
+      <AiWrite
+        kind="comment"
+        value={comment}
+        context={{ surface: "project", projectId: data.project.id }}
+        onText={setComment}
       />
       <AppButton
         size="sm"

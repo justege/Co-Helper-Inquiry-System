@@ -3,11 +3,11 @@ import { decryptSecret } from "./secret.js";
 export const PUBLIC_APP_ORIGIN = (
   process.env.PUBLIC_APP_URL ||
   process.env.TRELLO_RETURN_URL ||
-  "https://co-helper.com"
+  "https://egemenokur.com"
 ).replace(/\/$/, "");
 
-const FROM = process.env.EMAIL_FROM || "Co-Helper <hello@co-helper.com>";
-const SITE = "https://co-helper.com";
+const FROM = process.env.EMAIL_FROM || "EgemenOkur <info@egemenokur.com>";
+const SITE = "https://egemenokur.com";
 
 export function appUrl(path = "") {
   const origin = PUBLIC_APP_ORIGIN;
@@ -25,14 +25,14 @@ export function escapeHtml(value) {
 }
 
 export function personLabel(user) {
-  if (!user) return "Co-Helper";
+  if (!user) return "EgemenOkur";
   const full = [user.first_name || user.firstName, user.last_name || user.lastName].filter(Boolean).join(" ").trim();
   return (
     String(user.company_name || user.companyName || "").trim() ||
     full ||
     String(user.username || "").trim() ||
     String(user.email || "").trim() ||
-    "Co-Helper"
+    "EgemenOkur"
   );
 }
 
@@ -40,7 +40,7 @@ export function workspaceDisplayName(workspace, user) {
   const name = String(workspace?.name || "").trim();
   if (name && name !== "My workspace") return name;
   const who = personLabel(user);
-  if (who === "Co-Helper") return "Co-Helper";
+  if (who === "EgemenOkur") return "EgemenOkur";
   return `${who}'s workspace`;
 }
 
@@ -74,7 +74,7 @@ function brandedLayout({ preview, heading, bodyHtml, ctaLabel, ctaUrl, footerHtm
         <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border:1px solid #E5E7EB;border-radius:16px;overflow:hidden">
           <tr>
             <td style="background:#0B1A15;padding:18px 28px">
-              <a href="${SITE}" style="color:#ffffff;text-decoration:none;font-family:Inter,Helvetica,Arial,sans-serif;font-weight:700;font-size:16px;letter-spacing:-0.02em">Co-Helper</a>
+              <a href="${SITE}" style="color:#ffffff;text-decoration:none;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:600;font-size:16px;letter-spacing:-0.04em">&lt;EO/&gt;</a>
             </td>
           </tr>
           <tr>
@@ -86,7 +86,7 @@ function brandedLayout({ preview, heading, bodyHtml, ctaLabel, ctaUrl, footerHtm
           </tr>
         </table>
         <p style="font-family:Inter,Helvetica,Arial,sans-serif;color:#6B7280;font-size:12px;line-height:1.6;margin:18px 8px 0;max-width:560px">
-          ${footerHtml || `Sent by Co-Helper · <a href="${SITE}" style="color:#0F6E56;text-decoration:none">${SITE.replace("https://", "")}</a>`}
+          ${footerHtml || `Sent by EgemenOkur · <a href="${SITE}" style="color:#0F6E56;text-decoration:none">${SITE.replace("https://", "")}</a>`}
         </p>
       </td>
     </tr>
@@ -191,13 +191,13 @@ export async function sendEmail({
 }
 
 export async function sendTestEmail(workspace, to) {
-  const heading = "Your Co-Helper email is working";
+  const heading = "Your EgemenOkur email is working";
   const html = brandedLayout({
-    preview: "This is a test from your Co-Helper workspace.",
+    preview: "This is a test from your EgemenOkur workspace.",
     heading,
     bodyHtml: `<p style="margin:0 0 12px">This message was sent from your workspace to confirm that outbound email is set up correctly.</p>
       <p style="margin:0">If you received it, clients and collaborators will get invites and invoices the same way.</p>`,
-    footerHtml: `Sent by Co-Helper · <a href="${SITE}" style="color:#0F6E56;text-decoration:none">co-helper.com</a>`,
+    footerHtml: `Sent by EgemenOkur · <a href="${SITE}" style="color:#0F6E56;text-decoration:none">egemenokur.com</a>`,
   });
   return sendEmail({
     workspace,
@@ -224,16 +224,16 @@ export function inviteEmail({
     ? `${who} invited you to ${project}`
     : `${who} invited you to ${space}`;
   const preview = isCollab && project
-    ? `Join ${project} on Co-Helper at co-helper.com.`
-    : `Join ${space} on Co-Helper at co-helper.com.`;
+    ? `Join ${project} on EgemenOkur at egemenokur.com.`
+    : `Join ${space} on EgemenOkur at egemenokur.com.`;
   const bodyHtml = isCollab
     ? `<p style="margin:0 0 12px">${escapeHtml(who)} invited you to collaborate${project ? ` on <strong>${escapeHtml(project)}</strong>` : ""} in <strong>${escapeHtml(space)}</strong>.</p>
-       <p style="margin:0">Open the invite on Co-Helper to create your account or sign in. You will only see the project you were invited to.</p>`
-    : `<p style="margin:0 0 12px">${escapeHtml(who)} invited you to their workspace <strong>${escapeHtml(space)}</strong> on Co-Helper.</p>
+       <p style="margin:0">Open the invite on EgemenOkur to create your account or sign in. You will only see the project you were invited to.</p>`
+    : `<p style="margin:0 0 12px">${escapeHtml(who)} invited you to their workspace <strong>${escapeHtml(space)}</strong> on EgemenOkur.</p>
        <p style="margin:0">Open the invite to create your account or sign in. You will only see the projects they share with you.</p>`;
   const text = isCollab
-    ? `${who} invited you to collaborate${project ? ` on ${project}` : ""} in ${space}.\n\nJoin: ${inviteUrl}\n\nCo-Helper · ${SITE}`
-    : `${who} invited you to ${space} on Co-Helper.\n\nJoin: ${inviteUrl}\n\nCo-Helper · ${SITE}`;
+    ? `${who} invited you to collaborate${project ? ` on ${project}` : ""} in ${space}.\n\nJoin: ${inviteUrl}\n\nEgemenOkur · ${SITE}`
+    : `${who} invited you to ${space} on EgemenOkur.\n\nJoin: ${inviteUrl}\n\nEgemenOkur · ${SITE}`;
 
   return {
     to: email,
@@ -244,9 +244,9 @@ export function inviteEmail({
       bodyHtml,
       ctaLabel: "Open invite",
       ctaUrl: inviteUrl,
-      footerHtml: `This email was sent to ${escapeHtml(email)} because ${escapeHtml(who)} invited you on Co-Helper.
+      footerHtml: `This email was sent to ${escapeHtml(email)} because ${escapeHtml(who)} invited you on EgemenOkur.
         If you were not expecting it, you can ignore this message.<br>
-        <a href="${SITE}" style="color:#0F6E56;text-decoration:none">co-helper.com</a>`,
+        <a href="${SITE}" style="color:#0F6E56;text-decoration:none">egemenokur.com</a>`,
     }),
     text,
   };
@@ -255,15 +255,39 @@ export function inviteEmail({
 export function contactEmail({ name, email, company, subject, message }) {
   const heading = subject || "Workspace question";
   return {
-    subject: `[Co-Helper] ${heading}`,
+    subject: `[EgemenOkur] ${heading}`,
     html: brandedLayout({
       preview: `${name} wrote from ${email}`,
       heading,
       bodyHtml: `<p style="margin:0 0 12px"><strong>${escapeHtml(name)}</strong> &lt;${escapeHtml(email)}&gt;${company ? `<br>${escapeHtml(company)}` : ""}</p>
         <p style="margin:0;white-space:pre-wrap">${escapeHtml(message)}</p>`,
-      footerHtml: `Contact form on <a href="${SITE}" style="color:#0F6E56;text-decoration:none">co-helper.com</a>`,
+      footerHtml: `Contact form on <a href="${SITE}" style="color:#0F6E56;text-decoration:none">egemenokur.com</a>`,
     }),
-    text: `${name} <${email}>${company ? ` · ${company}` : ""}\n\n${message}\n\nCo-Helper · ${SITE}`,
+    text: `${name} <${email}>${company ? ` · ${company}` : ""}\n\n${message}\n\nEgemenOkur · ${SITE}`,
+  };
+}
+
+export function projectRequestEmail({ name, email, company, role, projectName, projectType, description, timeline, budget, notes }) {
+  const heading = `New project request — ${projectName}`;
+  const details = [
+    company ? `Company: ${escapeHtml(company)}` : "",
+    role ? `Role: ${escapeHtml(role)}` : "",
+    projectType ? `Type: ${escapeHtml(projectType)}` : "",
+    timeline ? `Timeline: ${escapeHtml(timeline)}` : "",
+    budget ? `Budget: ${escapeHtml(budget)}` : "",
+  ].filter(Boolean).join("<br>");
+  return {
+    subject: `[EgemenOkur] ${heading}`,
+    html: brandedLayout({
+      preview: `${name} requested ${projectName}`,
+      heading,
+      bodyHtml: `<p style="margin:0 0 12px"><strong>${escapeHtml(name)}</strong> &lt;${escapeHtml(email)}&gt;</p>
+        ${details ? `<p style="margin:0 0 12px">${details}</p>` : ""}
+        <p style="margin:0;white-space:pre-wrap">${escapeHtml(description)}</p>
+        ${notes ? `<p style="margin:12px 0 0;white-space:pre-wrap"><strong>Notes</strong><br>${escapeHtml(notes)}</p>` : ""}`,
+      footerHtml: `Project request on <a href="${SITE}" style="color:#0F6E56;text-decoration:none">egemenokur.com</a>`,
+    }),
+    text: `${name} <${email}>${company ? ` · ${company}` : ""}${role ? ` · ${role}` : ""}\nProject: ${projectName}${projectType ? ` (${projectType})` : ""}\n${timeline ? `Timeline: ${timeline}\n` : ""}${budget ? `Budget: ${budget}\n` : ""}\n${description}${notes ? `\n\nNotes: ${notes}` : ""}\n\nEgemenOkur · ${SITE}`,
   };
 }
 
@@ -276,7 +300,7 @@ export function invoiceEmail({
   invoiceUrl,
 }) {
   const heading = `Rechnung ${number}`;
-  const who = workspaceName || "Co-Helper";
+  const who = workspaceName || "EgemenOkur";
   return {
     to,
     subject: `Rechnung ${number} — ${who}`,
@@ -285,11 +309,11 @@ export function invoiceEmail({
       heading,
       bodyHtml: `<p style="margin:0 0 12px">${escapeHtml(who)} hat Rechnung <strong>${escapeHtml(number)}</strong>${projectName ? ` für <strong>${escapeHtml(projectName)}</strong>` : ""} erstellt.</p>
         <p style="margin:0 0 12px">Betrag: <strong>${escapeHtml(totalLabel)}</strong></p>
-        <p style="margin:0">Die E-Rechnung (ZUGFeRD / Factur-X, EN 16931) ist als PDF angehängt. Sie können sie auch in Co-Helper öffnen.</p>`,
+        <p style="margin:0">Die E-Rechnung (ZUGFeRD / Factur-X, EN 16931) ist als PDF angehängt. Sie können sie auch in EgemenOkur öffnen.</p>`,
       ctaLabel: "Rechnung öffnen",
       ctaUrl: invoiceUrl,
-      footerHtml: `Gesendet über Co-Helper · <a href="${SITE}" style="color:#0F6E56;text-decoration:none">co-helper.com</a>`,
+      footerHtml: `Gesendet über EgemenOkur · <a href="${SITE}" style="color:#0F6E56;text-decoration:none">egemenokur.com</a>`,
     }),
-    text: `Rechnung ${number} von ${who}${projectName ? ` für ${projectName}` : ""}.\nBetrag: ${totalLabel}\n\n${invoiceUrl}\n\nCo-Helper · ${SITE}`,
+    text: `Rechnung ${number} von ${who}${projectName ? ` für ${projectName}` : ""}.\nBetrag: ${totalLabel}\n\n${invoiceUrl}\n\nEgemenOkur · ${SITE}`,
   };
 }

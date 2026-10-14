@@ -173,7 +173,7 @@ export async function embedZugferdPdf(pdfBuffer, ctx) {
       title: `Rechnung ${ctx.invoice.number}`,
       author: partyDisplayName(ctx.seller),
       subject: "ZUGFeRD-konforme E-Rechnung (EN 16931)",
-      creator: "Co-Helper",
+      creator: "EgemenOkur",
     },
   });
   if (result.xsdValidation && result.xsdValidation.valid === false) {

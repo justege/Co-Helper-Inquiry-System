@@ -58,7 +58,7 @@ export default function CookiesPage() {
           <h2>6. Contact</h2>
           <p>
             Questions about cookies:{" "}
-            <a href="mailto:privacy@co-helper.com">privacy@co-helper.com</a>
+            <a href="mailto:info@egemenokur.com">info@egemenokur.com</a>
           </p>
         </ProseBlock>
       </ContentSection>

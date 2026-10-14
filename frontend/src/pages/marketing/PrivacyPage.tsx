@@ -14,9 +14,9 @@ export default function PrivacyPage() {
         <ProseBlock>
           <h2>1. Introduction</h2>
           <p>
-            Co-Helper ("we", "our", or "us") operates a shared workspace for one-person businesses and the companies they invite.
+            EgemenOkur ("we", "our", or "us") operates a shared workspace for one-person businesses and the companies they invite.
             This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use
-            our website and services. Co-Helper is not a marketplace, staffing agency, or payment processor.
+            our website and services. EgemenOkur is not a marketplace, staffing agency, or payment processor.
           </p>
 
           <h2>2. Information we collect</h2>
@@ -38,7 +38,7 @@ export default function PrivacyPage() {
             <li>To improve the product and to comply with legal obligations</li>
           </ul>
           <p>
-            We do not use your jobs to match you with third-party specialists, assign a Co-Helper project manager,
+            We do not use your jobs to match you with third-party specialists, assign a EgemenOkur project manager,
             or process payments between you and your clients.
           </p>
 
@@ -59,7 +59,7 @@ export default function PrivacyPage() {
           <h2>5. Data retention</h2>
           <p>
             We retain workspace and account data for as long as your account is active or as needed to provide the
-            service. You may request deletion of your account by contacting us at privacy@co-helper.com.
+            service. You may request deletion of your account by contacting us at info@egemenokur.com.
           </p>
 
           <h2>6. Your rights</h2>
@@ -83,7 +83,7 @@ export default function PrivacyPage() {
           <h2>9. Contact</h2>
           <p>
             For privacy-related questions, contact us at{" "}
-            <a href="mailto:privacy@co-helper.com">privacy@co-helper.com</a>.
+            <a href="mailto:info@egemenokur.com">info@egemenokur.com</a>.
           </p>
         </ProseBlock>
       </ContentSection>

@@ -15,6 +15,7 @@ import {
   LuUser,
   LuReceipt,
   LuClock,
+  LuSparkles,
 } from "react-icons/lu"
 import type { IconType } from "react-icons"
 import { GREEN, INK, MUTED, PAPER, RULE, SURFACE } from "@/theme/tokens"
@@ -22,6 +23,7 @@ import { AppInput } from "@/components/ui/AppInput"
 import { searchWorkspace, type WorkspaceSearchResult } from "@/api/workspace"
 import { getNotifications, markAllNotificationsRead, markNotificationRead, type AppNotification } from "@/api/notifications"
 import { BrandMark } from "@/components/brand/BrandMark"
+import { useAssistant } from "@/components/assistant/AssistantDock"
 import { TodoCardProvider, useTodoCard } from "@/components/work/TodoCardContext"
 import {
   DialogBody,
@@ -91,6 +93,7 @@ export default function ProtectedLayout() {
 
 function ProtectedApp() {
   const { user, logout } = useAuthContext()
+  const assistant = useAssistant()
   const navigate = useNavigate()
   const { openTodo } = useTodoCard()
   const [profile, setProfile] = useState<User | null>(null)
@@ -195,6 +198,19 @@ function ProtectedApp() {
         </Box>
 
         <Box px={5} py={5} borderTop="1px solid rgba(255,255,255,0.06)">
+          <Box
+            as="button"
+            display="flex"
+            alignItems="center"
+            gap={2}
+            mb={3}
+            color="rgba(255,255,255,0.72)"
+            fontSize="0.8125rem"
+            fontWeight="600"
+            onClick={() => assistant?.open()}
+          >
+            <LuSparkles size={14} /> Assistant
+          </Box>
           <Text fontSize="0.75rem" color="rgba(255,255,255,0.45)" mb={2} overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
             {user.email}
           </Text>
@@ -279,6 +295,18 @@ function ProtectedApp() {
             </Box>
             <DialogHeader display="none" />
             <DialogBody px={6} py={2} pb={5}>
+              <Box
+                as="button"
+                w="100%"
+                textAlign="left"
+                py={3}
+                borderBottom={`1px solid ${RULE}`}
+                color={INK}
+                fontWeight="600"
+                onClick={() => { setMoreOpen(false); assistant?.open() }}
+              >
+                Assistant
+              </Box>
               {(isOwner ? [
                 { to: "/app/invoices", label: "Invoices" },
                 { to: "/app/clients", label: "Clients" },

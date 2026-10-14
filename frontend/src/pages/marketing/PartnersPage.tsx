@@ -29,7 +29,7 @@ export default function PartnersPage() {
       <ContentSection>
         <Grid templateColumns={{ base: "1fr", lg: "1fr 1fr" }} gap={12} mb={16}>
           <Box>
-            <Heading fontSize="1.125rem" fontWeight="600" color={INK} mb={5}>Why one-person businesses use Co-Helper</Heading>
+            <Heading fontSize="1.125rem" fontWeight="600" color={INK} mb={5}>Why one-person businesses use EgemenOkur</Heading>
             <Stack gap={3} mb={8}>
               {BENEFITS.map((b) => (
                 <CheckItem key={b}>{b}</CheckItem>

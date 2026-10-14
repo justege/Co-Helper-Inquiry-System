@@ -1,28 +1,21 @@
 import { Box, Text } from "@chakra-ui/react"
 import { Link } from "react-router-dom"
-import { GREEN, INK } from "@/theme/tokens"
+import { INK } from "@/theme/tokens"
 
 export function BrandGlyph({ size = 28 }: { size?: number }) {
-  const diamond = Math.round(size * 0.38)
+  const fontSize = size <= 24 ? "0.95rem" : "1.15rem"
   return (
-    <Box
-      w={`${size}px`}
-      h={`${size}px`}
-      bg={GREEN}
-      rounded="md"
-      display="flex"
-      alignItems="center"
-      justifyContent="center"
-      flexShrink={0}
+    <Text
+      as="span"
+      fontFamily="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace"
+      fontWeight="500"
+      fontSize={fontSize}
+      letterSpacing="-0.04em"
+      lineHeight="1"
+      color="inherit"
     >
-      <Box
-        w={`${diamond}px`}
-        h={`${diamond}px`}
-        bg="white"
-        rounded="1px"
-        transform="rotate(45deg)"
-      />
-    </Box>
+      {"<EO/>"}
+    </Text>
   )
 }
 
@@ -37,24 +30,24 @@ export function BrandMark({
 }) {
   const glyph = size === "sm" ? 24 : 28
   const mark = (
-    <Box display="flex" alignItems="center" gap="10px">
+    <Box display="flex" alignItems="center" gap="10px" color={inverted ? "white" : INK}>
       <BrandGlyph size={glyph} />
       <Text
         fontSize={size === "sm" ? "0.6875rem" : "0.75rem"}
-        fontWeight="800"
-        letterSpacing="0.08em"
+        fontWeight="600"
+        letterSpacing="0.14em"
         textTransform="uppercase"
-        color={inverted ? "white" : INK}
+        color="inherit"
         lineHeight="1"
       >
-        Co-Helper
+        EgemenOkur
       </Text>
     </Box>
   )
 
   if (!to) return mark
   return (
-    <Link to={to} style={{ textDecoration: "none" }}>
+    <Link to={to} style={{ textDecoration: "none", color: "inherit" }}>
       {mark}
     </Link>
   )

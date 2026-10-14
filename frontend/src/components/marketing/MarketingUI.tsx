@@ -260,7 +260,7 @@ export function MarketingFooter() {
             gap={3}
           >
             <Text fontSize="0.8125rem" color={MUTED} fontWeight="500">
-              © {new Date().getFullYear()} Co-Helper. All rights reserved.
+              © {new Date().getFullYear()} EgemenOkur. All rights reserved.
             </Text>
             <Text fontSize="0.8125rem" color={MUTED} fontWeight="500">
               Berlin · Remote-first · One-person businesses

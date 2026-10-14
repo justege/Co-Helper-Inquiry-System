@@ -7,7 +7,7 @@ const PRESS_ITEMS = [
   {
     date: "September 2026",
     outlet: "Product",
-    title: "Co-Helper launches a workspace for one-person businesses and the companies they work with",
+    title: "EgemenOkur launches a workspace for one-person businesses and the companies they work with",
   },
   {
     date: "August 2026",
@@ -54,7 +54,7 @@ export default function PressPage() {
               <Text fontSize="0.875rem" color={MUTED} lineHeight="1.65" mb={4}>
                 For press inquiries, interview requests, and media assets, contact our communications team.
               </Text>
-              <Text fontSize="0.875rem" fontWeight="600" color={INK}>press@co-helper.com</Text>
+              <Text fontSize="0.875rem" fontWeight="600" color={INK}>info@egemenokur.com</Text>
             </Box>
 
             <Box p={7} bg="white" borderRadius="8px" border={`1px solid ${RULE}`}>
@@ -68,9 +68,9 @@ export default function PressPage() {
             <Box p={7} bg="white" borderRadius="8px" border={`1px solid ${RULE}`}>
               <Heading fontSize="1rem" fontWeight="600" color={INK} mb={3}>Company boilerplate</Heading>
               <Text fontSize="0.875rem" color={MUTED} lineHeight="1.75">
-                Co-Helper is a shared workspace for one-person businesses and the companies they work with.
+                EgemenOkur is a shared workspace for one-person businesses and the companies they work with.
                 Operators invite the companies they already serve, then keep the brief, chat, files, to-dos,
-                rates, hours, and payment logs in one place. Co-Helper does not match parties, assign a
+                rates, hours, and payment logs in one place. EgemenOkur does not match parties, assign a
                 project manager, or process payments.
               </Text>
             </Box>

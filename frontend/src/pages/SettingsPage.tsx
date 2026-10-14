@@ -99,7 +99,7 @@ export default function SettingsPage() {
       stats={[
         { label: "Invoice details", value: workspace ? `${invoiceFilled}/6` : "—" },
         { label: "Tax", value: taxLabel },
-        { label: "Email", value: workspace?.emailMode === "smtp" ? "SMTP" : "Co-Helper" },
+        { label: "Email", value: workspace?.emailMode === "smtp" ? "SMTP" : "EgemenOkur" },
         { label: "Week", value: workspace?.weeklyHours ? `${workspace.weeklyHours}h` : "—" },
       ]}
     >
@@ -519,13 +519,13 @@ function EmailSettingsSection() {
   return (
     <SectionCard icon={<LuMail size={16} />} title="Email">
       <Text fontSize="0.875rem" color={APP_MUTED} mb={4}>
-        Invites go through Co-Helper email or your own SMTP.
+        Invites go through EgemenOkur email or your own SMTP.
       </Text>
       <Grid templateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={5}>
         <Box>
           <FieldLabel>Send via</FieldLabel>
           <FormNativeSelect value={emailMode} onChange={(e) => setEmailMode(e.target.value)}>
-            <option value="platform">Co-Helper email</option>
+            <option value="platform">EgemenOkur email</option>
             <option value="smtp">Your SMTP</option>
           </FormNativeSelect>
         </Box>
@@ -585,7 +585,7 @@ function BillingSection() {
         {info ? `Plan: ${info.plan} · Status: ${info.status}` : "Loading billing…"}
       </Text>
       <Text fontSize="0.8125rem" color={APP_MUTED} mb={4}>
-        Intro pricing is $9/month until 31 Dec 2026, then $49/month. Co-Helper does not take commission on client work.
+        Intro pricing is $9/month until 31 Dec 2026, then $49/month. EgemenOkur does not take commission on client work.
       </Text>
       {info?.stripeConfigured ? (
         <Box display="flex" gap={2}>

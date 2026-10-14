@@ -9,7 +9,7 @@ import { AuthDivider, SocialAuthButtons } from "@/components/auth/SocialAuthButt
 import { authFieldLabel, authInputProps } from "@/components/auth/authStyles"
 import { useAuthContext } from "../components/auth/AuthContext"
 import { acceptInvite } from "@/api/workspace"
-import loginPng from "@/assets/login.png"
+import loginVideo from "@/assets/EOLogin.mp4"
 import { AppButton } from "@/components/ui/AppButton"
 
 
@@ -56,10 +56,10 @@ export default function LoginPage() {
   return (
     <AuthShell
       title="Sign in"
-      subtitle="See the projects you share with the one-person business you work with."
+      subtitle="Sign in to the projects you share on EgemenOkur."
+      videoSrc={loginVideo}
       promo={{
-        tagline: "You were invited here — current work, hours, and invoices in one place.",
-        imageSrc: loginPng,
+        tagline: "Current work, hours, and invoices in one place.",
       }}
       footer={
         <>

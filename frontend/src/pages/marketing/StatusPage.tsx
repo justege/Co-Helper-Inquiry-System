@@ -17,7 +17,7 @@ export default function StatusPage() {
       <PageHero
         label="Support"
         title="System status"
-        subtitle="Live checks against the Co-Helper API and database."
+        subtitle="Live checks against the EgemenOkur API and database."
       />
       <ContentSection narrow>
         <Box p={6} bg={SURFACE} borderRadius="8px" border={`1px solid ${RULE}`} mb={8}>

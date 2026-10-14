@@ -11,7 +11,9 @@ import expensesRouter from "./routes/expenses.js";
 import storageRouter from "./routes/storage.js";
 import notificationsRouter from "./routes/notifications.js";
 import billingRouter, { stripeWebhook } from "./routes/billing.js";
+import assistantRouter from "./routes/assistant.js";
 import { ensureStorageBuckets } from "./storage.js";
+import { geminiConfigured } from "./lib/gemini.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isProduction = process.env.NODE_ENV === "production";
@@ -29,8 +31,8 @@ const allowedOrigins = new Set(
 );
 
 allowedOrigins.add(PRODUCTION_APP_ORIGIN);
-allowedOrigins.add("https://co-helper.com");
-allowedOrigins.add("https://www.co-helper.com");
+allowedOrigins.add("https://egemenokur.com");
+allowedOrigins.add("https://www.egemenokur.com");
 
 if (process.env.RAILWAY_PUBLIC_DOMAIN) {
   allowedOrigins.add(`https://${process.env.RAILWAY_PUBLIC_DOMAIN}`);
@@ -66,6 +68,7 @@ app.use("/api/workspace", expensesRouter);
 app.use("/api/storage", storageRouter);
 app.use("/api/notifications", notificationsRouter);
 app.use("/api/billing", billingRouter);
+app.use("/api/assistant", assistantRouter);
 app.use("/api/public", publicRouter);
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
@@ -81,6 +84,10 @@ if (isProduction) {
 ensureStorageBuckets().catch((err) => {
   console.error("[storage]", err);
 });
+
+if (!geminiConfigured()) {
+  console.warn("[assistant] GEMINI_API_KEY is not set — the assistant will be unavailable");
+}
 
 export { app };
 

@@ -15,7 +15,7 @@ const INTEGRATIONS = [
   {
     category: "Communication",
     items: [
-      { name: "Email notifications", status: "Available", detail: "Invites and invoice emails via Co-Helper or your SMTP." },
+      { name: "Email notifications", status: "Available", detail: "Invites and invoice emails via EgemenOkur or your SMTP." },
       { name: "In-app notifications", status: "Available", detail: "Invite accepted and invoice sent land in the workspace bell." },
       { name: "Slack / Teams", status: "Roadmap", detail: "Optional alerts later — the source of truth stays the workspace." },
     ],
@@ -63,7 +63,7 @@ export default function IntegrationsPage() {
       <ContentSection>
         <Grid templateColumns={{ base: "1fr", lg: "1fr 1fr" }} gap={6} mb={12}>
           <InfoCard title="Built for a two-sided workspace">
-            Integrations serve the one-person business and invited companies on a project. We don’t sync work out to a marketplace or a Co-Helper PM.
+            Integrations serve the one-person business and invited companies on a project. We don’t sync work out to a marketplace or a EgemenOkur PM.
           </InfoCard>
           <InfoCard title="You opt in">
             SMTP and Stripe only run when you configure them. We don’t scrape boards or send project text to a model unless a later feature asks you first.

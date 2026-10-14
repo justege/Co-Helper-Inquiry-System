@@ -68,7 +68,7 @@ export default function ChangelogPage() {
       <PageHero
         label="Platform"
         title="Changelog"
-        subtitle="What changed in the Co-Helper workspace — not a marketplace feed."
+        subtitle="What changed in the EgemenOkur workspace — not a marketplace feed."
       />
 
       <ContentSection narrow>

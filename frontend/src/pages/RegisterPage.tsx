@@ -82,7 +82,7 @@ export default function RegisterPage() {
   return (
     <AuthShell
       title="Create your account"
-      subtitle="You were invited to Co-Helper — set up your account to join the workspace."
+      subtitle="You were invited to EgemenOkur — set up your account to join the workspace."
       promo={{
         tagline: "One shared workspace with the one-person business you work with — jobs, rates, and payments in one place.",
         imageSrc: loginPng,
