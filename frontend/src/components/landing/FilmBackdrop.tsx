@@ -5,11 +5,13 @@ import backVideo from "@/assets/EOBack.mp4"
 export default function FilmBackdrop({
   src = backVideo,
   dim = 0,
+  loop = true,
   videoRef: videoRefProp,
   children,
 }: {
   src?: string
   dim?: number
+  loop?: boolean
   videoRef?: RefObject<HTMLVideoElement | null>
   children?: ReactNode
 }) {
@@ -30,7 +32,7 @@ export default function FilmBackdrop({
         src={src}
         autoPlay
         muted
-        loop
+        loop={loop}
         playsInline
         aria-hidden="true"
         style={{

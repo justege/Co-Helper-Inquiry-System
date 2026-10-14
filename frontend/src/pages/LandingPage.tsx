@@ -1,11 +1,30 @@
 import { useEffect, useRef, useState } from "react"
 import { Flex, Text } from "@chakra-ui/react"
-import { Link } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import FilmBackdrop from "@/components/landing/FilmBackdrop"
 
-function Choice({ to, children }: { to: string; children: string }) {
+const REVEAL_AT = 5
+const HOLD_AT = 15
+
+function Choice({ onChoose, children }: { onChoose: () => void; children: string }) {
   return (
-    <Link to={to} style={{ textDecoration: "none", pointerEvents: "auto", position: "relative", zIndex: 2 }}>
+    <button
+      type="button"
+      onClick={onChoose}
+      style={{
+        background: "none",
+        border: "none",
+        padding: 0,
+        margin: 0,
+        cursor: "pointer",
+        font: "inherit",
+        color: "inherit",
+        textDecoration: "none",
+        pointerEvents: "auto",
+        position: "relative",
+        zIndex: 2,
+      }}
+    >
       <Text
         as="span"
         display="inline-block"
@@ -21,13 +40,16 @@ function Choice({ to, children }: { to: string; children: string }) {
       >
         {children}
       </Text>
-    </Link>
+    </button>
   )
 }
 
 export default function LandingPage() {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const leavingRef = useRef(false)
+  const navigate = useNavigate()
   const [visible, setVisible] = useState(false)
+  const [departing, setDeparting] = useState(false)
 
   useEffect(() => {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -39,7 +61,12 @@ export default function LandingPage() {
     const video = videoRef.current
     const reveal = () => setVisible(true)
     const onTime = () => {
-      if (video && video.currentTime >= 5) reveal()
+      if (!video) return
+      if (video.currentTime >= REVEAL_AT) reveal()
+      if (!leavingRef.current && video.currentTime >= HOLD_AT) {
+        video.pause()
+        if (video.currentTime > HOLD_AT) video.currentTime = HOLD_AT
+      }
     }
     const fallback = window.setTimeout(reveal, 8000)
     video?.addEventListener("timeupdate", onTime)
@@ -53,19 +80,67 @@ export default function LandingPage() {
     }
   }, [])
 
+  function depart(to: string) {
+    if (leavingRef.current) return
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    const video = videoRef.current
+    if (reduce || !video) {
+      navigate(to)
+      return
+    }
+
+    leavingRef.current = true
+    setDeparting(true)
+
+    let finished = false
+    let timer = 0
+    const finish = () => {
+      if (finished) return
+      finished = true
+      window.clearTimeout(timer)
+      navigate(to)
+    }
+
+    const playOut = () => {
+      if (video.currentTime < HOLD_AT) {
+        const cap = Number.isFinite(video.duration) ? video.duration : HOLD_AT
+        video.currentTime = Math.min(HOLD_AT, cap)
+      }
+      video.addEventListener("ended", finish, { once: true })
+      video.addEventListener("error", finish, { once: true })
+      const remaining = Number.isFinite(video.duration)
+        ? Math.max(0, video.duration - video.currentTime)
+        : 20
+      if (remaining < 0.05 || video.ended) {
+        finish()
+        return
+      }
+      timer = window.setTimeout(finish, (remaining + 1.5) * 1000)
+      void video.play().catch(() => finish())
+    }
+
+    if (video.readyState >= 1) playOut()
+    else {
+      video.addEventListener("loadedmetadata", playOut, { once: true })
+      video.addEventListener("error", finish, { once: true })
+    }
+  }
+
+  const shown = visible && !departing
+
   return (
-    <FilmBackdrop videoRef={videoRef} dim={visible ? 0.38 : 0}>
+    <FilmBackdrop videoRef={videoRef} loop={false} dim={shown ? 0.38 : 0}>
       <Flex
         minH="100vh"
         align="center"
         justify="center"
         px={6}
-        opacity={visible ? 1 : 0}
-        transform={visible ? "translateY(0)" : "translateY(16px)"}
+        opacity={shown ? 1 : 0}
+        transform={shown ? "translateY(0)" : "translateY(16px)"}
         transition="opacity 1.8s ease, transform 1.8s ease"
-        pointerEvents={visible ? "auto" : "none"}
-        aria-hidden={!visible}
-        data-choices={visible ? "visible" : "hidden"}
+        pointerEvents={shown ? "auto" : "none"}
+        aria-hidden={!shown}
+        data-choices={shown ? "visible" : departing ? "departing" : "hidden"}
       >
         <Flex direction="column" align="center" gap={{ base: 8, md: 10 }}>
           <Text
@@ -83,7 +158,7 @@ export default function LandingPage() {
             gap={{ base: 4, md: 7 }}
             direction={{ base: "column", sm: "row" }}
           >
-            <Choice to="/login">Log in</Choice>
+            <Choice onChoose={() => depart("/login")}>Log in</Choice>
             <Text
               color="rgba(255,255,255,0.55)"
               fontSize="0.75rem"
@@ -92,7 +167,7 @@ export default function LandingPage() {
             >
               or
             </Text>
-            <Choice to="/request">New project request</Choice>
+            <Choice onChoose={() => depart("/request")}>New project request</Choice>
           </Flex>
         </Flex>
       </Flex>
