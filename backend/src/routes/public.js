@@ -3,8 +3,6 @@ import { queryOne, execute } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { registerPartner } from "../lib/partnerRegistration.js";
 import { sendEmail, contactEmail, projectRequestEmail } from "../lib/email.js";
-import { polishCopy } from "../lib/assistant.js";
-import { allowRequest, clientAddress, sendAssistantError } from "../lib/gemini.js";
 
 const router = Router();
 
@@ -115,23 +113,6 @@ router.post("/project-request", async (req, res) => {
   } catch (err) {
     console.error("[project-request]", err);
     res.status(500).json({ error: err.message });
-  }
-});
-
-router.post("/assistant/polish", async (req, res) => {
-  if (!allowRequest(`public:${clientAddress(req)}`, 12, 60 * 60 * 1000)) {
-    return res.status(429).json({ error: "Too many assistant requests. Try again later." });
-  }
-  try {
-    res.json(await polishCopy({
-      kind: req.body?.kind,
-      text: req.body?.text,
-      instruction: req.body?.instruction,
-      hint: req.body?.hint,
-      publicOnly: true,
-    }));
-  } catch (err) {
-    sendAssistantError(res, err);
   }
 });
 

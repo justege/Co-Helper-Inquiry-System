@@ -1,5 +1,4 @@
 import { api } from "../lib/api"
-import { getApiBaseUrl } from "../lib/apiBase"
 
 export type AssistantContextInput = {
   surface?: string
@@ -34,19 +33,6 @@ type PolishBody = {
   context?: AssistantContextInput
 }
 
-async function publicPost<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${getApiBaseUrl()}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  })
-  if (!res.ok) {
-    const payload = await res.json().catch(() => ({}))
-    throw new Error((payload as { error?: string }).error ?? `HTTP ${res.status}`)
-  }
-  return res.json() as Promise<T>
-}
-
 export function draftPlain(draft: AssistantDraft): string {
   if (draft.kind === "new_project") return [draft.name, draft.description || draft.text].filter(Boolean).join("\n\n")
   if (draft.kind === "new_todo") return [draft.title, draft.body || draft.description, draft.acceptanceCriteria && `Acceptance: ${draft.acceptanceCriteria}`].filter(Boolean).join("\n\n")
@@ -55,9 +41,6 @@ export function draftPlain(draft: AssistantDraft): string {
 
 export const polishText = (body: PolishBody) =>
   api.post<{ text: string }>("/api/assistant/polish", body).then((result) => result.text)
-
-export const polishPublicText = (body: PolishBody) =>
-  publicPost<{ text: string }>("/api/public/assistant/polish", body).then((result) => result.text)
 
 export const draftWithAssistant = (body: {
   kind: string

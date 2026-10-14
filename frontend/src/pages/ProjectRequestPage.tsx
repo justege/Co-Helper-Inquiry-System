@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form"
 import FilmBackdrop from "@/components/landing/FilmBackdrop"
 import loginVideo from "@/assets/EOLogin.mp4"
 import { submitProjectRequest } from "@/api/public"
-import { AiWrite } from "@/components/assistant/AiWrite"
 
 type RequestFields = {
   name: string
@@ -194,13 +193,6 @@ export default function ProjectRequestPage() {
                     </Field>
                     <Field label="What do you need" htmlFor="brief-description" error={errors.description?.message} required>
                       <textarea id="brief-description" className="brief-field" aria-invalid={!!errors.description} placeholder="The goal, who it’s for, and anything already decided." {...register("description", { required: "Describe the work in a sentence or two", minLength: { value: 20, message: "Add a little more detail — a sentence or two is enough" } })} />
-                      <AiWrite
-                        scope="public"
-                        kind="brief"
-                        value={values.description}
-                        hint={[values.projectName && `Project: ${values.projectName}`, values.projectType && `Type: ${values.projectType}`].filter(Boolean).join(". ")}
-                        onText={(text) => setValue("description", text, { shouldValidate: true, shouldDirty: true })}
-                      />
                     </Field>
                   </Flex>
                 )}
@@ -227,13 +219,6 @@ export default function ProjectRequestPage() {
                     </Field>
                     <Field label="Anything else" htmlFor="brief-notes">
                       <textarea id="brief-notes" className="brief-field" placeholder="Constraints, links, or a preferred way to talk." {...register("notes")} />
-                      <AiWrite
-                        scope="public"
-                        kind="brief"
-                        value={values.notes}
-                        hint={[values.projectName && `Project: ${values.projectName}`, values.description && `Brief: ${values.description}`].filter(Boolean).join("\n")}
-                        onText={(text) => setValue("notes", text, { shouldDirty: true })}
-                      />
                     </Field>
                   </Flex>
                 )}

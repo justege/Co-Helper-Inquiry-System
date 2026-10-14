@@ -25,13 +25,6 @@ export function allowRequest(key, limit, windowMs) {
   return true;
 }
 
-export function clientAddress(req) {
-  const forwarded = req.headers["x-forwarded-for"];
-  const raw = Array.isArray(forwarded) ? forwarded[0] : forwarded;
-  const ip = (raw ? String(raw).split(",")[0] : req.ip) || "unknown";
-  return ip.trim().slice(0, 80);
-}
-
 function requireKey() {
   if (!geminiConfigured()) {
     throw assistantError(503, "Add GEMINI_API_KEY to the server environment");

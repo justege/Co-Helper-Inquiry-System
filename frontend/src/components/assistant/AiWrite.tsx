@@ -7,7 +7,6 @@ import { GREEN } from "@/theme/tokens"
 import {
   draftPlain,
   draftWithAssistant,
-  polishPublicText,
   polishText,
   type AssistantContextInput,
   type AssistantDraft,
@@ -20,7 +19,6 @@ export function AiWrite({
   onDraft,
   context,
   hint,
-  scope = "app",
   mode = "both",
   draftKind,
 }: {
@@ -30,7 +28,6 @@ export function AiWrite({
   onDraft?: (draft: AssistantDraft) => void
   context?: AssistantContextInput
   hint?: string
-  scope?: "app" | "public"
   mode?: "both" | "write" | "polish"
   draftKind?: string
 }) {
@@ -45,8 +42,7 @@ export function AiWrite({
     setBusy(true)
     setError(null)
     try {
-      const request = { kind, text: value.trim(), hint, context }
-      const text = scope === "public" ? await polishPublicText(request) : await polishText(request)
+      const text = await polishText({ kind, text: value.trim(), hint, context })
       onText(text)
       setOpen(false)
     } catch (err) {
@@ -66,17 +62,7 @@ export function AiWrite({
     setBusy(true)
     setError(null)
     try {
-      if (scope === "public") {
-        const text = await polishPublicText({
-          kind,
-          text: source || instruction,
-          instruction: source
-            ? instruction || "Make this clearer and more specific."
-            : "Turn these notes into the finished text for this field.",
-          hint,
-        })
-        onText?.(text)
-      } else if (onDraft) {
+      if (onDraft) {
         onDraft(await draftWithAssistant({
           kind: draftKind || kind,
           prompt: instruction || "Rewrite this so it is clear and specific.",

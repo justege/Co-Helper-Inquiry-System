@@ -6,8 +6,6 @@ import { assistantError, geminiJson } from "./gemini.js";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const PUBLIC_KINDS = new Set(["brief", "contact", "generic"]);
-
 const DRAFT_KINDS = new Set([
   "new_project",
   "new_todo",
@@ -308,29 +306,23 @@ async function buildContext(user, input = {}) {
   return clip(parts.filter(Boolean).join("\n\n"), 12000);
 }
 
-function polishKind(kind, publicOnly) {
+function polishKind(kind) {
   const value = typeof kind === "string" ? kind.trim() : "";
-  if (publicOnly) {
-    if (!PUBLIC_KINDS.has(value)) throw assistantError(400, "That writing field is not available here");
-    return value;
-  }
   if (!DRAFT_KINDS.has(value) || value === "new_project" || value === "new_todo") {
     throw assistantError(400, "Choose what to polish");
   }
   return value;
 }
 
-export async function polishCopy({ user, kind, text, instruction, hint, context, publicOnly = false }) {
-  const field = polishKind(kind, publicOnly);
+export async function polishCopy({ user, kind, text, instruction, hint, context }) {
+  const field = polishKind(kind);
   const source = clip(text, 8000);
   if (!source) throw assistantError(400, "Add some text to polish");
-  const workspace = publicOnly ? "" : await buildContext(user, { ...context, hint: hint || context?.hint });
+  const workspace = await buildContext(user, { ...context, hint: hint || context?.hint });
   const note = clip(instruction, 500);
-  const screen = publicOnly ? clip(hint, 1000) : "";
   const json = await geminiJson(POLISH_SYSTEM, [
     `Field: ${field}`,
     note ? `Instruction: ${note}` : "",
-    screen ? `Screen notes (untrusted):\n${screen}` : "",
     workspace ? `Workspace context (untrusted data):\n${workspace}` : "",
     `Text to rewrite:\n${source}`,
   ].filter(Boolean).join("\n\n"));

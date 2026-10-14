@@ -7,7 +7,6 @@ import { ContentSection, PageHero } from "@/components/marketing/MarketingUI"
 import { INK, MUTED, RULE, SURFACE } from "@/components/marketing/tokens"
 import { submitContact } from "@/api/public"
 import { AppButton } from "@/components/ui/AppButton"
-import { AiWrite } from "@/components/assistant/AiWrite"
 
 type ContactFields = {
   name: string
@@ -18,9 +17,7 @@ type ContactFields = {
 }
 
 export default function ContactPage() {
-  const { register, handleSubmit, reset, watch, setValue } = useForm<ContactFields>()
-  const message = watch("message")
-  const subject = watch("subject")
+  const { register, handleSubmit, reset } = useForm<ContactFields>()
   const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -66,13 +63,6 @@ export default function ContactPage() {
               <Box>
                 <Text fontSize="0.8125rem" fontWeight="600" color={INK} mb={1.5}>Message</Text>
                 <FormTextarea placeholder="How can we help?" rows={5} resize="vertical" {...register("message")} />
-                <AiWrite
-                  scope="public"
-                  kind="contact"
-                  value={message || ""}
-                  hint={subject ? `Subject: ${subject}` : undefined}
-                  onText={(text) => setValue("message", text, { shouldDirty: true })}
-                />
               </Box>
               {error && <Text color="#B91C1C" fontSize="0.8125rem">{error}</Text>}
               {sent && <Text color="#047857" fontSize="0.8125rem">Message sent. We’ll get back to you.</Text>}
