@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router-dom"
 import { Box, Grid, Spinner, Text } from "@chakra-ui/react"
 import { LuPlus } from "react-icons/lu"
 import { getMe, type User } from "@/api/users"
-import { getMyWorkspace } from "@/api/workspace"
 import { getWorkbench, type WorkDiscussion, type WorkTodo, type Workbench } from "@/api/work"
 import { PageShell } from "@/components/ui/PageShell"
 import { OnboardingChecklist } from "@/components/workspace/OnboardingChecklist"
@@ -19,29 +18,20 @@ import { formatHours, formatWhen, TODO_STATUS_LABEL } from "@/lib/hours"
 export default function DashboardPage() {
   const [me, setMe] = useState<User | null>(null)
   const [bench, setBench] = useState<Workbench | null>(null)
-  const [clientCount, setClientCount] = useState(0)
-  const [hasWorkspace, setHasWorkspace] = useState(false)
   const [loading, setLoading] = useState(true)
   const { openTodo } = useTodoCard()
   const navigate = useNavigate()
 
   function load(quiet = false) {
     if (!quiet) setLoading(true)
-    ;(async () => {
-      const profile = await getMe()
-      setMe(profile)
-      const [ws, work] = await Promise.all([
-        getMyWorkspace().catch(() => null),
-        getWorkbench().catch(() => null),
-      ])
-      setBench(work)
-      if (ws && "workspace" in ws) {
-        setHasWorkspace(true)
-        setClientCount(ws.clients.length)
-      } else if (ws && "workspaces" in ws) {
-        setHasWorkspace(ws.workspaces.length > 0)
-      }
-    })()
+    Promise.all([
+      getMe().catch(() => null),
+      getWorkbench().catch(() => null),
+    ])
+      .then(([profile, work]) => {
+        setMe(profile)
+        setBench(work)
+      })
       .catch(() => null)
       .finally(() => setLoading(false))
   }
@@ -98,8 +88,8 @@ export default function DashboardPage() {
     >
       <OnboardingChecklist
         isOwner={Boolean(owner)}
-        hasWorkspace={hasWorkspace}
-        hasClients={clientCount > 0}
+        hasWorkspace={Boolean(bench?.workspace)}
+        hasClients={(bench?.clientCount ?? 0) > 0}
         hasProjects={(bench?.projectCount ?? 0) > 0}
       />
 

@@ -27,17 +27,15 @@ export function toUser(row) {
 
 router.get("/me", requireAuth, async (req, res) => {
   try {
-    await ensureUserByFirebaseUid({
-      firebaseUid: req.uid,
-      email: req.firebaseUser.email ?? "",
-    });
-
-    const data = await fetchUser("u.firebase_uid = $1", [req.uid]);
-    if (!data) return res.status(404).json({ error: "User not found" });
-
-    if (data.role === "expert") {
-      await ensureWorkspaceForOwner(data.id, data.company_name || data.username);
+    const email = req.firebaseUser.email ?? "";
+    let data = await fetchUser("u.firebase_uid = $1", [req.uid]);
+    if (!data) {
+      await ensureUserByFirebaseUid({ firebaseUid: req.uid, email });
+      data = await fetchUser("u.firebase_uid = $1", [req.uid]);
+    } else if (email && (data.email ?? "") !== email) {
+      data = await queryOne("UPDATE users SET email = $1 WHERE id = $2 RETURNING *", [email, data.id]);
     }
+    if (!data) return res.status(404).json({ error: "User not found" });
 
     res.json(toUser(data));
   } catch (err) {

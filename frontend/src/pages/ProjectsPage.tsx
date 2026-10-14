@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, useEffect } from "react"
+import { useCallback, useMemo, useRef, useState, useEffect } from "react"
 import { Link, useSearchParams } from "react-router-dom"
 import { Box, Grid, Spinner, Text } from "@chakra-ui/react"
 import { LuPencil, LuPlus, LuTrash2 } from "react-icons/lu"
@@ -41,7 +41,9 @@ export default function ProjectsPage() {
   const [params, setParams] = useSearchParams()
   const [projects, setProjects] = useState<WorkProject[]>([])
   const [clients, setClients] = useState<WorkspaceClient[]>([])
+  const [clientCount, setClientCount] = useState(0)
   const [canManage, setCanManage] = useState(false)
+  const clientsRef = useRef<WorkspaceClient[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [dialog, setDialog] = useState<"create" | "rename" | "delete" | null>(null)
@@ -58,9 +60,9 @@ export default function ProjectsPage() {
     setLoading(true)
     setError(null)
     try {
-      const [ws, work] = await Promise.all([getMyWorkspace(), getWorkbench()])
-      setCanManage(ws.role === "owner")
-      if (ws.role === "owner") setClients(ws.clients)
+      const work = await getWorkbench()
+      setCanManage(work.role === "owner")
+      setClientCount(work.clientCount ?? 0)
       setProjects(work.projects)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load projects")
@@ -71,40 +73,61 @@ export default function ProjectsPage() {
 
   useEffect(() => { void load() }, [load])
 
+  async function ensureClients() {
+    if (clientsRef.current.length) return clientsRef.current
+    const ws = await getMyWorkspace()
+    const list = "clients" in ws ? ws.clients : []
+    clientsRef.current = list
+    setClients(list)
+    setClientCount(list.length)
+    return list
+  }
+
+  async function openCreate(preferredClientId?: string | null) {
+    try {
+      const list = await ensureClients()
+      setActive(null)
+      setName("")
+      setDescription("")
+      setClientId(
+        preferredClientId && list.some((client) => client.id === preferredClientId)
+          ? preferredClientId
+          : (list[0]?.id ?? "")
+      )
+      setEmails([...EMPTY_INVITE_EMAILS])
+      setFormError(null)
+      setDialog("create")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load clients")
+    }
+  }
+
+  async function openRename(project: WorkProject) {
+    try {
+      await ensureClients()
+      setActive(project)
+      setName(project.name)
+      setDescription(project.description || "")
+      setClientId(project.clientId)
+      setFormError(null)
+      setDialog("rename")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load clients")
+    }
+  }
+
   useEffect(() => {
-    if (loading || !canManage || clients.length === 0) return
+    if (loading || !canManage || clientCount === 0) return
     if (params.get("new") !== "1") return
-    openCreate(params.get("client"))
+    const preferred = params.get("client")
     setParams((prev) => {
       const next = new URLSearchParams(prev)
       next.delete("new")
       next.delete("client")
       return next
     }, { replace: true })
-  }, [loading, canManage, clients, params, setParams])
-
-  function openCreate(preferredClientId?: string | null) {
-    setActive(null)
-    setName("")
-    setDescription("")
-    setClientId(
-      preferredClientId && clients.some((client) => client.id === preferredClientId)
-        ? preferredClientId
-        : (clients[0]?.id ?? "")
-    )
-    setEmails([...EMPTY_INVITE_EMAILS])
-    setFormError(null)
-    setDialog("create")
-  }
-
-  function openRename(project: WorkProject) {
-    setActive(project)
-    setName(project.name)
-    setDescription(project.description || "")
-    setClientId(project.clientId)
-    setFormError(null)
-    setDialog("rename")
-  }
+    void openCreate(preferred)
+  }, [loading, canManage, clientCount, params, setParams])
 
   function openDelete(project: WorkProject) {
     setActive(project)
@@ -179,7 +202,7 @@ export default function ProjectsPage() {
     }
   }
 
-  const needClient = canManage && clients.length === 0
+  const needClient = canManage && clientCount === 0
   const empty = !loading && projects.length === 0
   const visible = useMemo(() => {
     if (filter === "waiting") return projects.filter((project) => project.waitingOnClient)
@@ -192,8 +215,8 @@ export default function ProjectsPage() {
     id: "projects-create",
     priority: 20,
     accept: (draft) => draft.kind === "new_project",
-    apply: (draft) => {
-      openCreate()
+    apply: async (draft) => {
+      await openCreate()
       if (draft.name) setName(draft.name.slice(0, 80))
       const notes = (draft.description || draft.text).trim()
       if (notes) setDescription(notes)

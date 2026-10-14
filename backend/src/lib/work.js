@@ -1,5 +1,5 @@
 import { query, queryOne, execute, withTransaction } from "../db.js";
-import { mapClient, mapUserBrief, getProjectAccess, getWorkspaceByOwner, assertProjectAssignee, listProjectPeople } from "./workspace.js";
+import { mapClient, mapUserBrief, getProjectAccess, getWorkspaceByOwner, ensureWorkspaceForOwner, assertProjectAssignee, listProjectPeople } from "./workspace.js";
 import {
   addDaysIso,
   invoiceBillingGaps,
@@ -478,7 +478,7 @@ function sortWorkbenchProjects(projects) {
 
 export async function loadProjectsForWorkbench(user) {
   if (user.role === "expert") {
-    const ws = await getWorkspaceByOwner(user.id);
+    const ws = await ensureWorkspaceForOwner(user.id, user.company_name || user.username);
     if (!ws) return { workspace: null, projects: [] };
     const projects = await query(
       `SELECT p.*,
@@ -537,50 +537,31 @@ async function aggregatesForProjects(projectIds, weekStart) {
   if (!projectIds.length) {
     return { logged: {}, week: {}, trailing: {}, unbilled: {}, last: {} };
   }
-  const [logged, week, trailing, unbilled, last] = await Promise.all([
-    query(
-      `SELECT project_id, COALESCE(SUM(hours), 0) AS hours
-       FROM time_entries WHERE project_id = ANY($1::uuid[])
-       GROUP BY project_id`,
-      [projectIds]
-    ),
-    query(
-      `SELECT project_id, COALESCE(SUM(hours), 0) AS hours
-       FROM time_entries
-       WHERE project_id = ANY($1::uuid[]) AND entry_date >= $2
-       GROUP BY project_id`,
-      [projectIds, weekStart]
-    ),
-    query(
-      `SELECT project_id, COALESCE(SUM(hours), 0) / 4.0 AS hours
-       FROM time_entries
-       WHERE project_id = ANY($1::uuid[]) AND entry_date >= CURRENT_DATE - 28
-       GROUP BY project_id`,
-      [projectIds]
-    ),
-    query(
-      `SELECT project_id, COALESCE(SUM(hours), 0) AS hours
-       FROM time_entries
-       WHERE project_id = ANY($1::uuid[]) AND billable = TRUE AND invoice_id IS NULL
-       GROUP BY project_id`,
-      [projectIds]
-    ),
-    query(
-      `SELECT DISTINCT ON (project_id) project_id, entry_date, created_at
-       FROM time_entries
-       WHERE project_id = ANY($1::uuid[])
-       ORDER BY project_id, entry_date DESC, created_at DESC`,
-      [projectIds]
-    ),
-  ]);
-  const toMap = (rows) => Object.fromEntries(rows.map((r) => [r.project_id, asNumber(r.hours)]));
-  return {
-    logged: toMap(logged),
-    week: toMap(week),
-    trailing: toMap(trailing),
-    unbilled: toMap(unbilled),
-    last: Object.fromEntries(last.map((r) => [r.project_id, r.created_at])),
-  };
+  const rows = await query(
+    `SELECT project_id,
+            COALESCE(SUM(hours), 0) AS logged,
+            COALESCE(SUM(hours) FILTER (WHERE entry_date >= $2), 0) AS week,
+            COALESCE(SUM(hours) FILTER (WHERE entry_date >= CURRENT_DATE - 28), 0) / 4.0 AS trailing,
+            COALESCE(SUM(hours) FILTER (WHERE billable = TRUE AND invoice_id IS NULL), 0) AS unbilled,
+            (ARRAY_AGG(created_at ORDER BY entry_date DESC, created_at DESC))[1] AS last_at
+     FROM time_entries
+     WHERE project_id = ANY($1::uuid[])
+     GROUP BY project_id`,
+    [projectIds, weekStart]
+  );
+  const logged = {};
+  const week = {};
+  const trailing = {};
+  const unbilled = {};
+  const last = {};
+  for (const row of rows) {
+    logged[row.project_id] = asNumber(row.logged);
+    week[row.project_id] = asNumber(row.week);
+    trailing[row.project_id] = asNumber(row.trailing);
+    unbilled[row.project_id] = asNumber(row.unbilled);
+    if (row.last_at) last[row.project_id] = row.last_at;
+  }
+  return { logged, week, trailing, unbilled, last };
 }
 
 function mapDiscussion(row) {
@@ -674,38 +655,31 @@ export async function getWorkbench(user) {
   const projectIds = projects.map((p) => p.id);
   const workspaceIds = [...new Set(projects.map((p) => p.workspace_id))];
   if (workspace && !workspaceIds.includes(workspace.id)) workspaceIds.push(workspace.id);
+  const hideInternalOn = projects.filter((p) => !isOwner && p.client_user_id === user.id).map((p) => p.id);
 
-  const [todos, nowRows, agg, collabRows] = await Promise.all([
+  const [todos, agg, collabRows, clientCountRow, elsewhereRow, discussions] = await Promise.all([
     projectIds.length
       ? query(`${TODO_WITH_HOURS} WHERE t.project_id = ANY($1::uuid[])`, [projectIds])
-      : [],
-    workspaceIds.length
-      ? query(
-          `SELECT t.*,
-                  ${TODO_EXTRAS},
-                  au.email AS assignee_email,
-                  au.first_name AS assignee_first_name,
-                  au.last_name AS assignee_last_name,
-                  au.username AS assignee_username,
-                  au.company_name AS assignee_company_name,
-                  p.name AS project_name,
-                  p.client_id,
-                  c.email AS client_email,
-                  c.first_name AS client_first_name,
-                  c.last_name AS client_last_name,
-                  c.company_name AS client_company_name
-           FROM todos t
-           LEFT JOIN users au ON au.id = t.assignee_id
-           JOIN projects p ON p.id = t.project_id
-           JOIN clients c ON c.id = p.client_id
-           WHERE t.workspace_id = ANY($1::uuid[]) AND t.status = 'in_progress'`,
-          [workspaceIds]
-        )
       : [],
     aggregatesForProjects(projectIds, weekStart),
     !isOwner && user.id
       ? query(`SELECT project_id FROM project_members WHERE user_id = $1`, [user.id])
       : Promise.resolve([]),
+    isOwner && workspace
+      ? queryOne(`SELECT COUNT(*)::int AS count FROM clients WHERE workspace_id = $1`, [workspace.id])
+      : null,
+    !isOwner && workspaceIds.length
+      ? queryOne(
+          `SELECT EXISTS (
+             SELECT 1 FROM todos
+             WHERE workspace_id = ANY($1::uuid[])
+               AND status = 'in_progress'
+               AND NOT (project_id = ANY($2::uuid[]))
+           ) AS elsewhere`,
+          [workspaceIds, projectIds]
+        )
+      : null,
+    listRecentDiscussions(projectIds, hideInternalOn),
   ]);
 
   const todosByProject = new Map();
@@ -720,7 +694,6 @@ export async function getWorkbench(user) {
   const isCollaborator = collabIds.size > 0;
   const isClientOnAny = projects.some((p) => p.client_user_id === user.id);
   const role = isOwner ? "owner" : isClientOnAny && !isCollaborator ? "client" : isCollaborator ? "collaborator" : "client";
-  const hideInternalOn = projects.filter((p) => !isOwner && p.client_user_id === user.id).map((p) => p.id);
 
   const summarized = projects.map((project) => {
     const weekly = asNumber(project.workspace_weekly_hours ?? workspace?.weekly_hours, 20);
@@ -746,28 +719,22 @@ export async function getWorkbench(user) {
   const projectById = new Map(projects.map((p) => [p.id, p]));
 
   let now = null;
-  let nowElsewhere = false;
-  for (const row of nowRows) {
-    const yours = summarized.some((p) => p.id === row.project_id);
+  for (const row of todos) {
+    if (row.status !== "in_progress") continue;
     const forClient = hideInternalOn.includes(row.project_id);
     if (forClient && row.internal) continue;
-    const mapped = {
+    const project = projectById.get(row.project_id);
+    now = {
       ...mapTodo(row, { forClient }),
       projectId: row.project_id,
-      projectName: row.project_name,
-      clientName:
-        row.client_company_name ||
-        [row.client_first_name, row.client_last_name].filter(Boolean).join(" ") ||
-        row.client_email,
-      clientId: row.client_id,
-      belongsToYou: yours,
+      projectName: project?.name ?? null,
+      clientName: project ? clientLabel(project) : null,
+      clientId: project?.client_id ?? null,
+      belongsToYou: true,
     };
-    if (yours) {
-      now = mapped;
-      break;
-    }
-    nowElsewhere = true;
+    break;
   }
+  const nowElsewhere = Boolean(elsewhereRow?.elsewhere);
 
   const suggested = !now
     ? visible
@@ -804,8 +771,6 @@ export async function getWorkbench(user) {
   myTodos.sort((a, b) => (rank[a.status] ?? 9) - (rank[b.status] ?? 9));
   waitingOnYou.sort((a, b) => (rank[a.status] ?? 9) - (rank[b.status] ?? 9));
 
-  const discussions = await listRecentDiscussions(projectIds, hideInternalOn);
-
   return {
     role,
     meId: user.id,
@@ -828,6 +793,7 @@ export async function getWorkbench(user) {
         : null,
     now,
     nowElsewhere: Boolean(!isOwner && nowElsewhere && !now),
+    clientCount: isOwner ? Number(clientCountRow?.count ?? 0) : 0,
     lastWorkedAt: lastOnYours?.lastWorkedAt ?? null,
     lastWorkedProjectId: lastOnYours?.id ?? null,
     suggested,

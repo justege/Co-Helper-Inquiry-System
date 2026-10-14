@@ -2,16 +2,16 @@ import { query, queryOne, execute } from "../db.js";
 import { mapClientBilling } from "./billingProfile.js";
 
 export async function ensureWorkspaceForOwner(ownerId, name) {
-  let workspace = await queryOne("SELECT * FROM workspaces WHERE owner_id = $1", [ownerId]);
+  const existing = await queryOne("SELECT * FROM workspaces WHERE owner_id = $1", [ownerId]);
+  if (existing) return existing;
 
-  if (!workspace) {
-    workspace = await queryOne(
-      `INSERT INTO workspaces (owner_id, name)
-       VALUES ($1, $2)
-       RETURNING *`,
-      [ownerId, name?.trim() || "Workspace"]
-    );
-  }
+  const workspace = await queryOne(
+    `INSERT INTO workspaces (owner_id, name)
+     VALUES ($1, $2)
+     ON CONFLICT (owner_id) DO UPDATE SET name = workspaces.name
+     RETURNING *`,
+    [ownerId, name?.trim() || "Workspace"]
+  );
 
   await execute(
     `INSERT INTO workspace_members (workspace_id, user_id, role)

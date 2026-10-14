@@ -37,6 +37,22 @@ export async function listNotifications(userId, { unreadOnly = false, limit = 40
   );
 }
 
+export async function listNotificationFeed(userId, { limit = 40 } = {}) {
+  const rows = await query(
+    `SELECT n.*,
+            (COUNT(*) FILTER (WHERE n.read_at IS NULL) OVER ())::int AS unread
+     FROM notifications n
+     WHERE n.user_id = $1
+     ORDER BY n.created_at DESC
+     LIMIT $2`,
+    [userId, limit]
+  );
+  return {
+    notifications: rows,
+    unread: rows[0]?.unread ?? 0,
+  };
+}
+
 export async function unreadCount(userId) {
   const row = await queryOne(
     `SELECT COUNT(*)::int AS count FROM notifications WHERE user_id = $1 AND read_at IS NULL`,

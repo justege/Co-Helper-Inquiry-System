@@ -70,9 +70,6 @@ function parseTitle(value) {
 
 router.get("/workbench", requireAuth, attachRole, async (req, res) => {
   try {
-    if (req.userRole === "expert") {
-      await ensureWorkspaceForOwner(req.dbUser.id, req.dbUser.company_name || req.dbUser.username);
-    }
     res.json(await getWorkbench(req.dbUser));
   } catch (err) {
     console.error(err);

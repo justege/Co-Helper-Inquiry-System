@@ -2,8 +2,7 @@ import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import { attachRole } from "../middleware/requireRole.js";
 import {
-  listNotifications,
-  unreadCount,
+  listNotificationFeed,
   markRead,
   markAllRead,
   mapNotification,
@@ -14,10 +13,8 @@ router.use(requireAuth, attachRole);
 
 router.get("/", async (req, res) => {
   try {
-    const unreadOnly = req.query.unread === "1";
-    const rows = await listNotifications(req.dbUser.id, { unreadOnly });
-    const unread = await unreadCount(req.dbUser.id);
-    res.json({ notifications: rows.map(mapNotification), unread });
+    const { notifications, unread } = await listNotificationFeed(req.dbUser.id);
+    res.json({ notifications: notifications.map(mapNotification), unread });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

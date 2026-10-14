@@ -150,6 +150,7 @@ export interface Workbench {
   } | null
   now: WorkTodo | null
   nowElsewhere: boolean
+  clientCount?: number
   lastWorkedAt: string | null
   lastWorkedProjectId: string | null
   suggested: (WorkTodo & { projectName?: string; clientName?: string }) | null

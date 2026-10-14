@@ -17,7 +17,9 @@ async function getAuthHeaders(): Promise<HeadersInit> {
   };
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+const inflightGets = new Map<string, Promise<unknown>>();
+
+async function requestOnce<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = await getAuthHeaders();
   const res = await fetch(`${BASE_URL}${path}`, { ...init, headers });
   if (!res.ok) throw new Error(await parseError(res));
@@ -25,6 +27,20 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const text = await res.text();
   if (!text) return undefined as T;
   return JSON.parse(text) as T;
+}
+
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const method = (init.method ?? "GET").toUpperCase();
+  if (method !== "GET") return requestOnce<T>(path, init);
+
+  const pending = inflightGets.get(path);
+  if (pending) return pending as Promise<T>;
+
+  const promise = requestOnce<T>(path, init).finally(() => {
+    if (inflightGets.get(path) === promise) inflightGets.delete(path);
+  });
+  inflightGets.set(path, promise);
+  return promise;
 }
 
 export async function publicGet<T>(path: string): Promise<T> {
