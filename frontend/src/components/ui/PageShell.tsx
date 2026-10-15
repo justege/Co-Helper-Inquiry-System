@@ -79,7 +79,7 @@ export function PageShell({
           <FeatureEmptyState
             title={island.title}
             bullets={island.bullets}
-            stats={island.stats ?? stats}
+            stats={island.stats}
             cta={island.cta}
             mockup={island.mockup ?? <InquiryMockup />}
           />

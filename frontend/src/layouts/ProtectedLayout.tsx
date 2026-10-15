@@ -126,9 +126,28 @@ function ProtectedApp() {
     }, 220)
   }, [query])
 
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault()
+        setSearchOpen(true)
+      }
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [])
+
   const isOwner = profile?.role === "expert"
   const groups = navGroups(isOwner)
   const mobileItems = groups.flatMap((g) => g.items)
+  const personName = [profile?.firstName, profile?.lastName].filter(Boolean).join(" ")
+    || profile?.companyName
+    || profile?.username
+    || ""
+  const displayName = personName || user?.email || ""
+  const roleLabel = profile?.role === "expert" ? "Workspace" : profile?.role === "client" ? "Client" : ""
+  const initial = (profile?.firstName || profile?.companyName || user?.email || "?").trim().charAt(0).toUpperCase()
+  const searchHint = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent) ? "⌘K" : "Ctrl K"
 
   if (!user) return null
 
@@ -138,116 +157,183 @@ function ProtectedApp() {
   }
 
   return (
-    <Flex minH="100vh" bg={PAPER}>
+    <Flex className="app-canvas" minH="100vh">
       <Box
         as="aside"
+        className="atelier-rail"
         display={{ base: "none", lg: "flex" }}
         flexDir="column"
-        w="248px"
+        w="260px"
         flexShrink={0}
-        bg={INK}
         position="fixed"
-        top={0}
-        left={0}
-        h="100vh"
+        top="16px"
+        left="16px"
+        h="calc(100vh - 32px)"
         zIndex={10}
+        overflow="hidden"
       >
-        <Box px={5} py={6} display="flex" alignItems="center">
-          <BrandMark inverted to="/app" />
-        </Box>
-
-        <Box px={3} pb={4}>
-          <Box
-            as="button"
-            w="100%"
-            display="flex"
-            alignItems="center"
-            gap={2}
-            h="40px"
-            px="14px"
-            border="1px solid rgba(255,255,255,0.08)"
-            borderRadius="10px"
-            bg="rgba(255,255,255,0.04)"
-            color="rgba(255,255,255,0.48)"
-            fontSize="0.8125rem"
-            onClick={() => setSearchOpen(true)}
-          >
-            <LuSearch size={15} /> Search
+        <Box position="relative" zIndex={1} display="flex" flexDir="column" h="100%">
+          <Box px={5} pt={6} pb={4} display="flex" alignItems="center">
+            <BrandMark to="/app" />
           </Box>
-        </Box>
 
-        <Box flex="1" overflowY="auto" px={3} pb={4}>
-          {groups.map((group) => (
-            <Box key={group.label} mb={5}>
-              <Text
-                px={3}
-                mb={1.5}
+          <Box px={3} pb={4}>
+            <Box
+              as="button"
+              w="100%"
+              display="flex"
+              alignItems="center"
+              gap={2}
+              h="40px"
+              px="14px"
+              border="1px solid rgba(14,27,23,0.08)"
+              borderRadius="12px"
+              bg="rgba(255,255,255,0.55)"
+              color="rgba(14,27,23,0.48)"
+              fontSize="0.8125rem"
+              letterSpacing="-0.01em"
+              boxShadow="inset 0 1px 0 rgba(255,255,255,0.8)"
+              transition="background-color 220ms ease, border-color 220ms ease, color 180ms ease"
+              _hover={{ bg: "rgba(255,255,255,0.82)", borderColor: "rgba(14,27,23,0.12)", color: INK }}
+              onClick={() => setSearchOpen(true)}
+            >
+              <LuSearch size={15} />
+              <Box as="span" flex="1" textAlign="left">Search</Box>
+              <Box
+                as="kbd"
+                fontFamily="'JetBrains Mono', ui-monospace, monospace"
                 fontSize="0.625rem"
-                fontWeight="700"
-                letterSpacing="0.14em"
-                textTransform="uppercase"
-                color="rgba(255,255,255,0.32)"
+                letterSpacing="0.04em"
+                color="rgba(14,27,23,0.42)"
+                border="1px solid rgba(14,27,23,0.1)"
+                borderRadius="6px"
+                px="6px"
+                py="2px"
+                lineHeight="1.4"
               >
-                {group.label}
-              </Text>
-              {group.items.map((item) => (
-                <SidebarItem key={item.to} item={item} />
-              ))}
+                {searchHint}
+              </Box>
             </Box>
-          ))}
-        </Box>
-
-        <Box px={5} py={5} borderTop="1px solid rgba(255,255,255,0.06)">
-          <Box
-            as="button"
-            display="flex"
-            alignItems="center"
-            gap={2}
-            mb={3}
-            color="rgba(255,255,255,0.72)"
-            fontSize="0.8125rem"
-            fontWeight="600"
-            onClick={() => assistant?.open()}
-          >
-            <LuSparkles size={14} /> Assistant
           </Box>
-          <Text fontSize="0.75rem" color="rgba(255,255,255,0.45)" mb={2} overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
-            {user.email}
-          </Text>
-          <Box
-            as="button"
-            display="inline-flex"
-            alignItems="center"
-            gap={1.5}
-            color="rgba(255,255,255,0.5)"
-            fontSize="0.75rem"
-            fontWeight="600"
-            onClick={handleLogout}
-            _hover={{ color: "white" }}
-          >
-            <LuLogOut size={13} /> Sign out
+
+          <Box className="atelier-scroll" flex="1" overflowY="auto" px={3} pb={3}>
+            {groups.map((group, index) => (
+              <Box key={group.label} mb={index === groups.length - 1 ? 2 : 5}>
+                <Text
+                  px={3}
+                  mb={1.5}
+                  fontSize="0.625rem"
+                  fontWeight="600"
+                  letterSpacing="0.18em"
+                  textTransform="uppercase"
+                  color="rgba(14,27,23,0.4)"
+                >
+                  {group.label}
+                </Text>
+                {group.items.map((item) => (
+                  <SidebarItem key={item.to} item={item} />
+                ))}
+              </Box>
+            ))}
+          </Box>
+
+          <Box px={3} pt={2} pb={3}>
+            <Box
+              h="1px"
+              mb={3}
+              mx={2}
+              background="linear-gradient(90deg, transparent, rgba(14,27,23,0.12), transparent)"
+            />
+            <Box
+              as="button"
+              w="100%"
+              display="flex"
+              alignItems="center"
+              gap={2.5}
+              h="40px"
+              px={3}
+              mb={2}
+              borderRadius="12px"
+              bg="rgba(15,110,86,0.07)"
+              border="1px solid rgba(15,110,86,0.14)"
+              color={INK}
+              fontSize="0.8125rem"
+              fontWeight="600"
+              letterSpacing="-0.01em"
+              transition="background-color 220ms ease, border-color 220ms ease"
+              _hover={{ bg: "rgba(15,110,86,0.12)", borderColor: "rgba(15,110,86,0.22)" }}
+              onClick={() => assistant?.open()}
+            >
+              <LuSparkles size={14} color={GREEN} />
+              Assistant
+            </Box>
+            <Box display="flex" alignItems="center" gap={2.5} px={2} py={1.5}>
+              <Box
+                w="34px"
+                h="34px"
+                borderRadius="full"
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                flexShrink={0}
+                bg="rgba(15,110,86,0.1)"
+                border="1px solid rgba(15,110,86,0.16)"
+                boxShadow="inset 0 1px 0 rgba(255,255,255,0.7)"
+                color={GREEN}
+                fontSize="0.75rem"
+                fontWeight="600"
+                letterSpacing="-0.02em"
+              >
+                {initial}
+              </Box>
+              <Box minW={0} flex="1">
+                <Text fontSize="0.8125rem" fontWeight="600" color={INK} letterSpacing="-0.01em" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
+                  {displayName}
+                </Text>
+                <Text fontSize="0.6875rem" color={MUTED} overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
+                  {personName ? user.email : roleLabel}
+                </Text>
+              </Box>
+              <Box
+                as="button"
+                aria-label="Sign out"
+                w="32px"
+                h="32px"
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                flexShrink={0}
+                borderRadius="10px"
+                color="rgba(14,27,23,0.4)"
+                transition="background-color 180ms ease, color 180ms ease"
+                _hover={{ bg: "rgba(14,27,23,0.05)", color: INK }}
+                onClick={handleLogout}
+              >
+                <LuLogOut size={15} />
+              </Box>
+            </Box>
           </Box>
         </Box>
       </Box>
 
-      <Box as="main" flex="1" ml={{ base: 0, lg: "248px" }} minH="100vh" position="relative">
+      <Box as="main" flex="1" ml={{ base: 0, lg: "292px" }} minH="100vh" position="relative">
         <Box
+          className="atelier-topbar"
           display={{ base: "flex", lg: "none" }}
           alignItems="center"
           justifyContent="space-between"
           px={4}
           h="56px"
-          bg={INK}
           position="sticky"
           top={0}
           zIndex={8}
         >
-          <BrandMark inverted size="sm" to="/app" />
+          <BrandMark size="sm" to="/app" />
           <Box display="flex" gap={1}>
-            <Box as="button" w="44px" h="44px" display="flex" alignItems="center" justifyContent="center" color="white" onClick={() => setSearchOpen(true)} aria-label="Search">
+            <Box as="button" w="44px" h="44px" display="flex" alignItems="center" justifyContent="center" color={INK} onClick={() => setSearchOpen(true)} aria-label="Search">
               <LuSearch size={18} />
             </Box>
-            <Box as="button" w="44px" h="44px" display="flex" alignItems="center" justifyContent="center" color="white" position="relative" onClick={() => setBellOpen(true)} aria-label="Notifications">
+            <Box as="button" w="44px" h="44px" display="flex" alignItems="center" justifyContent="center" color={INK} position="relative" onClick={() => setBellOpen(true)} aria-label="Notifications">
               <LuBell size={18} />
               {unread > 0 && <Box position="absolute" top="10px" right="10px" w="7px" h="7px" bg={GREEN} rounded="full" />}
             </Box>
@@ -265,24 +351,24 @@ function ProtectedApp() {
       </Box>
 
       <Box
+        className="atelier-dock"
         display={{ base: "flex", lg: "none" }}
         position="fixed"
-        bottom={0}
-        left={0}
-        right={0}
+        left="12px"
+        right="12px"
         zIndex={100}
-        h="72px"
+        h="64px"
         alignItems="center"
         justifyContent="space-around"
         px={2}
-        bg={INK}
+        style={{ bottom: "max(12px, env(safe-area-inset-bottom))" }}
       >
         {mobileItems.slice(0, 3).map((item) => (
           <MobileNavItem key={item.to} item={item} />
         ))}
         <Box as="button" flex="1" display="flex" flexDir="column" alignItems="center" gap="3px" onClick={() => setMoreOpen(true)}>
-          <LuEllipsis size={21} color="rgba(255,255,255,0.45)" />
-          <Text fontSize="0.6rem" fontWeight="500" color="rgba(255,255,255,0.45)">More</Text>
+          <LuEllipsis size={20} color="rgba(14,27,23,0.45)" />
+          <Text fontSize="0.6rem" fontWeight="500" letterSpacing="0.01em" color="rgba(14,27,23,0.45)">More</Text>
         </Box>
       </Box>
 
@@ -428,23 +514,40 @@ function SidebarItem({ item }: { item: NavItem }) {
   const Icon = item.icon
   const end = item.to === "/app"
   return (
-    <NavLink to={item.to} end={end}>
+    <NavLink to={item.to} end={end} className="atelier-nav-link">
       {({ isActive }: { isActive: boolean }) => (
         <Box
           as="span"
+          className="atelier-item"
+          position="relative"
           display="flex"
           alignItems="center"
           gap={2.5}
           px={3}
           py="9px"
           mb="2px"
-          borderRadius="10px"
+          borderRadius="12px"
           fontSize="0.875rem"
+          letterSpacing="-0.011em"
           fontWeight={isActive ? "600" : "500"}
-          color={isActive ? "white" : "rgba(255,255,255,0.58)"}
-          bg={isActive ? "rgba(15,110,86,0.55)" : "transparent"}
-          _hover={{ bg: isActive ? "rgba(15,110,86,0.55)" : "rgba(255,255,255,0.05)", color: "white" }}
+          color={isActive ? INK : "rgba(14,27,23,0.62)"}
+          bg={isActive ? "rgba(15,110,86,0.1)" : "transparent"}
+          boxShadow={isActive ? "inset 0 0 0 1px rgba(15,110,86,0.12)" : "none"}
+          _hover={{
+            bg: isActive ? "rgba(15,110,86,0.12)" : "rgba(14,27,23,0.04)",
+            color: INK,
+          }}
         >
+          <Box
+            as="span"
+            className="atelier-mark"
+            position="absolute"
+            left="5px"
+            top="50%"
+            transform="translateY(-50%)"
+            h={isActive ? "14px" : "0px"}
+            opacity={isActive ? 1 : 0}
+          />
           <Icon size={16} />
           {item.label}
         </Box>
@@ -459,8 +562,8 @@ function MobileNavItem({ item }: { item: NavItem }) {
     <NavLink to={item.to} end={item.to === "/app"} style={{ flex: 1 }}>
       {({ isActive }: { isActive: boolean }) => (
         <Box as="span" display="flex" flexDir="column" alignItems="center" gap="3px">
-          <Icon size={21} color={isActive ? "#86efac" : "rgba(255,255,255,0.45)"} />
-          <Text fontSize="0.6rem" fontWeight={isActive ? "700" : "500"} color={isActive ? "#86efac" : "rgba(255,255,255,0.45)"}>{item.label}</Text>
+          <Icon size={20} color={isActive ? GREEN : "rgba(14,27,23,0.45)"} />
+          <Text fontSize="0.6rem" fontWeight={isActive ? "600" : "500"} letterSpacing="0.01em" color={isActive ? GREEN : "rgba(14,27,23,0.45)"}>{item.label}</Text>
         </Box>
       )}
     </NavLink>

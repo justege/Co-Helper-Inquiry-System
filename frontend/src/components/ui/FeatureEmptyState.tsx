@@ -37,22 +37,19 @@ export function FeatureEmptyState({
 }) {
   return (
     <Box
-      bg="white"
-      border={`1px solid ${APP_BORDER}`}
-      borderRadius="16px"
-      boxShadow="0 8px 28px rgba(14,27,23,0.06), 0 1px 3px rgba(14,27,23,0.04)"
-      px={{ base: 7, md: 12 }}
-      py={{ base: 8, md: 12 }}
+      className="atelier-island"
+      overflow="hidden"
+      px={{ base: 7, md: 8 }}
+      py={{ base: 7, md: 8 }}
       display="flex"
       alignItems="center"
-      gap={{ base: 0, md: 12 }}
+      gap={{ base: 0, md: 10 }}
       flexDir={{ base: "column", md: "row" }}
-      overflow="hidden"
     >
-      <Box flex="1" minW={0}>
+      <Box flex="1" minW={0} position="relative" zIndex={1}>
         <Text
           fontSize={{ base: "1.5rem", md: "1.75rem" }}
-          fontWeight="700"
+          fontWeight="600"
           color={APP_INK}
           letterSpacing="-0.03em"
           lineHeight="1.2"
@@ -65,7 +62,7 @@ export function FeatureEmptyState({
         {stats && stats.length > 0 && (
           <Box display={{ base: "grid", md: "none" }} gridTemplateColumns="1fr 1fr" gap={3} mb={cta ? 6 : 0}>
             {stats.map((stat) => (
-              <Box key={stat.label} bg={APP_BG_SUBTLE} border={`1px solid ${APP_BORDER}`} borderRadius="12px" p={3}>
+              <Box key={stat.label} bg="rgba(255,255,255,0.55)" border="1px solid rgba(14,27,23,0.06)" borderRadius="14px" p={3}>
                 <Text fontSize="0.65rem" fontWeight="700" color={APP_LABEL} textTransform="uppercase" letterSpacing="0.04em">{stat.label}</Text>
                 <Text fontSize="1.25rem" fontWeight="800" color={APP_INK} letterSpacing="-0.03em">{stat.value}</Text>
                 {stat.hint && <Text fontSize="0.7rem" color={APP_MUTED}>{stat.hint}</Text>}
@@ -84,13 +81,14 @@ export function FeatureEmptyState({
                   mt="2px"
                   flexShrink={0}
                   borderRadius="full"
-                  bg={APP_ACCENT}
+                  bg="rgba(15,110,86,0.1)"
+                  border="1px solid rgba(15,110,86,0.18)"
                   display="flex"
                   alignItems="center"
                   justifyContent="center"
                 >
                   <svg width="10" height="8" viewBox="0 0 10 8" fill="none" aria-hidden>
-                    <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M1 4L3.5 6.5L9 1" stroke={APP_ACCENT} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </Box>
                 <Text fontSize="0.9375rem" color="#374151" lineHeight="1.5">
@@ -105,16 +103,18 @@ export function FeatureEmptyState({
       </Box>
 
       {stats && stats.length > 0 ? (
-        <Box display={{ base: "none", md: "grid" }} gridTemplateColumns="1fr 1fr" gap={3} w="100%" maxW="340px" flexShrink={0}>
+        <Box position="relative" zIndex={1} display={{ base: "none", md: "grid" }} gridTemplateColumns="1fr 1fr" gap={3} w="100%" maxW="340px" flexShrink={0}>
           {stats.map((stat) => (
-            <Box key={stat.label} bg={APP_BG_SUBTLE} border={`1px solid ${APP_BORDER}`} borderRadius="14px" p={4}>
+            <Box key={stat.label} bg="rgba(255,255,255,0.55)" border="1px solid rgba(14,27,23,0.06)" borderRadius="14px" p={4}>
               <Text fontSize="0.65rem" fontWeight="700" color={APP_LABEL} textTransform="uppercase" letterSpacing="0.04em">{stat.label}</Text>
               <Text fontSize="1.5rem" fontWeight="800" color={APP_INK} letterSpacing="-0.03em" mt={1}>{stat.value}</Text>
               {stat.hint && <Text fontSize="0.75rem" color={APP_MUTED} mt={1}>{stat.hint}</Text>}
             </Box>
           ))}
         </Box>
-      ) : mockup}
+      ) : (
+        <Box position="relative" zIndex={1}>{mockup}</Box>
+      )}
     </Box>
   )
 }

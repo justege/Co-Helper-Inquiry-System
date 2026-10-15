@@ -61,7 +61,7 @@ export function PageBody({ children, wide }: { children: ReactNode; wide?: boole
     <Box
       px={{ base: 4, md: 6, lg: 8 }}
       pt={{ base: 5, md: 6 }}
-      pb={{ base: "96px", lg: 12 }}
+      pb={{ base: "120px", lg: 12 }}
       maxW={wide ? "1280px" : "960px"}
       mx="auto"
     >
