@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 import { Box, Flex, Text } from "@chakra-ui/react"
 import { Link } from "react-router-dom"
 import { useForm } from "react-hook-form"
 import FilmBackdrop from "@/components/landing/FilmBackdrop"
 import loginVideo from "@/assets/EOLogin.mp4"
 import { submitProjectRequest } from "@/api/public"
+import { BrandMark } from "@/components/brand/BrandMark"
+import { GREEN, INK, MUTED } from "@/theme/tokens"
 
 type RequestFields = {
   name: string
@@ -90,71 +92,85 @@ export default function ProjectRequestPage() {
   }
 
   return (
-    <FilmBackdrop src={loginVideo} dim={0.72}>
-      <style>{`
-        .brief-field {
-          width: 100%;
-          border: 1px solid #E5E7EB;
-          border-radius: 10px;
-          background: #fff;
-          color: #0E1B17;
-          font: inherit;
-          font-size: 0.9375rem;
-          padding: 12px 14px;
-          outline: none;
-        }
-        .brief-field:focus {
-          border-color: #0F6E56;
-          box-shadow: 0 0 0 3px rgba(15,110,86,0.14);
-        }
-        .brief-field[aria-invalid="true"] {
-          border-color: #DC2626;
-          box-shadow: 0 0 0 3px rgba(220,38,38,0.12);
-        }
-        textarea.brief-field { min-height: 140px; resize: vertical; line-height: 1.55; }
-      `}</style>
+    <FilmBackdrop src={loginVideo} dim={0.62}>
       <Flex minH="100vh" align="flex-start" justify="center" px={{ base: 4, md: 6 }} py={{ base: 6, md: 10 }}>
-        <Box w="full" maxW="680px">
-          <Link to="/" style={{ textDecoration: "none", color: "rgba(255,255,255,0.78)" }}>
-            <Text fontSize="0.75rem" letterSpacing="0.16em" textTransform="uppercase" mb={4}>
-              ← Back
-            </Text>
-          </Link>
+        <Box w="full" maxW="720px">
+          <Flex align="center" justify="space-between" mb={5} gap={4}>
+            <BrandMark inverted to="/" />
+            <Link to="/" style={{ textDecoration: "none" }}>
+              <Text
+                fontSize="0.6875rem"
+                fontWeight="600"
+                letterSpacing="0.16em"
+                textTransform="uppercase"
+                color="rgba(255,255,255,0.62)"
+                _hover={{ color: "white" }}
+              >
+                Return
+              </Text>
+            </Link>
+          </Flex>
 
-          <Box bg="white" color="#0E1B17" borderRadius="20px" boxShadow="0 30px 80px rgba(0,0,0,0.35)" px={{ base: 5, md: 10 }} py={{ base: 6, md: 8 }}>
+          <Box className="atelier-brief" color={INK} px={{ base: 5, md: 10 }} py={{ base: 7, md: 9 }}>
+            <Box position="relative" zIndex={1}>
             {sent ? (
               <Box>
-                <Text fontFamily="'JetBrains Mono', ui-monospace, monospace" fontSize="0.95rem" mb={3}>{"<EO/>"}</Text>
-                <Text as="h1" ref={headingRef} tabIndex={-1} outline="none" fontSize="1.75rem" fontWeight="600" letterSpacing="-0.03em" mb={3}>
+                <Text
+                  fontSize="0.625rem"
+                  fontWeight="600"
+                  letterSpacing="0.18em"
+                  textTransform="uppercase"
+                  color="rgba(14,27,23,0.42)"
+                  mb={3}
+                >
+                  Received
+                </Text>
+                <Text as="h1" ref={headingRef} tabIndex={-1} outline="none" fontSize={{ base: "1.75rem", md: "2.125rem" }} fontWeight="600" letterSpacing="-0.035em" lineHeight="1.12" mb={3}>
                   Request received
                 </Text>
-                <Text color="#4B5563" lineHeight="1.7">
+                <Text color={MUTED} fontSize="0.9375rem" lineHeight="1.7" maxW="460px">
                   I’ll reply to {values.email}. If it’s urgent, you can also write directly to info@egemenokur.com.
                 </Text>
               </Box>
             ) : (
               <form onSubmit={handleSubmit(onSubmit)} noValidate>
-                <Flex gap={2} mb={6} aria-label="Progress">
+                <Flex gap={3} mb={7} aria-label="Progress">
                   {STEPS.map((item, index) => {
                     const state = index < step ? "done" : index === step ? "current" : "upcoming"
                     return (
-                      <Box key={item.label} flex="1">
-                        <Box h="3px" borderRadius="99px" bg={state === "upcoming" ? "#E5E7EB" : "#0F6E56"} mb={2} />
-                        <Text fontSize="0.6875rem" letterSpacing="0.08em" textTransform="uppercase" color={state === "current" ? "#0E1B17" : "#9CA3AF"} fontWeight={state === "current" ? "700" : "500"}>
-                          {index + 1} {item.label}
+                      <Box key={item.label} flex="1" minW={0}>
+                        <Box
+                          h="2px"
+                          borderRadius="99px"
+                          bg={state === "upcoming" ? "rgba(14,27,23,0.1)" : GREEN}
+                          mb={2}
+                          transition="background-color 240ms ease"
+                        />
+                        <Text
+                          fontSize="0.625rem"
+                          letterSpacing="0.12em"
+                          textTransform="uppercase"
+                          color={state === "current" ? INK : "rgba(14,27,23,0.38)"}
+                          fontWeight={state === "current" ? "600" : "500"}
+                          whiteSpace="nowrap"
+                          overflow="hidden"
+                          textOverflow="ellipsis"
+                        >
+                          {item.label}
                         </Text>
                       </Box>
                     )
                   })}
                 </Flex>
 
-                <Text fontSize="0.75rem" letterSpacing="0.14em" textTransform="uppercase" color="#6B7280" mb={2}>
+                <Box key={step} className="brief-step">
+                <Text fontSize="0.625rem" fontWeight="600" letterSpacing="0.18em" textTransform="uppercase" color="rgba(14,27,23,0.4)" mb={2}>
                   Step {step + 1} of {STEPS.length}
                 </Text>
-                <Text as="h1" ref={headingRef} tabIndex={-1} outline="none" fontSize={{ base: "1.6rem", md: "1.85rem" }} fontWeight="600" letterSpacing="-0.03em" lineHeight="1.15" mb={2}>
+                <Text as="h1" ref={headingRef} tabIndex={-1} outline="none" fontSize={{ base: "1.7rem", md: "2.125rem" }} fontWeight="600" letterSpacing="-0.035em" lineHeight="1.12" mb={2}>
                   {STEPS[step].title}
                 </Text>
-                <Text color="#6B7280" fontSize="0.9375rem" mb={6}>
+                <Text color={MUTED} fontSize="0.9375rem" lineHeight="1.6" mb={6}>
                   {STEPS[step].hint}
                 </Text>
 
@@ -224,7 +240,7 @@ export default function ProjectRequestPage() {
                 )}
 
                 {step === 3 && (
-                  <Flex direction="column" gap={3}>
+                  <Flex direction="column">
                     <ReviewRow label="Name" value={values.name} onEdit={() => setStep(0)} />
                     <ReviewRow label="Email" value={values.email} onEdit={() => setStep(0)} />
                     <ReviewRow label="Company" value={values.company || "—"} onEdit={() => setStep(0)} />
@@ -237,27 +253,29 @@ export default function ProjectRequestPage() {
                     {values.notes ? <ReviewRow label="Notes" value={values.notes} onEdit={() => setStep(2)} /> : null}
                   </Flex>
                 )}
+                </Box>
 
                 {error && <Text color="#B91C1C" fontSize="0.875rem" mt={4}>{error}</Text>}
 
                 <Flex mt={7} justify="space-between" align="center" gap={3}>
                   {step > 0 ? (
-                    <button type="button" onClick={() => setStep((current) => current - 1)} style={ghostButton}>
+                    <button type="button" onClick={() => setStep((current) => current - 1)} className="brief-ghost">
                       Back
                     </button>
                   ) : <span />}
                   {step < STEPS.length - 1 ? (
-                    <button type="button" onClick={continueStep} style={primaryButton}>
+                    <button type="button" onClick={continueStep} className="brief-primary">
                       Continue
                     </button>
                   ) : (
-                    <button type="submit" disabled={submitting} style={{ ...primaryButton, cursor: submitting ? "wait" : "pointer" }}>
+                    <button type="submit" disabled={submitting} className="brief-primary">
                       {submitting ? "Sending" : "Send request"}
                     </button>
                   )}
                 </Flex>
               </form>
             )}
+            </Box>
           </Box>
         </Box>
       </Flex>
@@ -280,9 +298,9 @@ function Field({
 }) {
   return (
     <Box flex="1">
-      <Text as="label" htmlFor={htmlFor} display="block" fontSize="0.8125rem" fontWeight="600" mb={1.5}>
+      <Text as="label" htmlFor={htmlFor} display="block" fontSize="0.8125rem" fontWeight="600" letterSpacing="-0.011em" color={INK} mb="6px">
         {label}
-        {required ? <Text as="span" color="#B91C1C"> *</Text> : null}
+        {required ? <Text as="span" color={GREEN}> *</Text> : null}
       </Text>
       {children}
       {error ? <Text color="#B91C1C" fontSize="0.8125rem" mt={1.5}>{error}</Text> : null}
@@ -312,17 +330,7 @@ function ChoiceGroup({
             role="radio"
             aria-checked={selected}
             onClick={() => onChange(option)}
-            style={{
-              border: selected ? "1px solid #0F6E56" : "1px solid #E5E7EB",
-              background: selected ? "#E8F5EF" : "#fff",
-              color: "#0E1B17",
-              borderRadius: "999px",
-              padding: "10px 14px",
-              fontSize: "0.875rem",
-              fontWeight: selected ? 600 : 500,
-              cursor: "pointer",
-              fontFamily: "inherit",
-            }}
+            className="brief-choice"
           >
             {option}
           </button>
@@ -334,38 +342,14 @@ function ChoiceGroup({
 
 function ReviewRow({ label, value, onEdit }: { label: string; value: string; onEdit: () => void }) {
   return (
-    <Flex gap={4} py={3} borderBottom="1px solid #E5E7EB" align="flex-start">
-      <Text w="88px" flexShrink={0} fontSize="0.75rem" letterSpacing="0.08em" textTransform="uppercase" color="#6B7280" pt="2px">
+    <Flex gap={4} py={3.5} borderBottom="1px solid rgba(14,27,23,0.08)" align="flex-start" _last={{ borderBottom: "none" }}>
+      <Text w="88px" flexShrink={0} fontSize="0.625rem" fontWeight="600" letterSpacing="0.14em" textTransform="uppercase" color="rgba(14,27,23,0.42)" pt="3px">
         {label}
       </Text>
-      <Text flex="1" fontSize="0.9375rem" lineHeight="1.5" whiteSpace="pre-wrap">{value}</Text>
-      <button type="button" onClick={onEdit} style={{ background: "none", border: 0, color: "#0F6E56", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", fontSize: "0.8125rem" }}>
+      <Text flex="1" fontSize="0.9375rem" lineHeight="1.55" letterSpacing="-0.011em" whiteSpace="pre-wrap">{value}</Text>
+      <button type="button" onClick={onEdit} className="brief-edit">
         Edit
       </button>
     </Flex>
   )
-}
-
-const primaryButton: CSSProperties = {
-  background: "#0F6E56",
-  color: "white",
-  border: 0,
-  borderRadius: "999px",
-  padding: "12px 22px",
-  fontSize: "0.875rem",
-  fontWeight: 600,
-  cursor: "pointer",
-  fontFamily: "inherit",
-}
-
-const ghostButton: CSSProperties = {
-  background: "transparent",
-  color: "#0E1B17",
-  border: "1px solid #E5E7EB",
-  borderRadius: "999px",
-  padding: "12px 18px",
-  fontSize: "0.875rem",
-  fontWeight: 600,
-  cursor: "pointer",
-  fontFamily: "inherit",
 }

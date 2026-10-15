@@ -5,6 +5,77 @@ import FilmBackdrop from "@/components/landing/FilmBackdrop"
 
 const REVEAL_AT = 5
 const HOLD_AT = 15
+const MARK = "<EO/>"
+// Pause on the caret, then each key. Letters follow faster than the symbols.
+const STROKE_GAPS = [560, 160, 110, 190, 140]
+const CARET_LINGER = 680
+
+function prefersReducedMotion() {
+  return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+}
+
+function TypedMark({ play }: { play: boolean }) {
+  const [reduced] = useState(prefersReducedMotion)
+  const [count, setCount] = useState(reduced ? MARK.length : 0)
+  const [caretOn, setCaretOn] = useState(false)
+
+  useEffect(() => {
+    if (reduced) {
+      setCount(MARK.length)
+      setCaretOn(false)
+      return
+    }
+    if (!play) return
+
+    setCaretOn(true)
+    let elapsed = 0
+    const timers: number[] = []
+    for (let i = 0; i < MARK.length; i++) {
+      elapsed += STROKE_GAPS[i] ?? 120
+      const next = i + 1
+      timers.push(window.setTimeout(() => setCount(next), elapsed))
+    }
+    timers.push(window.setTimeout(() => setCaretOn(false), elapsed + CARET_LINGER))
+    return () => {
+      for (const timer of timers) window.clearTimeout(timer)
+    }
+  }, [play, reduced])
+
+  return (
+    <Text
+      aria-label={MARK}
+      fontFamily="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace"
+      fontWeight="500"
+      fontSize={{ base: "1.75rem", md: "2.25rem" }}
+      letterSpacing="-0.04em"
+      lineHeight="1"
+      opacity={reduced || play ? 1 : 0}
+      transition={reduced ? undefined : "opacity 0.45s ease"}
+    >
+      <span style={{ display: "inline-grid" }}>
+        <span aria-hidden="true" style={{ gridArea: "1 / 1", visibility: "hidden" }}>
+          {MARK}
+        </span>
+        <span aria-hidden="true" style={{ gridArea: "1 / 1" }}>
+          {MARK.slice(0, count)}
+          {caretOn && (
+            <span
+              className="typewriter-cursor"
+              style={{
+                display: "inline-block",
+                width: 2,
+                height: "0.92em",
+                marginLeft: 2,
+                background: "white",
+                verticalAlign: "text-bottom",
+              }}
+            />
+          )}
+        </span>
+      </span>
+    </Text>
+  )
+}
 
 function Choice({ onChoose, children }: { onChoose: () => void; children: string }) {
   return (
@@ -135,28 +206,23 @@ export default function LandingPage() {
         align="center"
         justify="center"
         px={6}
-        opacity={shown ? 1 : 0}
-        transform={shown ? "translateY(0)" : "translateY(16px)"}
-        transition="opacity 1.8s ease, transform 1.8s ease"
+        opacity={departing ? 0 : 1}
+        transform={departing ? "translateY(16px)" : "translateY(0)"}
+        transition={departing ? "opacity 1.2s ease, transform 1.2s ease" : undefined}
         pointerEvents={shown ? "auto" : "none"}
         aria-hidden={!shown}
         data-choices={shown ? "visible" : departing ? "departing" : "hidden"}
       >
         <Flex direction="column" align="center" gap={{ base: 8, md: 10 }}>
-          <Text
-            fontFamily="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace"
-            fontWeight="500"
-            fontSize={{ base: "1.75rem", md: "2.25rem" }}
-            letterSpacing="-0.04em"
-            lineHeight="1"
-          >
-            {"<EO/>"}
-          </Text>
+          <TypedMark play={shown} />
           <Flex
             align="center"
             justify="center"
             gap={{ base: 4, md: 7 }}
             direction={{ base: "column", sm: "row" }}
+            opacity={shown ? 1 : 0}
+            transform={shown ? "translateY(0)" : "translateY(16px)"}
+            transition="opacity 1.8s ease, transform 1.8s ease"
           >
             <Choice onChoose={() => depart("/login")}>Log in</Choice>
             <Text
