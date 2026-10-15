@@ -8,14 +8,22 @@ import { AppTextarea } from "@/components/ui/AppTextarea"
 import { GREEN, INK, MUTED, PAPER, RULE, SURFACE } from "@/theme/tokens"
 import {
   askAssistant,
+  askProjectPlan,
   draftPlain,
   type AssistantContextInput,
   type AssistantDraft,
   type AssistantMessage,
+  type ProjectPlan,
 } from "@/api/assistant"
 import { findAssistantClaim, useAssistantClaimsVersion } from "./assistantClaims"
+import { PlanReview } from "./PlanReview"
 
-type ChatEntry = AssistantMessage & { suggestion?: AssistantDraft | null }
+type ChatEntry = AssistantMessage & {
+  suggestion?: AssistantDraft | null
+  plan?: ProjectPlan | null
+  planProjectId?: string
+  stale?: boolean
+}
 
 const AssistantContext = createContext<{ open: (prompt?: string) => void } | null>(null)
 
@@ -23,13 +31,13 @@ export function useAssistant() {
   return useContext(AssistantContext)
 }
 
-function routeContext(pathname: string, todoId: string | null): AssistantContextInput {
+function routeContext(pathname: string, todoId: string | null, view: string | null): AssistantContextInput {
   const project = pathname.match(/^\/app\/projects\/([^/]+)/)
   const client = pathname.match(/^\/app\/clients\/([^/]+)/)
   const invoice = pathname.match(/^\/app\/invoices\/([^/]+)/)
   let surface = "home"
-  if (todoId) surface = "todo"
-  else if (project) surface = "project"
+  if (project) surface = "project"
+  else if (todoId) surface = "todo"
   else if (pathname.startsWith("/app/projects")) surface = "projects"
   else if (client) surface = "client"
   else if (pathname.startsWith("/app/clients")) surface = "clients"
@@ -39,28 +47,50 @@ function routeContext(pathname: string, todoId: string | null): AssistantContext
   else if (pathname.startsWith("/app/settings")) surface = "settings"
   else if (pathname.startsWith("/app/profile")) surface = "profile"
   else if (!pathname.startsWith("/app")) surface = "site"
+  const projectView = view === "work" ? "board" : view || "overview"
   return {
     surface,
     projectId: project?.[1],
     clientId: client?.[1],
     invoiceId: invoice?.[1],
     todoId: todoId || undefined,
+    view: project ? projectView : undefined,
   }
 }
 
-function starters(surface: string): { label: string; text: string }[] {
+function projectStarters(view: string | undefined, todoOpen: boolean): { label: string; text: string }[] {
+  const place = view === "board" ? "board" : view === "plan" ? "plan" : view === "timeline" ? "timeline" : "overview"
+  const starters = [
+    {
+      label: "Where this stands",
+      text: `Here is the current situation on the ${place}. Propose what to add or change on the overview, board, plan, and timeline. Mark the ones you recommend.`,
+    },
+    {
+      label: "Fill the gaps",
+      text: "Look at this project and propose the missing to-dos, milestones, and dates. Mark the ones you recommend. Leave a date blank unless I gave you one.",
+    },
+    {
+      label: "Break it up",
+      text: "Break the remaining work into milestones and to-dos. Mark the ones you would actually save.",
+    },
+  ]
+  if (!todoOpen) return starters
+  return [
+    {
+      label: "Update this to-do",
+      text: "Update the open to-do so the description is clear, and add one acceptance criterion if it doesn't have one. Keep every fact.",
+    },
+    ...starters.slice(0, 2),
+  ]
+}
+
+function starters(surface: string, view?: string, todoOpen?: boolean): { label: string; text: string }[] {
+  if (surface === "project") return projectStarters(view, Boolean(todoOpen))
   if (surface === "todo") {
     return [
       { label: "Rewrite this to-do", text: "Rewrite this to-do so the description is clear and specific. Keep every fact." },
       { label: "Acceptance criterion", text: "Write one acceptance criterion the client can actually test for this to-do." },
       { label: "Status comment", text: "Draft a short comment about where this to-do stands." },
-    ]
-  }
-  if (surface === "project") {
-    return [
-      { label: "Project description", text: "Write a clear project description: what it is, who it is for, and what done looks like." },
-      { label: "Draft a to-do", text: "Draft the next useful to-do for this project, with a description and one acceptance criterion." },
-      { label: "Add a goal", text: "Suggest one concrete goal for this project." },
     ]
   }
   if (surface === "projects") {
@@ -127,7 +157,7 @@ function AssistantDock({
   const { user, loading } = useAuthContext()
   const { pathname } = useLocation()
   const [params] = useSearchParams()
-  const context = routeContext(pathname, params.get("todo"))
+  const context = routeContext(pathname, params.get("todo"), params.get("view"))
   const [messages, setMessages] = useState<ChatEntry[]>([])
   const [input, setInput] = useState("")
   const [busy, setBusy] = useState(false)
@@ -170,8 +200,23 @@ function AssistantDock({
     setError(null)
     setNotice(null)
     try {
-      const result = await askAssistant({ messages: history, context })
-      setMessages((current) => [...current, { role: "assistant", content: result.reply, suggestion: result.suggestion }])
+      if (context.projectId && context.surface === "project") {
+        const previousPlan = [...messages].reverse().find((message) => message.plan)?.plan ?? null
+        const result = await askProjectPlan({ messages: history, context, previousPlan })
+        setMessages((current) => [
+          ...(result.plan ? current.map((message) => (message.plan && !message.stale ? { ...message, stale: true } : message)) : current),
+          {
+            role: "assistant",
+            content: result.reply,
+            suggestion: result.suggestion,
+            plan: result.plan,
+            planProjectId: result.plan ? context.projectId : undefined,
+          },
+        ])
+      } else {
+        const result = await askAssistant({ messages: history, context })
+        setMessages((current) => [...current, { role: "assistant", content: result.reply, suggestion: result.suggestion }])
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "The assistant is unavailable")
     } finally {
@@ -201,7 +246,9 @@ function AssistantDock({
     }
   }
 
-  const prompts = starters(context.surface || "home")
+  const prompts = starters(context.surface || "home", context.view, Boolean(context.todoId))
+  const planning = context.surface === "project"
+  const wide = messages.some((message) => message.plan)
 
   return (
     <>
@@ -213,8 +260,11 @@ function AssistantDock({
           zIndex={1600}
           right={{ base: 3, lg: 6 }}
           bottom={{ base: "84px", lg: 6 }}
-          w={{ base: "calc(100vw - 24px)", sm: "400px" }}
-          h={{ base: "min(640px, calc(100vh - 120px))", lg: "min(640px, calc(100vh - 48px))" }}
+          w={{ base: "calc(100vw - 24px)", sm: wide ? "460px" : "400px" }}
+          h={{
+            base: planning || wide ? "min(720px, calc(100vh - 120px))" : "min(640px, calc(100vh - 120px))",
+            lg: planning || wide ? "min(720px, calc(100vh - 48px))" : "min(640px, calc(100vh - 48px))",
+          }}
           display="flex"
           flexDirection="column"
           bg={SURFACE}
@@ -226,7 +276,7 @@ function AssistantDock({
           <Box bg="#0B1A15" px={4} py={3} display="flex" alignItems="center" justifyContent="space-between" flexShrink={0}>
             <Box display="flex" alignItems="center" gap={2} color="white">
               <LuSparkles size={16} />
-              <Text fontWeight="700" fontSize="0.9375rem">Assistant</Text>
+              <Text fontWeight="700" fontSize="0.9375rem">{planning ? "Project planner" : "Assistant"}</Text>
             </Box>
             <Box as="button" type="button" color="rgba(255,255,255,0.7)" aria-label="Close assistant" onClick={onClose}>
               <LuX size={16} />
@@ -236,7 +286,9 @@ function AssistantDock({
             {messages.length === 0 && (
               <Box>
                 <Text fontSize="0.875rem" color={MUTED} lineHeight="1.6" mb={3}>
-                  I can draft a project, a to-do, or rewrite the field you’re working on. I only use this workspace.
+                  {planning
+                    ? "Tell me where this project stands. I’ll propose to-dos, milestones, dates, and overview updates. Nothing is saved until you approve it."
+                    : "I can draft a project, a to-do, or rewrite the field you’re working on. I only use this workspace."}
                 </Text>
                 <Box display="flex" flexWrap="wrap" gap={2}>
                   {prompts.map((prompt) => (
@@ -261,7 +313,14 @@ function AssistantDock({
               </Box>
             )}
             {messages.map((message, index) => (
-              <Box key={`${message.role}-${index}`} mb={3} display="flex" flexDirection="column" alignItems={message.role === "user" ? "flex-end" : "flex-start"}>
+              <Box
+                key={`${message.role}-${index}`}
+                mb={3}
+                display="flex"
+                flexDirection="column"
+                alignItems={message.role === "user" ? "flex-end" : "stretch"}
+                w={message.role === "assistant" ? "100%" : undefined}
+              >
                 <Box
                   maxW="92%"
                   px={3}
@@ -272,6 +331,9 @@ function AssistantDock({
                 >
                   <Text fontSize="0.875rem" color={INK} whiteSpace="pre-wrap" lineHeight="1.55">{message.content}</Text>
                 </Box>
+                {message.plan && message.planProjectId && (
+                  <PlanReview projectId={message.planProjectId} plan={message.plan} stale={message.stale} />
+                )}
                 {message.suggestion && (
                   <Box mt={2} maxW="92%" w="100%" p={3} border={`1px solid ${RULE}`} borderRadius="12px" bg={SURFACE}>
                     <Text fontSize="0.8125rem" color={INK} whiteSpace="pre-wrap" lineHeight="1.5" maxH="140px" overflowY="auto">
@@ -289,7 +351,7 @@ function AssistantDock({
                 )}
               </Box>
             ))}
-            {busy && <Text fontSize="0.8125rem" color={MUTED}>Writing…</Text>}
+            {busy && <Text fontSize="0.8125rem" color={MUTED}>{planning ? "Planning…" : "Writing…"}</Text>}
             {error && <Text fontSize="0.8125rem" color="#B91C1C" mt={2}>{error}</Text>}
             {notice && <Text fontSize="0.8125rem" color="#047857" fontWeight="600" mt={2}>{notice}</Text>}
             <Box ref={endRef} />
@@ -300,7 +362,7 @@ function AssistantDock({
               value={input}
               rows={2}
               minH="64px"
-              placeholder="Ask, or describe what to write"
+              placeholder={planning ? "Describe where this project stands" : "Ask, or describe what to write"}
               onChange={(event) => setInput(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !event.shiftKey) {

@@ -60,14 +60,14 @@ export function sendAssistantError(res, err) {
   return res.status(mapped.status).json({ error: mapped.error });
 }
 
-export async function geminiJson(system, prompt) {
+export async function geminiJson(system, prompt, options = {}) {
   const ai = new GoogleGenerativeAI(requireKey());
   const model = ai.getGenerativeModel({
     model: process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash",
     systemInstruction: system,
     generationConfig: {
-      temperature: 0.4,
-      maxOutputTokens: 2048,
+      temperature: options.temperature ?? 0.4,
+      maxOutputTokens: options.maxOutputTokens || 2048,
       responseMimeType: "application/json",
     },
   });

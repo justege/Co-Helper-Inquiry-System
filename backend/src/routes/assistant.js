@@ -2,6 +2,7 @@ import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import { attachRole } from "../middleware/requireRole.js";
 import { chatCopy, draftCopy, polishCopy } from "../lib/assistant.js";
+import { applyProjectPlan, proposeProjectPlan } from "../lib/projectPlan.js";
 import { allowRequest, sendAssistantError } from "../lib/gemini.js";
 
 const router = Router();
@@ -41,6 +42,23 @@ router.post("/chat", requireAuth, attachRole, async (req, res) => {
   if (limited(req, res)) return;
   try {
     res.json(await chatCopy(req.dbUser, req.body));
+  } catch (err) {
+    sendAssistantError(res, err);
+  }
+});
+
+router.post("/plan", requireAuth, attachRole, async (req, res) => {
+  if (limited(req, res)) return;
+  try {
+    res.json(await proposeProjectPlan(req.dbUser, req.body));
+  } catch (err) {
+    sendAssistantError(res, err);
+  }
+});
+
+router.post("/plan/apply", requireAuth, attachRole, async (req, res) => {
+  try {
+    res.json(await applyProjectPlan(req.dbUser, req.body));
   } catch (err) {
     sendAssistantError(res, err);
   }

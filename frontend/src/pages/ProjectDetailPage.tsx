@@ -45,11 +45,20 @@ import {
   PlanPanel,
   StatusChip,
 } from "@/components/work/ProjectTicketPanels"
-import { LuTrash2, LuUsers } from "react-icons/lu"
+import { LuSparkles, LuTrash2, LuUsers } from "react-icons/lu"
 import { useAssistantClaim } from "@/components/assistant/assistantClaims"
+import { useAssistant } from "@/components/assistant/AssistantDock"
 
 const PROJECT_VIEWS = ["overview", "work", "timeline", "plan", "files", "discuss", "people", "details", "finance", "pricing"] as const
 type ProjectView = (typeof PROJECT_VIEWS)[number]
+
+function planSeed(view: string) {
+  if (view === "work") return "On the board, here is where things stand: "
+  if (view === "plan") return "On the plan, here is where things stand: "
+  if (view === "timeline") return "On the timeline, here is where things stand: "
+  if (view === "overview") return "On the overview, here is where things stand: "
+  return "Here is where this project stands: "
+}
 
 function parseView(value: string | null): ProjectView {
   if (value && (PROJECT_VIEWS as readonly string[]).includes(value)) return value as ProjectView
@@ -73,6 +82,7 @@ export default function ProjectDetailPage() {
   const [removeId, setRemoveId] = useState<string | null>(null)
   const tab = parseView(params.get("view"))
   const { openTodo } = useTodoCard()
+  const assistant = useAssistant()
 
   function load() {
     if (!id) return
@@ -188,7 +198,17 @@ export default function ProjectDetailPage() {
       eyebrow="Project"
       title={data.project.name}
       backHref="/app"
-      action={<StatusChip status={data.project.status} />}
+      action={(
+        <Box display="flex" alignItems="center" gap={2} flexWrap="wrap" justifyContent="flex-end">
+          {canWork && (
+            <AppButton size="sm" variant="secondary" onClick={() => assistant?.open(planSeed(activeView))}>
+              <LuSparkles size={14} />
+              Plan with me
+            </AppButton>
+          )}
+          <StatusChip status={data.project.status} />
+        </Box>
+      )}
       stats={[
         { label: "Open", value: String(openTodos.length) },
         { label: "Hours", value: formatHours(work.project.loggedHours) },
