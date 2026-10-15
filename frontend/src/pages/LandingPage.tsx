@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Flex, Text } from "@chakra-ui/react"
 import { useNavigate } from "react-router-dom"
+import AvailabilityBanner from "@/components/landing/AvailabilityBanner"
 import FilmBackdrop from "@/components/landing/FilmBackdrop"
 
 const REVEAL_AT = 5
@@ -200,6 +201,8 @@ export default function LandingPage() {
   const shown = visible && !departing
 
   return (
+    <>
+    <AvailabilityBanner />
     <FilmBackdrop videoRef={videoRef} loop={false} dim={shown ? 0.38 : 0}>
       <Flex
         minH="100vh"
@@ -238,5 +241,6 @@ export default function LandingPage() {
         </Flex>
       </Flex>
     </FilmBackdrop>
+    </>
   )
 }

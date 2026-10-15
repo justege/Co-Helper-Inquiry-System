@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react"
 import { Box, Flex, Text } from "@chakra-ui/react"
 import { Link } from "react-router-dom"
 import { useForm } from "react-hook-form"
+import AvailabilityBanner from "@/components/landing/AvailabilityBanner"
 import FilmBackdrop from "@/components/landing/FilmBackdrop"
 import loginVideo from "@/assets/EOLogin.mp4"
 import { submitProjectRequest } from "@/api/public"
@@ -92,8 +93,17 @@ export default function ProjectRequestPage() {
   }
 
   return (
+    <>
+    <AvailabilityBanner />
     <FilmBackdrop src={loginVideo} dim={0.62}>
-      <Flex minH="100vh" align="flex-start" justify="center" px={{ base: 4, md: 6 }} py={{ base: 6, md: 10 }}>
+      <Flex
+        minH="100vh"
+        align="flex-start"
+        justify="center"
+        px={{ base: 4, md: 6 }}
+        pt={{ base: "calc(var(--availability-banner) + 1.5rem)", md: "calc(var(--availability-banner) + 2.5rem)" }}
+        pb={{ base: 6, md: 10 }}
+      >
         <Box w="full" maxW="720px">
           <Flex align="center" justify="space-between" mb={5} gap={4}>
             <BrandMark inverted to="/" />
@@ -280,6 +290,7 @@ export default function ProjectRequestPage() {
         </Box>
       </Flex>
     </FilmBackdrop>
+    </>
   )
 }
 
