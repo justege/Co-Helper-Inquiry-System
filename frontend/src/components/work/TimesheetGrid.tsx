@@ -26,6 +26,7 @@ type SheetRow = {
   key: string
   date: string
   entryId: string | null
+  userId: string | null
   projectId: string
   todoId: string
   hours: number | null
@@ -53,6 +54,7 @@ function buildRows(days: string[], entries: TimeEntry[], extras: Record<string, 
         key: `blank:${date}`,
         date,
         entryId: null,
+        userId: null,
         projectId: "",
         todoId: "",
         hours: null,
@@ -65,6 +67,7 @@ function buildRows(days: string[], entries: TimeEntry[], extras: Record<string, 
           key: entry.id,
           date,
           entryId: entry.id,
+          userId: entry.userId || null,
           projectId: entry.projectId,
           todoId: entry.todoId || "",
           hours: entry.hours,
@@ -79,6 +82,7 @@ function buildRows(days: string[], entries: TimeEntry[], extras: Record<string, 
         key: `extra:${date}:${i}`,
         date,
         entryId: null,
+        userId: null,
         projectId: "",
         todoId: "",
         hours: null,
@@ -96,6 +100,8 @@ export function TimesheetGrid({
   projects,
   todos,
   canEdit,
+  canEditAny = true,
+  meId,
   monthLabel,
   projectId,
   onProjectChange,
@@ -107,6 +113,8 @@ export function TimesheetGrid({
   projects: TimesheetProject[]
   todos: TimesheetTodo[]
   canEdit: boolean
+  canEditAny?: boolean
+  meId?: string
   monthLabel: string
   projectId: string
   onProjectChange: (id: string) => void
@@ -141,6 +149,13 @@ export function TimesheetGrid({
     return todos.filter((todo) => todo.projectId === project && (todo.status !== "invoiced" || todo.id === currentId))
   }
 
+  function canEditRow(row: SheetRow | undefined) {
+    if (!canEdit || !row || row.locked) return false
+    if (canEditAny) return true
+    if (!row.entryId) return true
+    return Boolean(meId && row.userId === meId)
+  }
+
   function display(row: SheetRow, col: Col) {
     if (col === "date") return formatSheetDate(row.date)
     if (col === "project") return projects.find((p) => p.id === row.projectId)?.name || ""
@@ -150,7 +165,7 @@ export function TimesheetGrid({
 
   function startEdit(rowIndex: number, col: Col) {
     const row = rows[rowIndex]
-    if (!canEdit || !row || row.locked) {
+    if (!canEditRow(row)) {
       setActive({ row: rowIndex, col })
       setEditing(false)
       return
@@ -164,7 +179,7 @@ export function TimesheetGrid({
   }
 
   async function commit(row: SheetRow, col: Col, value: string) {
-    if (!canEdit || row.locked || busy) return
+    if (!canEditRow(row) || busy) return
     setError(null)
     const patch: Partial<SheetRow> = {}
     if (col === "date") {
@@ -336,7 +351,7 @@ export function TimesheetGrid({
               <tr key={row.key}>
                 {COLS.map((col) => {
                   const selected = active?.row === rowIndex && active?.col === col
-                  const isEditing = selected && editing && !row.locked && canEdit
+                  const isEditing = selected && editing && canEditRow(row)
                   return (
                     <td
                       key={col}
@@ -405,7 +420,7 @@ export function TimesheetGrid({
                       >
                         <LuPlus size={14} />
                       </Box>
-                      {row.entryId && !row.locked ? (
+                      {row.entryId && canEditRow(row) ? (
                         <Box
                           as="button"
                           aria-label="Delete hours"
@@ -442,7 +457,9 @@ export function TimesheetGrid({
         </table>
       </SheetFrame>
       <Text fontSize="0.75rem" color={APP_MUTED} mt={2}>
-        Click a cell to edit, like a spreadsheet. Empty days stay visible. Invoiced hours stay locked.
+        {canEdit && !canEditAny
+          ? "Click a cell to add or edit your own hours. Other people’s rows stay as they are. Invoiced hours stay locked."
+          : "Click a cell to edit, like a spreadsheet. Empty days stay visible. Invoiced hours stay locked."}
       </Text>
     </Box>
   )

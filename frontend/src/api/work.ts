@@ -315,6 +315,7 @@ export interface TimesheetTodo {
 
 export interface Timesheet {
   role: "owner" | "admin" | "client" | "collaborator"
+  meId?: string
   canEdit: boolean
   workspace: { id: string; name: string; currency: string; timezone: string } | null
   entries: TimeEntry[]
@@ -453,7 +454,7 @@ export const getInvoice = (id: string) =>
   api.get<{
     invoice: Invoice
     lines: InvoiceLine[]
-    role: "owner" | "client" | "admin"
+    role: "owner" | "client" | "admin" | "collaborator"
     projectName: string
     client: WorkspaceClient
     billing?: { complete: boolean; missing: string[]; format: string }

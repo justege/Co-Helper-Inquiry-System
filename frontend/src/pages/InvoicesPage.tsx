@@ -33,7 +33,7 @@ export default function InvoicesPage() {
       title="Invoices"
       stats={[
         { label: "Open", value: formatMoney(openAmount, currency) },
-        { label: "Drafts", value: String(drafts.length) },
+        ...(drafts.length ? [{ label: "Drafts", value: String(drafts.length) }] : []),
         { label: "Paid", value: formatMoney(paidAmount, currency) },
         { label: "Invoices", value: String(invoices.length) },
       ]}

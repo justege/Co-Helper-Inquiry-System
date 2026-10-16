@@ -168,17 +168,22 @@ const PROJECT_ACCESS_SQL = `
   WHERE p.id = $1
 `;
 
+export async function isProjectCollaborator(projectId, userId) {
+  if (!projectId || !userId) return false;
+  const member = await queryOne(
+    `SELECT id FROM project_members WHERE project_id = $1 AND user_id = $2`,
+    [projectId, userId]
+  );
+  return Boolean(member);
+}
+
 export async function getProjectAccess(projectId, user) {
   const project = await queryOne(PROJECT_ACCESS_SQL, [projectId]);
   if (!project) return null;
   if (project.owner_id === user.id) return { project, role: "owner" };
   if (["admin", "superadmin"].includes(user.role)) return { project, role: "admin" };
   if (project.client_user_id === user.id) return { project, role: "client" };
-  const member = await queryOne(
-    `SELECT id FROM project_members WHERE project_id = $1 AND user_id = $2`,
-    [projectId, user.id]
-  );
-  if (member) return { project, role: "collaborator" };
+  if (await isProjectCollaborator(projectId, user.id)) return { project, role: "collaborator" };
   return null;
 }
 

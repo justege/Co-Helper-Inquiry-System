@@ -1,5 +1,5 @@
 import { query, queryOne, execute, withTransaction } from "../db.js";
-import { mapClient, mapUserBrief, getProjectAccess, getWorkspaceByOwner, ensureWorkspaceForOwner, assertProjectAssignee, listProjectPeople } from "./workspace.js";
+import { mapClient, mapUserBrief, getProjectAccess, getWorkspaceByOwner, ensureWorkspaceForOwner, assertProjectAssignee, listProjectPeople, isProjectCollaborator } from "./workspace.js";
 import {
   addDaysIso,
   invoiceBillingGaps,
@@ -884,7 +884,7 @@ export async function getProjectWork(projectId, user) {
   const nowBelongs = nowInWorkspace?.project_id === projectId;
   summary.paidTotal = asNumber(billing?.paid);
   summary.invoicedTotal = asNumber(billing?.invoiced);
-  if (access.role !== "client") summary.draftTotal = asNumber(billing?.draft);
+  if (access.role === "owner" || access.role === "admin") summary.draftTotal = asNumber(billing?.draft);
   return {
     role: access.role,
     nowElsewhere: Boolean(nowInWorkspace && !nowBelongs && access.role === "client"),
@@ -1314,8 +1314,10 @@ export async function getInvoiceAccess(invoiceId, user) {
   if (!invoice) return null;
   if (invoice.owner_id === user.id) return { invoice, role: "owner" };
   if (["admin", "superadmin"].includes(user.role)) return { invoice, role: "admin" };
-  if (invoice.client_user_id === user.id && invoice.status !== "draft") {
-    return { invoice, role: "client" };
+  if (invoice.status === "draft") return null;
+  if (invoice.client_user_id === user.id) return { invoice, role: "client" };
+  if (await isProjectCollaborator(invoice.project_id, user.id)) {
+    return { invoice, role: "collaborator" };
   }
   return null;
 }
@@ -1367,29 +1369,28 @@ export async function loadInvoiceRenderContext(invoiceId) {
 }
 
 export async function listInvoicesForUser(user) {
-  if (user.role === "expert") {
-    const ws = await getWorkspaceByOwner(user.id);
-    if (!ws) return [];
-    return query(
-      `SELECT i.*, p.name AS project_name,
-              c.email AS client_email, c.company_name AS client_company_name
-       FROM invoices i
-       JOIN projects p ON p.id = i.project_id
-       JOIN clients c ON c.id = i.client_id
-       WHERE i.workspace_id = $1
-       ORDER BY i.created_at DESC`,
-      [ws.id]
-    );
-  }
+  const ws = user.role === "expert" ? await getWorkspaceByOwner(user.id) : null;
   return query(
     `SELECT i.*, p.name AS project_name,
             c.email AS client_email, c.company_name AS client_company_name
      FROM invoices i
      JOIN projects p ON p.id = i.project_id
      JOIN clients c ON c.id = i.client_id
-     WHERE c.user_id = $1 AND i.status <> 'draft'
+     WHERE (
+       ($2::uuid IS NOT NULL AND i.workspace_id = $2)
+       OR (
+         i.status <> 'draft'
+         AND (
+           c.user_id = $1
+           OR EXISTS (
+             SELECT 1 FROM project_members pm
+             WHERE pm.project_id = p.id AND pm.user_id = $1
+           )
+         )
+       )
+     )
      ORDER BY i.created_at DESC`,
-    [user.id]
+    [user.id, ws?.id ?? null]
   );
 }
 
@@ -1479,6 +1480,7 @@ export async function listTimesheet(user, { from, to, projectId } = {}) {
   if (!ids.length) {
     return {
       role,
+      meId: user.id,
       canEdit: role === "owner" || role === "admin" || role === "collaborator",
       workspace: workspace
         ? {
@@ -1515,6 +1517,7 @@ export async function listTimesheet(user, { from, to, projectId } = {}) {
   const visibleEntries = role === "client" ? entries.filter((e) => e.billable) : entries;
   return {
     role,
+    meId: user.id,
     canEdit: role === "owner" || role === "admin" || role === "collaborator",
     workspace: workspace
       ? {

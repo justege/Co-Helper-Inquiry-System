@@ -34,6 +34,7 @@ export function ProjectFinancePanel({
   todos,
   currency,
   canManage,
+  role,
   onChanged,
   onCreateInvoice,
 }: {
@@ -41,6 +42,7 @@ export function ProjectFinancePanel({
   todos: WorkTodo[]
   currency: string
   canManage: boolean
+  role?: "owner" | "admin" | "client" | "collaborator"
   onChanged: () => void
   onCreateInvoice: () => void
 }) {
@@ -54,11 +56,19 @@ export function ProjectFinancePanel({
 
   function loadFinance() {
     setLoading(true)
-    Promise.all([getInvoices(), getUnbilled(project.id)])
+    const invoicesReq = getInvoices()
+    const unbilledReq = canManage
+      ? getUnbilled(project.id).catch(() => null)
+      : Promise.resolve(null)
+    Promise.all([invoicesReq, unbilledReq])
       .then(([inv, unbilled]) => {
         setInvoices(inv.invoices.filter((row) => row.projectId === project.id))
-        setUnbilledEntries(unbilled.entries)
-        setHourlyRate(unbilled.hourlyRate ?? project.hourlyRate)
+        if (unbilled) {
+          setUnbilledEntries(unbilled.entries)
+          setHourlyRate(unbilled.hourlyRate ?? project.hourlyRate)
+        } else {
+          setUnbilledEntries([])
+        }
         setError(null)
       })
       .catch((e: Error) => setError(e.message))
@@ -67,7 +77,7 @@ export function ProjectFinancePanel({
 
   useEffect(() => {
     loadFinance()
-  }, [project.id, project.unbilledHours, todos.length])
+  }, [project.id, project.unbilledHours, todos.length, canManage])
 
   const doneTodos = useMemo(
     () => todos.filter((todo) => todo.status === "done"),
@@ -138,23 +148,27 @@ export function ProjectFinancePanel({
     <Box display="grid" gap={4}>
       {error && <Text fontSize="0.8125rem" color="#B91C1C">{error}</Text>}
 
-      <Box display="grid" gridTemplateColumns={{ base: "1fr 1fr", lg: "repeat(4, 1fr)" }} gap={3}>
-        <AppStatCard
-          label="Unbilled"
-          value={formatHours(unbilledHours)}
-          hint={unbilledAmount != null ? formatMoney(unbilledAmount, currency) : "Billable time not on an invoice yet"}
-        />
-        <AppStatCard
-          label="Ready to invoice"
-          value={formatHours(Math.max(unbilledHours, doneHours))}
-          hint={
-            doneTodos.length
-              ? `${doneTodos.length} finished to-do${doneTodos.length === 1 ? "" : "s"}`
-              : unbilledHours > 0
-                ? "Billable time not invoiced yet"
-                : "Finish work, then invoice from here"
-          }
-        />
+      <Box display="grid" gridTemplateColumns={{ base: "1fr 1fr", lg: canManage ? "repeat(4, 1fr)" : "1fr 1fr" }} gap={3}>
+        {canManage && (
+          <>
+            <AppStatCard
+              label="Unbilled"
+              value={formatHours(unbilledHours)}
+              hint={unbilledAmount != null ? formatMoney(unbilledAmount, currency) : "Billable time not on an invoice yet"}
+            />
+            <AppStatCard
+              label="Ready to invoice"
+              value={formatHours(Math.max(unbilledHours, doneHours))}
+              hint={
+                doneTodos.length
+                  ? `${doneTodos.length} finished to-do${doneTodos.length === 1 ? "" : "s"}`
+                  : unbilledHours > 0
+                    ? "Billable time not invoiced yet"
+                    : "Finish work, then invoice from here"
+              }
+            />
+          </>
+        )}
         <AppStatCard
           label="Awaiting payment"
           value={formatMoney(awaitingTotal, currency)}
@@ -289,9 +303,11 @@ export function ProjectFinancePanel({
 
       {(invoicedTodos.length > 0 || paidInvoices.length > 0) && (
         <AppCard label="Paid work">
-          <Text fontSize="0.8125rem" color={APP_MUTED} mb={3}>
-            To-dos move here after invoicing. Mark invoices paid when the client pays — manually or after they confirm.
-          </Text>
+          {canManage && (
+            <Text fontSize="0.8125rem" color={APP_MUTED} mb={3}>
+              To-dos move here after invoicing. Mark invoices paid when the client pays — manually or after they confirm.
+            </Text>
+          )}
           {invoicedTodos.map((todo, index) => (
             <Box
               key={todo.id}
@@ -315,7 +331,7 @@ export function ProjectFinancePanel({
         </AppCard>
       )}
 
-      {!canManage && awaitingInvoices.length > 0 && (
+      {role === "client" && awaitingInvoices.length > 0 && (
         <Box bg={APP_BG_SUBTLE} border={`1px solid ${APP_BORDER}`} borderRadius="12px" p={4}>
           <Text fontSize="0.875rem" fontWeight="600" color={APP_INK} mb={1}>
             {formatMoney(awaitingTotal, currency)} awaiting your payment

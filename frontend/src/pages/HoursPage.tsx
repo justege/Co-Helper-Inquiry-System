@@ -134,6 +134,8 @@ export default function HoursPage() {
           projects={sheet.projects}
           todos={sheet.todos}
           canEdit={sheet.canEdit}
+          canEditAny={sheet.role === "owner" || sheet.role === "admin"}
+          meId={sheet.meId}
           monthLabel={monthLabel}
           projectId={projectId}
           onProjectChange={setProject}

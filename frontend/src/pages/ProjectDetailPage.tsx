@@ -434,6 +434,7 @@ export default function ProjectDetailPage() {
               todos={work.project.todos}
               currency={work.currency}
               canManage={canManage}
+              role={data.role}
               onChanged={load}
               onCreateInvoice={() => setInvoiceOpen(true)}
             />
